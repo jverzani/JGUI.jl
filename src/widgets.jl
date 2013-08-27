@@ -554,10 +554,55 @@ function cairographics(parent::Container; width::Int=480, height::Int=400)
 end
 
 
+##################################################
+## 
+## Images
+
+type ImageView <: WidgetModel
+    o
+    block
+    model
+    parent
+    toolkit
+    attrs
+    img
+    draw
+    function ImageView(widget, block, model, parent, toolkit, attrs, img)
+        self = new(widget, block, model, parent, toolkit, attrs, img, nothing)
+        self.draw = () -> image_draw(self.toolkit, self, self.img)
+        self
+    end
+end
+
 
 ## image viewer
 ##
-## XXX use cairographics to display an image
+## Display an Image image. 
+##
+## Arguments:
+##
+## * `img::Image` an `Images.Image` instance (use `imread`, say)
+##
+## Signals
+## * `mousePress (x,y)`
+## * `mouseRelease (x, y)`
+## * `mouseDoubleClick (x, y)`
+##
+## Status:
+##
+## Might work for you, but is flaky on the mac. (Size issues, need to have realized...)
+##
+## call the objects `.draw()` method to see the graphic, as in `obj.draw()`.
+function imageview(parent::Container, img::Image)
+    model = EventModel()
+    widget, block = imageview(parent.toolkit, parent, model, img)
+    o = ImageView(widget, block, model, parent, parent.toolkit, Dict(), img)
+    ## Can't draw to a Cairo backend until it is realized
+    connect(o.model, "realized") do 
+        o.draw()
+    end
+    o
+end
 
 
 ##################################################
@@ -745,7 +790,6 @@ setKeywidth(tr::TreeView, width::Int) = setKeywidth(tr.toolkit, tr, width)
 list_props(::@PROP("TreeView")) = {:keywidth => "Width in pixels of column holding keys"
                                  }
                                  
-## Main methods for managing child nodes are in models.jl with TreeStore
 
 
 ## svg device

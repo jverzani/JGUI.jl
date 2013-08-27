@@ -131,6 +131,7 @@ type BoxContainer <: Container
     toolkit
     children
     attrs::Dict
+    spacing
 end
 
 ## A boxcontainer holds child objects either horizontally (`hbox`) or vertically (`vbox`)
@@ -167,7 +168,7 @@ function boxcontainer(parent::Container; direction::Symbol=:horizontal, kwargs..
 
 
     ##
-    BoxContainer(widget, block, parent, parent.toolkit, {}, attrs)
+    BoxContainer(widget, block, parent, parent.toolkit, {}, attrs, spacing=[2,2])
 end
 
 hbox(parent::Container; kwargs...) = boxcontainer(parent, direction=:horizontal, kwargs...)
@@ -175,7 +176,24 @@ vbox(parent::Container; kwargs...) = boxcontainer(parent, direction=:vertical, k
 
 length(object::BoxContainer) = length(children(object))
 clear(object::BoxContainer)  = splice!(object, 1:length(object))
-    
+
+## addStrut(px::int)
+## addStretch...
+## addSpacing...
+
+## properties
+## may be dynamic and adjust for just current chidren
+## spacing around each child
+setSpacing(object::BoxContainer, px::Int) = getSpacing(object, [px,px])
+function setSpacing(object::BoxContainer, px::Vector{Int})
+    object.spacing = px
+    setSpacing(object.toolkit, object, px)
+end
+## margin around insider of container
+setMargin(object::BoxContainer, px::Int) = setMargin(object::BoxContainer, [px,px])
+setMargin(object::BoxContainer, px::Vector{Int}) = setMargin(object.toolkit, object, px)
+
+
 ## add child to parent
 
 ## index is 1:n+1 -- not 0:n

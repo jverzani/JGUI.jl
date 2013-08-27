@@ -76,6 +76,16 @@ function boxcontainer(::MIME"application/x-tcltk", parent::Container)
     (widget, widget)
 end
 
+## set padx, pady for all the children
+function setSpacing(::MIME"application/x-tcltk", parent::BoxContainer, px::Vector{Int})
+    children= split(Tk.tcl(parent[:widget], "children"))
+    [Tk.tcl("pack", "configure", child, padx=px[1], pady=px[2]) for child in children]
+end
+
+function setMargin(::MIME"application/x-tcltk", parent::BoxContainer, px::Vector{Int})
+    Tk.configure(parent[:widget], padding=[px[1], px[2], px[1], px[2]])
+end
+
 function compute_anchor(child::Widget)
     ## (:left, :right, :center, :justify), (:top, :bottom, :center) -> "news"
     d = {:left=>"w", :right=>"e", :center=>"", :justify=>"", :top=>"n", :bottom=>"s", nothing=>""}
@@ -117,17 +127,21 @@ function insert_child(::MIME"application/x-tcltk", parent::BoxContainer, index, 
     slaves = split(Tk.tcl("pack", "slaves", getWidget(parent)))
     side = (getProp(parent, :direction) == :horizontal) ? "left" : "top"
     expand, fill, anchor =  compute_expand_fill_anchor(parent, child) 
+    spacing = parent.spacing
 
-    println(("Debug", expand, fill, anchor))
+    ## println(("Debug", expand, fill, anchor))
 
     if length(slaves) == 0
-        Tk.pack(child.block,                                   side=side, expand=expand, fill=fill, anchor=anchor) 
+        Tk.pack(child.block,                                   side=side, expand=expand, fill=fill, anchor=anchor, 
+                padx=spacing[1], pady=spacing[2]) 
     elseif index <= length(slaves)
         slave = slaves[index]
-        Tk.tcl("pack", "configure", child.block, before=slave, side=side, expand=expand, fill=fill, anchor=anchor)
+        Tk.tcl("pack", "configure", child.block, before=slave, side=side, expand=expand, fill=fill, anchor=anchor,
+               padx=spacing[1], pady=spacing[2]) 
     else
         slave = slaves[end]
-        Tk.tcl("pack", "configure", child.block, after=slave,  side=side, expand=expand, fill=fill, anchor=anchor)
+        Tk.tcl("pack", "configure", child.block, after=slave,  side=side, expand=expand, fill=fill, anchor=anchor,
+               padx=spacing[1], pady=spacing[2]) 
     end
 end
 
@@ -524,6 +538,9 @@ function cairographics(::MIME"application/x-tcltk", parent::Container, model::Ev
     widget = c = Tk.Canvas(block, width, height)
     pack(widget, expand=true, fill="both")
 
+    ## can't put signal on canvas Map...
+    bind(block, "<Map>", (path) -> notify(model, "realized"))
+
     ## mousebindings ...
     bind(c, "<ButtonPress-1>",   (path,x,y)->notify(model, "mousePress", x, y))
     bind(c, "<ButtonRelease-1>", (path,x,y)->notify(model, "mouseRelease", x, y))
@@ -774,7 +791,36 @@ function setKeywidth(::MIME"application/x-tcltk", tr::TreeView, width::Int)
     Tk.tcl(tr.o, "column", "#0", width=width)
 end
     
+## Images
+function imageview(::MIME"application/x-tcltk", parent::Container, model::EventModel, img)
 
+    d, w, h = size(img)
+    block = Tk.Frame(parent[:widget])
+    widget = Tk.Canvas(block, w, h)
+    pack(widget, expand=true, fill="both")
+
+    bind(block, "<Map>") do path
+        notify(model, "realized") 
+    end
+
+
+    ## Do I have any signals?
+    bind(widget, "<ButtonPress-1>",   (path,x,y)->notify(model, "mousePress", x, y))
+    bind(widget, "<ButtonRelease-1>", (path,x,y)->notify(model, "mouseRelease", x, y))
+    bind(widget, "<Double-Button-1>", (path,x,y)->notify(model, "mouseDoubleClick", x, y))
+
+   
+
+    (widget, block)
+end
+function image_draw(::MIME"application/x-tcltk", o::ImageView, img::Image)
+    buf = uint32color(img)'
+    ctx = Base.Graphics.getgc(o[:widget])
+    d, w, h = size(img)
+    Tk.configure(o.block, width=w, height=h)
+    image(ctx, buf, 0, 0, w, h)
+    Tk.reveal(o[:widget])
+end
 
 ##################################################
 ##

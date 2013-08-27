@@ -1,6 +1,11 @@
 module JGUI
 
 using Tk
+## for Images
+using Images
+using Cairo
+using Base.Graphics
+
 
 import Base: show
 import Base: getindex, setindex!, length, push!, append!, prepend!, insert!, splice!, shift!, unshift!, pop!, findin
@@ -20,8 +25,8 @@ export window, labelframe,
 export label, separator, button, lineedit, textedit,
        checkbox, radiogroup, buttongroup, combobox,
        slider, slider2d,
-       listview, storeview, treeview,
-       cairographics
+       listview, storeview, treeview, 
+       cairographics, imageview
 
 export Store
 

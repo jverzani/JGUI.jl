@@ -46,7 +46,6 @@ make_control(parent::Container, x::Int) = lineedit(parent, x, coerce=parseint)
 ## evaluation context
 ## context to store dynamic values
 module ManipulateContext
-Base.isinteractive() = false
 end
 
 function dict_to_module(d::Dict, context) ## stuff values into Manipulate Context
