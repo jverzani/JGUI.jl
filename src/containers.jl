@@ -1,0 +1,495 @@
+## Container widgets defined here
+
+## methods
+connect(object::Container, signal::String, obj, slot::Function) = connect(object.model, signal, obj, slot)
+connect(object::Container, signal::String, slot::Function) = connect(object.model, signal, slot)
+disconnect(o::Container, id::String) = disconnect(o.model, id)
+
+## think of containers as Widget[] containers
+children(object::Container) = object.children
+getindex(object::Container, i::Union(Int, Range, Vector)) = children(object)[i]
+
+## `push!(parent, child)` is the typical way a child is added to a
+## container. This is a convenience as the child holds a reference to
+## the parent.
+push!(child::Widget) = push!(child.parent, child)
+
+## Bin containers only allow one child
+abstract BinContainer <: Container 
+
+
+function push!(parent::BinContainer, child::Widget)
+    if parent != child.parent
+        error("Window is not parent's child?")
+    end
+
+    if length(children(parent)) >= 1
+        error("Can only add one child to a $(typeof(parent)) object")
+    end
+    ##
+    push!(parent.children, child)
+
+    set_child(parent.toolkit, parent, child)
+end
+clear(parent::BinContainer) = pop!(parent)
+
+
+##################################################
+##
+## Top-level window
+##
+type Window <: BinContainer
+    o                           # frame
+    block                       # window
+    parent
+    model
+    toolkit
+    children
+    attrs::Dict
+end
+
+## Main Window
+## XXX deal with toolkit
+## kwargs are used to pass along properties to the constructor (size)
+function window(;toolkit::MIME=MIME("application/x-tcltk"), title::String="", kwargs...)
+    widget, block = window(toolkit)
+    obj = Window(widget, block, nothing, EventModel(), toolkit, {}, Dict())
+    obj[:title] = title
+    for (k, v) in kwargs
+        obj[k] = v
+    end
+    obj
+end
+
+## close window
+destroy(o::Widget) = destroy(o.parent)
+function destroy(o::Window)
+    ## XXX call method that can intercept?
+    destroy_window(o.toolkit, o)
+end
+
+
+## properties
+getTitle(o::Window) = getTitle(o.toolkit, o)
+setTitle(o::Window, value::String) = setTitle(o.toolkit, o, value)
+getModal(o::Window) = getModal(o.toolkit, o)
+setModal(o::Window, value::Bool) = setModal(o.toolkit, o, value)
+
+list_props(::@PROP("Window")) = {:title => "window title",
+                                 :modal => "make window modal"
+                                 }
+                                 
+## addToolBar, addMenuBar, addStatusBar...
+
+## what name for this?
+## not that useful as is, need to use Module.DataType, as these aren't exported
+function lookup(o::Container, by::DataType)
+    ## return all children of the given data type recursing over children
+    function add_children(obj)
+        for child in children(obj)
+            isa(child, by) && push!(out, child)
+            isa(child, Container) && add_children(child)
+        end
+    end
+    out = {}
+    add_children(o)
+    out
+end
+    
+    
+## labelframe
+type LabelFrame <: BinContainer
+    o
+    block
+    parent
+    model
+    toolkit
+    children
+    attrs::Dict
+end
+
+## Label frame is a bin container to surround anothe container in a frame with a title.
+##
+## Arguments:
+##
+## * `alignment::MaybeSymbol`, one of (nothing, :left, :center, :right)
+##
+function labelframe(parent::Container, label::String, alignment::Union(Nothing, Symbol)=nothing)
+    (widget, block) = labelframe(parent.toolkit, parent, label, alignment=alignment)
+    LabelFrame(widget, block, parent, EventModel(), parent.toolkit, {}, Dict())
+end
+
+
+##################################################
+## 
+## Box containers
+
+type BoxContainer <: Container
+    o
+    block
+    parent
+    toolkit
+    children
+    attrs::Dict
+end
+
+## A boxcontainer holds child objects either horizontally (`hbox`) or vertically (`vbox`)
+##
+## Like Gtk, and not Qt or TclTk the container and the layout are coupled. Box containers are basically
+## frames with a box-like layout. By contrast, grid containers are frames with grid-like layouts.
+##
+## Conceptually a box container is treated like a queue. Children are
+## pushed, appended, prepended, or inserted into it. They can be
+## popped, shifted, or spliced by index. Child components may be
+## referenced by integer indices.
+##
+## Children are placed in box with size policies set by the
+## `sizepolicy` property. These are specified by direction `x` or `y`. The
+## value can be `nothing`, `:fixed`, or `:expand`. By default, widgets
+## will expand in the direction orthogonal to the packing direction
+## (horizontally for vertical boxes).
+##
+## When a child does not expand to fill the allocated space, it can be
+## aligned within the cell. The `alignment` property sets attributes
+## that control this, again with `x` and `y` values in `(:left,
+## :right, :center, :justify)`, `(:top, :bottom, :center)`
+## respectively.
+##
+function boxcontainer(parent::Container; direction::Symbol=:horizontal, kwargs...)
+    ## general (stuff kwargs -> attrs)
+    attrs = Dict()
+    for (k, v) in kwargs
+        attrs[k] = v
+    end
+    attrs[:direction] = direction
+    ## Toolkit
+    widget, block = boxcontainer(parent.toolkit, parent)
+
+
+    ##
+    BoxContainer(widget, block, parent, parent.toolkit, {}, attrs)
+end
+
+hbox(parent::Container; kwargs...) = boxcontainer(parent, direction=:horizontal, kwargs...)
+vbox(parent::Container; kwargs...) = boxcontainer(parent, direction=:vertical, kwargs...)
+
+length(object::BoxContainer) = length(children(object))
+clear(object::BoxContainer)  = splice!(object, 1:length(object))
+    
+## add child to parent
+
+## index is 1:n+1 -- not 0:n
+function insert!(parent::BoxContainer, index::Int, child::Widget)
+    insert!(parent.children, index, child)
+    insert_child(parent.toolkit, parent, index, child)
+    child
+end
+
+function push!(parent::BoxContainer, child::Widget)
+    insert!(parent, length(parent) + 1, child)
+end
+unshift!(parent::BoxContainer, child::Widget) = insert!(parent, 1, child)
+
+## append!(parent, [child1, child2, ...])
+function append!{T <: Widget}(parent::BoxContainer, children::Vector{T})
+    for child in children
+        push!(parent, child)
+    end
+    children
+end
+
+## prepend!(parent, [child1, child2, ...])
+function prepend!{T <: Widget}(parent::BoxContainer, children::Vector{T})
+    for child in reverse(children)
+        insert!(parent, 1, child)
+    end
+    children
+end
+prepend!(parent::BoxContainer, child) = prepend!(parent, [child])
+
+## Remove a child by index
+function splice!(parent::Container, index::Int)
+    child = children(parent)[index]
+    splice!(parent.children, index)
+    remove_child(parent.toolkit, parent, child)
+    child
+end
+
+
+## delete last one
+function pop!(parent::Container) 
+    splice!(parent, length(parent))
+end
+
+## remove child from contaier, using pop! in Dict sense
+function pop!(parent::Container, child::Widget)
+    splice!(parent, findin(child, parent))
+end
+
+
+## shift off first one
+shift!(parent::Container) = splice!(parent, 1)
+
+## findin
+## return index of child in parent or 0 if not present
+function findin(child::Widget, parent::Container) 
+    kids = children(parent)
+    n = length(kids)
+    out = [1:n][child .== kids]
+    length(out) == 0 ? 0 : out[1] 
+end
+ 
+
+##################################################
+##
+## Grid container
+##
+
+type GridContainer <: Container
+    o
+    block
+    parent
+    toolkit
+    children
+    attrs::Dict
+end
+
+## Grid
+##
+## a grid-like container
+##
+## Conceptually a grid is treated like a matrix.
+##
+## One can add children by index:
+## - `parent[i,j] = child`
+## - `parent[:,:] = [child1 child2; nothing child3]`
+##
+## Children can span multiple cells if added as follows
+## - `parent[i:(i+k), j:(j+l)] = child`
+##
+## children can be referenced by index, as in `parent[i,j]`.
+##
+## Children can be removed via `pop!(parent, child)`.
+## 
+## the size policy and alignment policies are used to position children within a cell
+##
+## Rows and columns can be configured to have a minimum height, width or relative size through
+## `row_minimum_height`, `column_minimum_width`, `row_stretch`, `column_stretch`.
+
+function grid(parent::Container; kwargs...)
+    ## general (stuff kwargs -> attrs)
+    attrs = Dict()
+    for (k, v) in kwargs
+        attrs[k] = v
+    end
+    ## Toolkit
+    widget, block = grid(parent.toolkit, parent)
+
+    ##
+    GridContainer(widget, block, parent, parent.toolkit, {}, attrs)
+end
+
+function column_minimum_width(object::GridContainer, j::Int, width::Int)
+    column_minimum_width(object.toolkit, object, j, width)
+end
+
+function row_minimum_height(object::GridContainer, i::Int, height::Int)
+    row_minimum_width(object.toolkit, object, i, height)
+end
+
+function column_stretch(object::GridContainer, j::Int, weight::Int)
+    column_stretch(object.toolkit, object, j, weight)
+end
+function row_stretch(object::GridContainer, i::Int, weight::Int)
+    row_stretch(object.toolkit, object, i, weight)
+end
+
+
+## return number of rows and columns
+size(object::GridContainer) = grid_size(object.toolkit, object)
+size(object::GridContainer, i::Int) = grid_size(object.toolkit, object)[i]
+endof(object::GridContainer) = prod(size(object))
+ndims(object::GridContainer) = 2
+function clear(object::GridContainer)
+    for child in children(object)
+        remove(child.toolkit, child.parent, child)
+    end
+    object.children = {}
+end
+
+## add children to grid container using array notation
+##
+## * `parent[i,j] = child` places child at grid location i, j
+## * `parent[1:4, 2:3] = child` will place over multiple cells
+function setindex!(parent::GridContainer, child::Widget, i::Union(Int, Range1), j::Union(Int, Range1))
+    ## must check that parents agree
+    if parent != child.parent
+        error("Parents are not the same")
+    end
+
+    ## How to organize children here? Could be a matrix, could carry ind info.... Useful for getindex..
+    push!(parent.children, child) ## just a vector for now
+    grid_add_child(parent.toolkit, child, i, j)
+end
+
+## place children through grid notation
+##
+## * `parent[:,:] = [w1 w2; nothing w3]` will place the three children in cells (1,1), (1,2) and (2,2).
+function setindex!(parent::GridContainer, children::Array, i::Union(Int, Range1), j::Union(Int, Range1))
+    nr, nc = size(parent)
+    if length(i) == nr && length(j) == nc
+        clear(parent)
+    end
+
+    nr, nc = size(children)
+    for i in 1:nr, j in 1:nc
+        child = children[i, j]
+        if isa(child, Widget)
+            parent[i, j] = child
+        end
+    end
+end
+
+### retrieve children through array notation
+function getindex(object::GridContainer, i::Int, j::Int)
+    grid_get_child_at(object.toolkit, object, i, j)
+end
+
+function getindex(object::GridContainer, i::Union(Vector, Range1), j::Union(Vector, Range1))
+    [object[ii, jj] for j in jj, ii in i]
+end
+
+## Remove a child. What to name this?
+function pop!(parent::GridContainer, child::Widget)
+    filter!(x -> !(x == child), parent.children)
+    remove_child(parent.toolkit, parent, child)
+end
+
+###
+type FormLayout <: Container
+    o
+    block
+    parent
+    toolkit
+    children
+    child_labels
+    attrs::Dict
+end
+
+## formlayout
+##
+## container to layout children in simple "label: control" form
+##
+## children are pushed onto the end with an additional label (which may be null):
+## - `push!(parent, child, label)`
+##
+## The `getValue` method will return a dictionary of control values keyed by the labels.
+##
+function formlayout(parent::Container; kwargs...)
+    ## general (stuff kwargs -> attrs)
+    attrs = Dict()
+    for (k, v) in kwargs
+        attrs[k] = v
+    end
+    ## Toolkit
+    widget, block = formlayout(parent.toolkit, parent)
+
+    ##
+    obj = FormLayout(widget, block, parent, parent.toolkit, {}, {}, attrs)
+    obj[:sizepolicy] = (:expand, :expand)
+    obj
+end
+
+## add children via push!(lty, child, label)
+function push!(parent::FormLayout, child::Widget, label::Union(Nothing, String))
+    push!(parent.children, child)
+    push!(parent.child_labels, label)
+    formlayout_add_child(parent.toolkit, child, label)
+end
+
+## return dictionary of control values
+function getValue(widget::FormLayout)
+    kids = children(widget)
+    labels = widget.child_labels
+    d = Dict()
+    for i in 1:length(kids)
+        if !isa(kids[i], Control) next end
+        label = labels[i]
+        key = isa(label, Nothing) ? string("control i") : label
+        d[key] = getValue(kids[i])
+    end
+    d
+end
+
+##################################################
+##    
+## notebook
+
+type NoteBook <: Container
+    o
+    block
+    parent
+    toolkit
+    children
+    model
+    attrs::Dict
+end
+
+## notebook container
+##
+## Arugments
+##
+## * `parent::Container` parent container
+##
+## Signals
+##
+## * `valueChanged (value)` value is currently selected tab index
+##
+## Methods
+## 
+## * `length` number of tables
+## * `insert!` insert at `i` with label 
+function notebook(parent::Container)
+    model = ItemModel(0)
+    widget, block = notebook(parent.toolkit, parent, model)
+    NoteBook(widget, block, parent, parent.toolkit, {}, model, Dict())
+end
+
+## interface
+length(object::NoteBook) = length(object.children)
+function setValue(object::NoteBook, i::Int) 
+    if i < 1 || i > length(object)
+        return
+    end
+    setValue(object.model, i)
+end
+getValue(object::NoteBook) = getValue(object.model)
+
+function insert!(parent::NoteBook, child::Widget, i::Int, label::String)
+    if i < 0 || i > length(parent) + 1
+        error("Index needs to be between 1 and n+1")
+    end
+
+    notebook_insert_child(parent.toolkit, parent, child, i, label)
+    insert!(parent.children, i, child)
+
+end
+push!(parent::NoteBook, child::Widget, label::String) = insert!(parent, child, length(parent) + 1, label)
+unshift!(parent::NoteBook, child::Widget, label::String) = insert!(parent, child, 1, label)
+
+## Remove a child by index
+function splice!(parent::NoteBook, index::Int)
+    child = children(parent)[index]
+    notebook_remove_child(parent.toolkit, parent, child)
+    splice!(parent.children, index)
+    child
+end
+pop!(parent::NoteBook) = splice!(parent, length(parent))
+shift!(parent::NoteBook) = splice!(parent, 1)
+
+pop!(parent::NoteBook, child::Widget) = splice!(parent, findin(child, parent))
+
+
+
+## panedgroup
+## expandgroup...
