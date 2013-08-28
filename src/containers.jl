@@ -61,6 +61,14 @@ function window(;toolkit::MIME=MIME("application/x-tcltk"), title::String="", kw
     obj
 end
 
+## raise window
+raise(o::Widget) = raise(o.parent)
+raise(o::Window) = raise(o.toolkit, o)
+
+## lower window
+lower(o::Widget) = lower(o.parent)
+lower(o::Window) = lower(o.toolkit, o)
+
 ## close window
 destroy(o::Widget) = destroy(o.parent)
 function destroy(o::Window)
@@ -336,6 +344,9 @@ function setSpacing(object::GridContainer, px::Vector{Int})
     setSpacing(object.toolkit, object, px)
 end
 
+list_props(::@PROP("GridContainer")) = {:spacing => "[x,y] padding around each child widget"
+                                       }
+
 ## return number of rows and columns
 size(object::GridContainer) = grid_size(object.toolkit, object)
 size(object::GridContainer, i::Int) = grid_size(object.toolkit, object)[i]
@@ -405,6 +416,7 @@ type FormLayout <: Container
     children
     child_labels
     attrs::Dict
+    spacing
 end
 
 ## formlayout
@@ -426,7 +438,7 @@ function formlayout(parent::Container; kwargs...)
     widget, block = formlayout(parent.toolkit, parent)
 
     ##
-    obj = FormLayout(widget, block, parent, parent.toolkit, {}, {}, attrs)
+    obj = FormLayout(widget, block, parent, parent.toolkit, {}, {}, attrs, [5,2])
     obj[:sizepolicy] = (:expand, :expand)
     obj
 end
@@ -451,6 +463,18 @@ function getValue(widget::FormLayout)
     end
     d
 end
+
+
+## Properties
+getSpacing(object::FormLayout) = object.spacing
+setSpacing(object::FormLayout, px::Int) = setSpacing(object, [px, px])
+function setSpacing(object::FormLayout, px::Vector{Int}) 
+    object.spacing = px
+    setSpacing(object.toolkit, object, px)
+end
+
+list_props(::@PROP("FormLayout")) = {:spacing => "[x,y] padding around each child widget",
+                                     :value => "read only. Returns dictionary of widget values"}
 
 ##################################################
 ##    

@@ -1,6 +1,8 @@
 module JGUI
 
 using Tk
+using Winston
+
 ## for Images
 using Images
 using Cairo
@@ -10,16 +12,20 @@ using Base.Graphics
 import Base: show
 import Base: getindex, setindex!, length, push!, append!, prepend!, insert!, splice!, shift!, unshift!, pop!, findin
 import Base: size, endof, ndims
-import Base: notify
+import Base: connect, notify
 
-export getValue, setValue, connect, disconnect,
-       destroy
+export getValue, setValue, disconnect
 
-export window, labelframe,
+
+export window, 
+       destroy, raise, lower
+
+export labelframe,
        hbox, vbox, 
-       grid, formlayout,
+       formlayout,
        notebook,
        children,
+       grid,
        row_minimum_height, column_minimum_width, row_stretch, column_stretch
 
 export label, separator, button, lineedit, textedit,
@@ -28,7 +34,7 @@ export label, separator, button, lineedit, textedit,
        listview, storeview, treeview, 
        cairographics, imageview
 
-export Store
+export Store, TreeStore
 
 export treestore, expand_node, collapse_node, node_to_path, path_to_node, update_node
 

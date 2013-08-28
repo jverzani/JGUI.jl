@@ -8,7 +8,7 @@ enabled(::MIME"application/x-tcltk", o::Widget, value::Bool) = Tk.set_enabled(ge
 visible(::MIME"application/x-tcltk", o::Widget) = Tk.get_visible(getWidget(o))
 visible(::MIME"application/x-tcltk", o::Widget, value::Bool) = Tk.set_visible(getWidget(o), value)
 getSize(::MIME"application/x-tcltk", o::Widget)  = [Tk.width(getWidget(o)), Tk.height(getWidget(o))]
-setSize(::MIME"application/x-tcltk", o::Widget, value)  = Tk.set_size(getWidget(o), value)
+setSize(::MIME"application/x-tcltk", o::Widget, value)  = Tk.set_size(o.block, value)
 getFocus(::MIME"application/x-tcltk", o::Widget) = nothing
 setFocus(::MIME"application/x-tcltk", o::Widget, value::Bool) = value ? Tk.focus(getWidget(o)) : nothing
 getWidget(::MIME"application/x-tcltk", o::Widget) = o.o
@@ -18,44 +18,48 @@ getWidget(::MIME"application/x-tcltk", o::Widget) = o.o
 
 ## Window
 function window(::MIME"application/x-tcltk")
-    block = Tk.Toplevel()
-    widget = Frame(block)
-    pack(widget, expand=true, fill="both")
+    widget = Tk.Toplevel()
+    block = Frame(widget)
+    pack(block, expand=true, fill="both")
     (widget, block)
 end
-## widget is all messed up
+## widget is all messed up, need to use block when it is a parent
 getWidget(::MIME"application/x-tcltk", o::Window) = o.block
 
 
 ### window methods
-function destroy_window(::MIME"application/x-tcltk", o::Window)
-    tcl("destroy", o.block)
-end
+raise(::MIME"application/x-tcltk", o::Window) = Tk.raise(o.o)
+lower(::MIME"application/x-tcltk", o::Window) = tcl("lower", o.o)
+destroy_window(::MIME"application/x-tcltk", o::Window) = tcl("destroy", o.o)
+
 
 ### window properties
-getTitle(::MIME"application/x-tcltk", o::Window) = Tk.wm(o.block, "title")
-setTitle(::MIME"application/x-tcltk", o::Window, value::String) = Tk.wm(o.block, "title", Tk.tk_string_escape(value))
+function setSize(::MIME"application/x-tcltk", o::Window, sz::Vector{Int}) 
+    Tk.pack_stop_propagate(o.o)
+    Tk.configure(o.o, width=sz[1], height=sz[2])
+end
+getTitle(::MIME"application/x-tcltk", o::Window) = Tk.wm(o.o, "title")
+setTitle(::MIME"application/x-tcltk", o::Window, value::String) = Tk.wm(o.o, "title", Tk.tk_string_escape(value))
 function getModal(::MIME"application/x-tcltk", o::Window) 
-    val = tcl("grab", "status", o.block)
+    val = tcl("grab", "status", o.o)
     println("modal:", val)
     val == "" ? false : true
 end
 function setModal(::MIME"application/x-tcltk", o::Window, value::Bool) 
     if value
         function callback(path)
-            tcl("grab", "release", o.block)
+            tcl("grab", "release", o.o)
             ## Insert method here ...
             destroy(o)
         end
-        Tk.wm(o.block, "protocol", "WM_DELETE_WINDOW", callback)
-#        tcl("tkwait", "window", o.block)
+        Tk.wm(o.o, "protocol", "WM_DELETE_WINDOW", callback)
+#        tcl("tkwait", "window", o.o)
         ## This make Tk window modal, but not console...
-        tcl("grab", "set", "-global", o.block)
+        tcl("grab", "set", "-global", o.o)
     else
-       tcl("grab", "release", o.block)
+       tcl("grab", "release", o.o)
     end
 end
-
 
 
 ## for BinContainer, only one child we pack and expand...
@@ -221,6 +225,10 @@ function formlayout_add_child(::MIME"application/x-tcltk", child::Widget, label:
     Tk.formlayout(child.block, label)
 end
 
+function setSpacing(::MIME"application/x-tcltk", object::FormLayout, px::Vector{Int})
+    children= split(Tk.winfo(parent[:widget], "children"))
+    [Tk.tcl("grid", "configure", child, padx=px[1], pady=px[2]) for child in children]
+end
 
 ## Notebook
 function notebook(::MIME"application/x-tcltk", parent::Container, model::Model)
@@ -759,7 +767,8 @@ function treeview(::MIME"application/x-tcltk", parent::Container, store::TreeSto
         path
     end
     function tk_xy_to_path(x, y)
-        col = parseint(Tk.tcl(widget, "identify", "column", x, y) + 1)
+        col = Tk.tcl(widget, "identify", "column", x, y)
+        col = parseint(col[2:end]) + 1 # strip off #
         item = Tk.tcl(widget, "identify", "item", x, y)
         (tk_item_to_path(item), col)
     end
@@ -779,12 +788,12 @@ function treeview(::MIME"application/x-tcltk", parent::Container, store::TreeSto
         path = tk_item_to_path(item)
         notify(model, "nodeCollapsed", path)
     end
-    bind(widget, "<Button-1>") do path, x, y
-        item, column = tk_xy_to_path(w, y)
+    bind(widget, "<Button-1>") do path,  x, y
+        item, column = tk_xy_to_path(x, y)
         notify(model, "clicked", path, column)
     end
-    bind(widget, "<Double-Button-1>") do path
-        item, column = tk_xy_to_path(w, y)
+    bind(widget, "<Double-Button-1>") do path, x, y
+        item, column = tk_xy_to_path(x, y)
         notify(model, "DoubleClicked", path, column)
     end
     
@@ -915,7 +924,7 @@ function setModaless(::MIME"application/x-tcltk", dlg::Dialog, value::Bool)
 end
 function destroy(::MIME"application/x-tcltk", dlg::Dialog)
     setModal(dlg, false)
-    tcl("destroy", o.widget)
+    tcl("destroy", dlg.o)
 end
 
 

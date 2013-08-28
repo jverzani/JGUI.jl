@@ -173,7 +173,8 @@ g[:,:] = [b1 b2; nothing b3]
 
 The expanding and alignment properties of how a child is placed into a
 parent are specified for the child, not the container. These are done
-through the properties `:sizepolicy` and `:alignment`.
+through the properties `:sizepolicy` and `:alignment`. Padding is done
+through the `:spacing` properties of the containers.
 
 ### properties 
 
@@ -193,7 +194,7 @@ push!(b)
 
 Some properties are dynamic, this one is not. It should be set before packing into a layout.
 
-The main value of widget is assigned the `value` property. For a button this is the label:
+The main value of a widget is assigned the `value` property. For a button this is the label:
 
 ```
 w = window(title="change label")
@@ -204,8 +205,8 @@ b[:value]			# "new label"
 ```
 
 When a property, say ':prop' is looked up a search for
-either a `getProp` or `setProp` method is made. Though not exported,
-This can be useful when using the property in a callback.
+either a `getProp` or `setProp` method is made. Though not exported, save for `getValue` and `setValue`
+this can be useful when using the property in a callback.
 
 ## signals
 
@@ -230,10 +231,12 @@ f = hbox(w); push!(f)
 sl = slider(f, 1:20)
 l = label(f, sl[:value])
 append!(f, [sl, l])
-connect(sl, "valueChanged", l, JGUI.setValue)
+connect(sl, "valueChanged", l, setValue)
 ```
 
-Some alternatives would be `connect(rb, "valueChanged", l, (l, value) -> l[:value] = value)` or `connect(rb, "valueChanged", value -> l[:value] = value)`.
+Some alternatives would be `connect(rb, "valueChanged", l, (l, value)
+-> l[:value] = value)` or `connect(rb, "valueChanged", value ->
+l[:value] = value)`.
 
 
 As an aside, this can also be done by sharing the model, as with:
@@ -271,7 +274,7 @@ The basic widgets are:
 
 * `radiogroup` exclusive set of buttons
 
-* `buttongroup` exclusive or not set of buttons
+* `buttongroup` exclusive (or not) set of buttons
 
 * `combobox` a popup selection widget
 
@@ -287,14 +290,19 @@ The basic widgets are:
 
 * `cairographics`  used with `Winston` graphics
 
-* `XXX`
+* `imageview` used to display an `Image` object (from the `Images` package)
 
 
 #### XXX example
 
+
+
 #### Cairographics example
 
-The `cairographics` widget is a light wrapper around `Tk.Canvas`. (Meaning it won't be portable across GUI toolkits, should that ever happen.) To use the canvas, access the `.o` property of the `cairographics` object:
+The `cairographics` widget is a light wrapper around
+`Tk.Canvas`. (Meaning it won't be portable across GUI toolkits, should
+that ever happen.) To use the canvas, access the `:widget` property of the
+`cairographics` object:
 
 ```
 ## update two graphics windows...
@@ -303,21 +311,23 @@ w = window()
 f = grid(w); push!(f)
 g1 = cairographics(f, width=480, height=400)
 g2 = cairographics(f, width=480, height=400)
-b = button(f, "update"); b[:alignment] = (nothing, :right)
+b = button(f, "update"); b[:alignment] = (:right, :center)
 f[:,:] = [g1 g2; nothing b]
 connect(b, "clicked") do
-   p = FramedPlot(); add(p, Curve(rand(10), rand(10))); Winston.display(g1.o, p)
-   p = FramedPlot(); add(p, Curve(rand(10), rand(10))); Winston.display(g2.o, p)
+   p = FramedPlot(); add(p, Curve(rand(10), rand(10))); Winston.display(g1[:widget], p)
+   p = FramedPlot(); add(p, Curve(rand(10), rand(10))); Winston.display(g2[:widget], p)
 end
 notify(b, "clicked")	# roundabout way to draw initial graphic, ...
 ```
 
 #### Storeview example
 
-A store is a vector of composite items displayed in a grid with each row representing an item. The items should inherit `AbstractStoreItem`. Here is an example. First we define a type for our items and some instances:
+A store is a vector of a composite type displayed in a grid with each
+row representing an item.  Here is an example. First we define a type for
+our items and some instances:
 
 ```
-type Test <: AbstractStoreItem
+type Test 
     x::Int
     y::Real
     z::String
@@ -337,13 +347,12 @@ store = Store{Test}([t1, t2, t3])
 Here is how we lay it out:
 
 ```
-w = window()
+w = window(size=[300, 300])
 sv = storeview(w, store)
 push!(sv)
 
 sv[:widths] = [100, 100, 100]	# column widths
 sv[:selectmode] = :multiple	# :single or :multiple
-w[:size] = [300, 300]		# Need some size, as sv requests none with Tk
 id = connect(sv, "rowClicked", (row, col) -> println((row, col))) # sample handler
 ```
 
@@ -382,10 +391,10 @@ t2  = Test(2, 2.0, "two")
 ```
 
 ```
-tstore = JGUI.TreeStore()
+tstore = treestore()
 w = window(size=[300, 300])
 tv = JGUI.treeview(w, tstore, tpl=t1) ## pass in something to determine columns, headers
-push!(tv)
+push!(tv)	      
 ```
 
 To manage child items, we have `insert!`:
@@ -422,7 +431,7 @@ There are some standard modal dialogs
 
 * `confirmbox`
 
-In addition, the `dialog` constructor can be used to generate dialogs, similar to Qt's base Dialog class:
+In addition, the `dialog` constructor can be used to generate dialogs, somewhat similar to Qt's base Dialog class:
 
 ```
 w = window()
