@@ -78,7 +78,7 @@ end
 
 ## set padx, pady for all the children
 function setSpacing(::MIME"application/x-tcltk", parent::BoxContainer, px::Vector{Int})
-    children= split(Tk.tcl(parent[:widget], "children"))
+    children= split(Tk.winfo(parent[:widget], "children"))
     [Tk.tcl("pack", "configure", child, padx=px[1], pady=px[2]) for child in children]
 end
 
@@ -160,6 +160,14 @@ end
 function grid_size(::MIME"application/x-tcltk", widget::GridContainer)
      map(parseint, split(tcl("grid", "size", getWidget(widget))))
 end
+
+## grid spacing
+function setSpacing(::MIME"application/x-tcltk", parent::GridContainer, px::Vector{Int})
+    children= split(Tk.winfo(parent[:widget], "children"))
+    [Tk.tcl("grid", "configure", child, padx=px[1], pady=px[2]) for child in children]
+end
+
+
 
 function compute_sticky(child::Widget)
     spx, spy = child[:sizepolicy]

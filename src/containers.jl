@@ -168,7 +168,7 @@ function boxcontainer(parent::Container; direction::Symbol=:horizontal, kwargs..
 
 
     ##
-    BoxContainer(widget, block, parent, parent.toolkit, {}, attrs, spacing=[2,2])
+    BoxContainer(widget, block, parent, parent.toolkit, {}, attrs, [2,2])
 end
 
 hbox(parent::Container; kwargs...) = boxcontainer(parent, direction=:horizontal, kwargs...)
@@ -184,7 +184,8 @@ clear(object::BoxContainer)  = splice!(object, 1:length(object))
 ## properties
 ## may be dynamic and adjust for just current chidren
 ## spacing around each child
-setSpacing(object::BoxContainer, px::Int) = getSpacing(object, [px,px])
+getSpacing(object::BoxContainer) = object.spacing
+setSpacing(object::BoxContainer, px::Int) = setSpacing(object, [px,px])
 function setSpacing(object::BoxContainer, px::Vector{Int})
     object.spacing = px
     setSpacing(object.toolkit, object, px)
@@ -192,6 +193,10 @@ end
 ## margin around insider of container
 setMargin(object::BoxContainer, px::Int) = setMargin(object::BoxContainer, [px,px])
 setMargin(object::BoxContainer, px::Vector{Int}) = setMargin(object.toolkit, object, px)
+
+list_props(::@PROP("BoxContainer")) = {:margin  => "[x,y] area in pixels around interior of box",
+                                       :spacing => "[x,y] padding around each child widget"
+                                       }
 
 
 ## add child to parent
@@ -270,6 +275,7 @@ type GridContainer <: Container
     toolkit
     children
     attrs::Dict
+    spacing
 end
 
 ## Grid
@@ -304,7 +310,7 @@ function grid(parent::Container; kwargs...)
     widget, block = grid(parent.toolkit, parent)
 
     ##
-    GridContainer(widget, block, parent, parent.toolkit, {}, attrs)
+    GridContainer(widget, block, parent, parent.toolkit, {}, attrs, [2,2])
 end
 
 function column_minimum_width(object::GridContainer, j::Int, width::Int)
@@ -322,6 +328,13 @@ function row_stretch(object::GridContainer, i::Int, weight::Int)
     row_stretch(object.toolkit, object, i, weight)
 end
 
+## Properties
+getSpacing(object::GridContainer) = object.spacing
+setSpacing(object::GridContainer, px::Int) = setSpacing(object, [px, px])
+function setSpacing(object::GridContainer, px::Vector{Int}) 
+    object.spacing = px
+    setSpacing(object.toolkit, object, px)
+end
 
 ## return number of rows and columns
 size(object::GridContainer) = grid_size(object.toolkit, object)
