@@ -49,12 +49,13 @@ type Window <: BinContainer
 end
 
 ## Main Window
-## XXX deal with toolkit
+## XXX deal with toolkit, menubar, statusbar
 ## kwargs are used to pass along properties to the constructor (size)
 function window(;toolkit::MIME=MIME("application/x-tcltk"), title::String="", kwargs...)
     widget, block = window(toolkit)
     obj = Window(widget, block, nothing, EventModel(), toolkit, {}, Dict())
     obj[:title] = title
+    obj[:icontheme] = :default
     for (k, v) in kwargs
         obj[k] = v
     end
@@ -139,7 +140,6 @@ type BoxContainer <: Container
     toolkit
     children
     attrs::Dict
-    spacing
 end
 
 ## A boxcontainer holds child objects either horizontally (`hbox`) or vertically (`vbox`)
@@ -171,12 +171,13 @@ function boxcontainer(parent::Container; direction::Symbol=:horizontal, kwargs..
         attrs[k] = v
     end
     attrs[:direction] = direction
+    attrs[:spacing] = [2,2]
     ## Toolkit
     widget, block = boxcontainer(parent.toolkit, parent)
 
 
     ##
-    BoxContainer(widget, block, parent, parent.toolkit, {}, attrs, [2,2])
+    BoxContainer(widget, block, parent, parent.toolkit, {}, attrs)
 end
 
 hbox(parent::Container; kwargs...) = boxcontainer(parent, direction=:horizontal, kwargs...)
@@ -192,10 +193,10 @@ clear(object::BoxContainer)  = splice!(object, 1:length(object))
 ## properties
 ## may be dynamic and adjust for just current chidren
 ## spacing around each child
-getSpacing(object::BoxContainer) = object.spacing
+getSpacing(object::BoxContainer) = object.attrs[:spacing]
 setSpacing(object::BoxContainer, px::Int) = setSpacing(object, [px,px])
 function setSpacing(object::BoxContainer, px::Vector{Int})
-    object.spacing = px
+    object.attrs[:spacing] = px
     setSpacing(object.toolkit, object, px)
 end
 ## margin around insider of container
@@ -283,7 +284,6 @@ type GridContainer <: Container
     toolkit
     children
     attrs::Dict
-    spacing
 end
 
 ## Grid
@@ -310,7 +310,7 @@ end
 
 function grid(parent::Container; kwargs...)
     ## general (stuff kwargs -> attrs)
-    attrs = Dict()
+    attrs = {:spacing => [2,2]}
     for (k, v) in kwargs
         attrs[k] = v
     end
@@ -318,7 +318,7 @@ function grid(parent::Container; kwargs...)
     widget, block = grid(parent.toolkit, parent)
 
     ##
-    GridContainer(widget, block, parent, parent.toolkit, {}, attrs, [2,2])
+    GridContainer(widget, block, parent, parent.toolkit, {}, attrs)
 end
 
 function column_minimum_width(object::GridContainer, j::Int, width::Int)
@@ -337,10 +337,10 @@ function row_stretch(object::GridContainer, i::Int, weight::Int)
 end
 
 ## Properties
-getSpacing(object::GridContainer) = object.spacing
+getSpacing(object::GridContainer) = object.attrs[:spacing]
 setSpacing(object::GridContainer, px::Int) = setSpacing(object, [px, px])
 function setSpacing(object::GridContainer, px::Vector{Int}) 
-    object.spacing = px
+    object.attrs[:spacing] = px
     setSpacing(object.toolkit, object, px)
 end
 
@@ -416,7 +416,6 @@ type FormLayout <: Container
     children
     child_labels
     attrs::Dict
-    spacing
 end
 
 ## formlayout
@@ -430,7 +429,7 @@ end
 ##
 function formlayout(parent::Container; kwargs...)
     ## general (stuff kwargs -> attrs)
-    attrs = Dict()
+    attrs = {:spacing => [5,2]}
     for (k, v) in kwargs
         attrs[k] = v
     end
@@ -438,7 +437,7 @@ function formlayout(parent::Container; kwargs...)
     widget, block = formlayout(parent.toolkit, parent)
 
     ##
-    obj = FormLayout(widget, block, parent, parent.toolkit, {}, {}, attrs, [5,2])
+    obj = FormLayout(widget, block, parent, parent.toolkit, {}, {}, attrs)
     obj[:sizepolicy] = (:expand, :expand)
     obj
 end
@@ -466,10 +465,10 @@ end
 
 
 ## Properties
-getSpacing(object::FormLayout) = object.spacing
+getSpacing(object::FormLayout) = object.attrs[:spacing]
 setSpacing(object::FormLayout, px::Int) = setSpacing(object, [px, px])
 function setSpacing(object::FormLayout, px::Vector{Int}) 
-    object.spacing = px
+    object.attrs[:spacing] = px
     setSpacing(object.toolkit, object, px)
 end
 

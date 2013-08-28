@@ -4,9 +4,9 @@ using Tk
 using Winston
 
 ## for Images
-using Images
-using Cairo
-using Base.Graphics
+##using Images XXX  merge in possibly...
+##using Cairo
+##using Base.Graphics
 
 
 import Base: show
@@ -32,7 +32,8 @@ export label, separator, button, lineedit, textedit,
        checkbox, radiogroup, buttongroup, combobox,
        slider, slider2d,
        listview, storeview, treeview, 
-       cairographics, imageview
+       cairographics, imageview,
+       icon
 
 export Store, TreeStore
 
@@ -45,6 +46,7 @@ export manipulate
 
 include("types.jl")
 include("methods.jl")
+include("icons.jl")
 include("models.jl")
 include("containers.jl")
 include("widgets.jl")

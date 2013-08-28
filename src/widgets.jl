@@ -71,6 +71,11 @@ function setAlignment(o::Widget, value) #x::Union(Symbol, Nothing), y::Union(Sym
     o.attrs[:alignment] = value
 end
 
+## icontheme
+getIcontheme(o::Widget) = getIcontheme(o.parent)
+getIcontheme(o::Window) = o.attrs[:icontheme]
+setIcontheme(o::Widget, value::Symbol) = setIcontheme(o.parent, value)
+setIcontheme(o::Window, value::Symbol) = o.attrs[:icontheme] = value
 
 ## get widget. Mostly just obj.o, but there may be exceptions
 getWidget(o::Widget) = getWidget(o.toolkit, o)
@@ -83,7 +88,8 @@ list_props(::@PROP("Widget")) = {:value => "Value of object",
                                  :size => "widget size (width, height) in pixels",
                                  :focus => "Does control have focus",
                                  :sizepolicy => "(x,y) with x and y being nothing, :fixed or :expand",
-                                 :alignment => "(x,y) with x in (:left, :right, :center, :justify), y in (:top, :bottom, :center)"
+                                 :alignment => "(x,y) with x in (:left, :right, :center, :justify), y in (:top, :bottom, :center)",
+                                 :icontheme => "set theme for any icons to be added"
                                  }
 
 
@@ -179,6 +185,21 @@ end
 button(parent::Container, value::String) = button(parent, ItemModel(value))
 button(parent::Container, value::Number) = button(parent, string(value))
 
+function setIcon(object::Button, icon::Icon;
+                 theme::Union(Nothing, Symbol) = nothing,
+                 size::Union(Nothing, Vector{Int}) = nothing)
+    if theme == nothing
+        theme = object[:icontheme]
+    end
+    if size == nothing
+        size = [16, 16]
+    end
+    setIcon(object.toolkit, object, icon)#; theme=theme, size=size)
+end
+setIcon(object::Button, nm::Union(Symbol, String)) = setIcon(object, icon(nm))
+setIcon(object::Button, nm::Nothing) = setIcon(object.toolkit, object, icon)
+
+list_props(::@PROP("Button")) = {:icon => "Set accompanying icon"}
 ##################################################
 ## Text controls
 
@@ -558,53 +579,75 @@ end
 ## 
 ## Images
 
-type ImageView <: WidgetModel
+# type ImageView <: WidgetModel
+#     o
+#     block
+#     model
+#     parent
+#     toolkit
+#     attrs
+#     img
+#     draw
+#     function ImageView(widget, block, model, parent, toolkit, attrs, img)
+#         self = new(widget, block, model, parent, toolkit, attrs, img, nothing)
+#         self.draw = () -> image_draw(self.toolkit, self, self.img)
+#         self
+#     end
+# end
+
+
+# ## image viewer
+# ##
+# ## Display an Image image. 
+# ##
+# ## Arguments:
+# ##
+# ## * `img::Image` an `Images.Image` instance (use `imread`, say)
+# ##
+# ## Signals
+# ## * `mousePress (x,y)`
+# ## * `mouseRelease (x, y)`
+# ## * `mouseDoubleClick (x, y)`
+# ##
+# ## Status:
+# ##
+# ## Might work for you, but is flaky on the mac. (Size issues, need to have realized...)
+# ##
+# ## call the objects `.draw()` method to see the graphic, as in `obj.draw()`.
+# function imageview(parent::Container, img::Image)
+#     model = EventModel()
+#     widget, block = imageview(parent.toolkit, parent, model, img)
+#     o = ImageView(widget, block, model, parent, parent.toolkit, Dict(), img)
+#     ## Can't draw to a Cairo backend until it is realized
+#     connect(o.model, "realized") do 
+#         o.draw()
+#     end
+#     o
+# end
+
+type ImageView <: Widget
     o
     block
-    model
     parent
     toolkit
     attrs
-    img
-    draw
-    function ImageView(widget, block, model, parent, toolkit, attrs, img)
-        self = new(widget, block, model, parent, toolkit, attrs, img, nothing)
-        self.draw = () -> image_draw(self.toolkit, self, self.img)
-        self
-    end
 end
 
-
-## image viewer
-##
-## Display an Image image. 
-##
-## Arguments:
-##
-## * `img::Image` an `Images.Image` instance (use `imread`, say)
-##
-## Signals
-## * `mousePress (x,y)`
-## * `mouseRelease (x, y)`
-## * `mouseDoubleClick (x, y)`
-##
-## Status:
-##
-## Might work for you, but is flaky on the mac. (Size issues, need to have realized...)
-##
-## call the objects `.draw()` method to see the graphic, as in `obj.draw()`.
-function imageview(parent::Container, img::Image)
-    model = EventModel()
-    widget, block = imageview(parent.toolkit, parent, model, img)
-    o = ImageView(widget, block, model, parent, parent.toolkit, Dict(), img)
-    ## Can't draw to a Cairo backend until it is realized
-    connect(o.model, "realized") do 
-        o.draw()
+function imageview(parent::Container, img::Union(Nothing, String))
+    widget, block = imageview(parent.toolkit, parent)
+    o = ImageView(widget, block, parent, parent.toolkit, Dict())
+    if !isa(img, Nothing)
+        o[:image] = img
     end
     o
 end
 
-
+function setImage(o::ImageView, img::String)
+    if isfile(img)
+        o.attrs[:image] = img
+        setImage(o.toolkit, o, img)
+    end
+end
 ##################################################
 ##
 ## Widgets with array or tree models

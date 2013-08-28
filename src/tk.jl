@@ -2,7 +2,21 @@
 
 using Tk
 
-## methods
+## Icons
+function get_icon(::MIME"application/x-tcltk", o::StockIcon)
+    nm = "icon_" * string(o.theme) * "_" * string(o.nm)
+    file = Pkg.dir("JGUI", "icons", string(o.theme), string(o.nm) * ".png")
+    Tk.tcl("image", "create", "photo", nm, file=file)
+    nm
+end
+function get_icon(::MIME"application/x-tcltk", o::FileIcon)
+    nm = "icon_" * replace(basename("/tmp/test.png"), ".", "_")
+    Tk.tcl("image", "create", "photo", nm, file=o.file)
+    nm
+end
+
+
+## Widget methods
 enabled(::MIME"application/x-tcltk", o::Widget) = Tk.get_enabled(getWidget(o))
 enabled(::MIME"application/x-tcltk", o::Widget, value::Bool) = Tk.set_enabled(getWidget(o), value)
 visible(::MIME"application/x-tcltk", o::Widget) = Tk.get_visible(getWidget(o))
@@ -280,6 +294,23 @@ function button(::MIME"application/x-tcltk", parent::Container, model::Model)
     (widget, widget)
 end
 
+## XXX remove icon... 
+
+function setIcon(::MIME"application/x-tcltk", widget::Button, icon::Union(Nothing, Icon); kwargs...)
+    if isa(icon, Nothing)
+        Tk.configure(widget[:widget], compound="text")
+    else
+
+        if isa(icon.theme, Nothing) 
+            icon.theme = widget[:icontheme]
+        end
+        nm = get_icon(widget.toolkit, icon)
+        ## scale...
+        Tk.configure(widget[:widget], image=nm, compound="left")
+    end
+end
+    
+
 function lineedit(::MIME"application/x-tcltk", parent::Container, model::Model)
     
     widget = Tk.Entry(getWidget(parent), getValue(model))
@@ -546,7 +577,6 @@ end
 ## spinbox
 
 
-## imageviewer
 
 ## cairographics
 function cairographics(::MIME"application/x-tcltk", parent::Container, model::EventModel; width::Int=480, height::Int=400)
@@ -809,35 +839,50 @@ function setKeywidth(::MIME"application/x-tcltk", tr::TreeView, width::Int)
 end
     
 ## Images
-function imageview(::MIME"application/x-tcltk", parent::Container, model::EventModel, img)
+# function imageview(::MIME"application/x-tcltk", parent::Container, model::EventModel, img)
 
-    d, w, h = size(img)
-    block = Tk.Frame(parent[:widget])
-    widget = Tk.Canvas(block, w, h)
-    pack(widget, expand=true, fill="both")
+#     d, w, h = size(img)
+#     block = Tk.Frame(parent[:widget])
+#     widget = Tk.Canvas(block, w, h)
+#     pack(widget, expand=true, fill="both")
 
-    bind(block, "<Map>") do path
-        notify(model, "realized") 
-    end
+#     bind(block, "<Map>") do path
+#         notify(model, "realized") 
+#     end
 
 
-    ## Do I have any signals?
-    bind(widget, "<ButtonPress-1>",   (path,x,y)->notify(model, "mousePress", x, y))
-    bind(widget, "<ButtonRelease-1>", (path,x,y)->notify(model, "mouseRelease", x, y))
-    bind(widget, "<Double-Button-1>", (path,x,y)->notify(model, "mouseDoubleClick", x, y))
+#     ## Do I have any signals?
+#     bind(widget, "<ButtonPress-1>",   (path,x,y)->notify(model, "mousePress", x, y))
+#     bind(widget, "<ButtonRelease-1>", (path,x,y)->notify(model, "mouseRelease", x, y))
+#     bind(widget, "<Double-Button-1>", (path,x,y)->notify(model, "mouseDoubleClick", x, y))
 
    
 
+#     (widget, block)
+# end
+# function image_draw(::MIME"application/x-tcltk", o::ImageView, img::Image)
+#     buf = uint32color(img)'
+#     ctx = Base.Graphics.getgc(o[:widget])
+#     d, w, h = size(img)
+#     Tk.configure(o.block, width=w, height=h)
+#     image(ctx, buf, 0, 0, w, h)
+#     Tk.reveal(o[:widget])
+# end
+
+## place to put a png image
+function imageview(::MIME"application/x-tcltk", parent::Container)
+    widget = block = Tk.Label(parent[:widget], "")
+    Tk.configure(widget, compound="image")
     (widget, block)
 end
-function image_draw(::MIME"application/x-tcltk", o::ImageView, img::Image)
-    buf = uint32color(img)'
-    ctx = Base.Graphics.getgc(o[:widget])
-    d, w, h = size(img)
-    Tk.configure(o.block, width=w, height=h)
-    image(ctx, buf, 0, 0, w, h)
-    Tk.reveal(o[:widget])
+
+function setImage(o::ImageView, img::String)
+    nm = get_icon(o.toolkit. o, FileIcon(img))
+    Tk.tcl("image", "create", "photo", nm, file=img)
+    Tk.configure(o[:widget], image=nm, compound="image")
 end
+
+
 
 ##################################################
 ##
