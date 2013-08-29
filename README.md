@@ -1,6 +1,6 @@
 # JGUI
 
-An attempt to simplify the creation of GUIs within Julia
+An package to simplify the creation of GUIs within Julia
 
 
 The `JGUI` package provides a few different means to simplify the
@@ -12,8 +12,8 @@ toolkits to be used.
 # Manipulate
 
 
-The easiest way to create a GUI is to use `manipulate`, which can be
-used to evaluate an expression with values coming from easily
+The easiest way to create a GUI is to use the `manipulate` function, which can be
+used to evaluate an expression parameterized by values coming from easily
 specified controls within a GUI. 
 
 For example, consider the expression (using a modified version of Winston):
@@ -23,15 +23,21 @@ expr = quote
      plot(x -> sin(u * x), 0, 2pi)
 end
 ```
-The unbound variable `u` will be filled in by `manipulate`, but what this expression will do when evaluated is create a graphic. To create a control for `u`, we simple specify a range of values:
+
+The unbound variable `u` will be filled in by `manipulate`, when the
+expression is evaluated. The modified `plot` command return a Winston
+plot object, which is then plotted. To create a control for `u`, we
+simply need to specify a range of values:
 
 ```
 a = manipulate(expr, (:u, 1:10), modules=[:Winston])
 ```
 
-This will pop up a simple GUI with a slider that allows one to adjust the value of `u` from 1 to 10.
+This call will pop up a simple GUI with a slider that allows one to
+adjust the value of `u` from 1 to 10, updating the graphic as this is
+done.
 
-Here is a means to add a title to the plot:
+Here is a how one can add a title to the plot. First we modify the `plot` call to include a title:
 
 ```
 expr = quote
@@ -39,16 +45,27 @@ expr = quote
 end
 ```
 
-Now `title` is also unbound. Here we use a string:
+Now `title` is also unbound. To specify a control to set a title, we use a string:
 
 ```
 a = manipulate(expr, (:u, 1:10), (:title, "A sine plot"), modules=[:Winston])
 ```
 
-Now when the plot is updated, the title is taken from a text box.
+Now when the plot is updated, the title is also taken from a text box.
 
+Manipulate has other simple-to-specify controls:
 
+* `(:symbol, Bool)` - checkbox. Use `{:label=>"some label"}` to label it.
+* `(:symbol, Range)` - slider
+* `(:symbol, Range, Range)` - 2d slider
+* `(:symbol, Vector)` - radio or combobox (depends on size)
+* `(:symbol, String)` - text edit 
+* `(:symbol, Real)` - text edit with conversion to float via `parsefloat`
+* `(:symbol, Int)` - text edit with conversion to integer via `parseint`
 
+The expression can be a Winston plot object or any other object. Plot
+objects are plotted in a display, other objects are displayed as
+usual.
 
 ## A simplified GUI interface
 
@@ -67,14 +84,18 @@ connect(b, "clicked", w, destroy)
 ```
 
 The first line creates a window object with an optional size
-specified. The second shows how a property of the window object may be
+specified.
+
+
+The second line shows how a property of the window object may be
 set, using indexing notation with an appropriate symbol, in this case
 `:title`. There are relatively few properties for any given
-object. For a control, the most important is `:value`.
+object. For a control, the most important is `:value`. (The method
+`properties` will list all of a widget's properties.)
 
 The third line creates a button object. All constructors except
 `window` use a parent container for the first argument. (This is
-similar to `Tk` and so the layout hierarchy is determined, but not the
+similar to `Tk` and so the widget hierarchy is determined, but not the
 actual layout). The `button` constructor has label value for the
 second positional argument.
 
@@ -215,12 +236,17 @@ event. The syntax follows Qt's signals and slots. It can take two
 forms: `connect(receiver, signal, obj, slot)` or `connect(receiver,
 signal, slot)`, where `slot` is a function. In the first instance, the
 call is `slot(obj, vals...)` and the second, just `slot(vals...)`
-where `vals...` depends on the signal. The basic `valueChanged` signal
-passes in the value. A button's `clicked` signal has no value passed.
+where `vals...` depends on the signal: the basic `valueChanged` signal
+passes in the value; whereas, a button's `clicked` signal has no value passed.
 
 Widgets have different signals defined. Mostly the names follow a
 small subset of those for the corresponding Qt widget (hence the names
 in camelCase format).
+
+
+The connect method returns an id. This can be used with `disconnect`
+to remove an observer of an object. At present there is no way to
+temporarily suspend a callback.
 
 As an example,  This is how
 one connects a slider value to a label:
@@ -239,7 +265,7 @@ Some alternatives would be `connect(rb, "valueChanged", l, (l, value)
 l[:value] = value)`.
 
 
-As an aside, this can also be done by sharing the model, as with:
+As an aside, this can also be done by sharing the underlying model, as with:
 
 ```
 w = window(title="label and slider")
@@ -250,10 +276,6 @@ append!(f, [sl, l])
 ```
 
 
-
-The connect method returns an id. This can be used with `disconnect`
-to remove an observer of an object. At present there is no way to
-temporarily suspend a callback.
 
 
 ## Widgets
@@ -290,7 +312,7 @@ The basic widgets are:
 
 * `cairographics`  used with `Winston` graphics
 
-* `imageview` used to display an `Image` object (from the `Images` package)
+* `imageview` used to display `png` or `gif` image files.
 
 
 #### XXX example
@@ -379,15 +401,15 @@ In addition to `rowClicked`, there are `rowDoubleClicked`, `headerClicked`, and 
 A treeview uses a treestore to hold the data, again specified using a composite type. Here is a simple example:
 
 ```
-type Test 
+type Test2 
     x::Int
     y::Real
     z::String
 end
 
-t1  = Test(1, 1.0, "one")
-t11 = Test(11, 11.0, "one-one")
-t2  = Test(2, 2.0, "two")
+t1  = Test2(1, 1.0, "one")
+t11 = Test2(11, 11.0, "one-one")
+t2  = Test2(2, 2.0, "two")
 ```
 
 ```

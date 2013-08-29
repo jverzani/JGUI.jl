@@ -742,6 +742,10 @@ getWidths(s::ModelView) = getWidths(s.toolkit, s)
 setWidths(s::ModelView, widths::Vector{Int}) = setWidths(s.toolkit, s, widths)
 setWidths(s::ModelView, widths::Int) = setWidths(s, [widths])
 
+setIcon(s::StoreView, i::Int, icon::Icon) = setIcon(s.toolkit, s, i, icon)
+setIcon(s::StoreView, i::Int, icon::Symbol) = setIcon(s, i, StockIcon(icon, s[:icontheme]))
+setIcon(s::StoreView, i::Int, icon::String) = setIcon(s, i, FileIcon(icon))
+    
 
 list_props(::@PROP("ModelView")) = {:selectmode => "Either :single or :multiple",
                                     :widths => "Vector of column widths, in pixels"
@@ -834,6 +838,10 @@ list_props(::@PROP("TreeView")) = {:keywidth => "Width in pixels of column holdi
                                  }
                                  
 
+setIcon(s::TreeView, path::Vector{Int}, icon::Icon) = setIcon(s.toolkit, s, path, icon)
+setIcon(s::TreeView, path::Vector{Int}, icon::Symbol) = setIcon(s, path, StockIcon(icon, s[:icontheme]))
+setIcon(s::TreeView, path::Vector{Int}, icon::String) = setIcon(s, path, FileIcon(icon))
+    
 
 ## svg device
 

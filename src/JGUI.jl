@@ -14,7 +14,12 @@ import Base: getindex, setindex!, length, push!, append!, prepend!, insert!, spl
 import Base: size, endof, ndims
 import Base: connect, notify
 
-export getValue, setValue, disconnect
+
+export properties
+
+export getValue, setValue, setIcon
+
+export disconnect
 
 
 export window, 

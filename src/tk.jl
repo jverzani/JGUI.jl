@@ -734,6 +734,14 @@ function setHeader(::MIME"application/x-tcltk", s::StoreView, val::Bool)
     end
 end
 
+function setIcon(::MIME"application/x-tcltk", s::StoreView, i::Int, icon::Icon)
+    widget = s.o
+    item = split(Tk.tcl(widget, "children", "{}"))[i]
+    Tk.tcl(widget, "item", item, image=get_icon(s.toolkit, icon))
+    Tk.tcl(widget, "column", "#0", width=40)
+    Tk.configure(widget, show="tree headings")
+end
+
 ##################################################
 ## Tree view
 ## tpl: a template for the type, otherwise from tr.children[1]
@@ -787,35 +795,26 @@ function treeview(::MIME"application/x-tcltk", parent::Container, store::TreeSto
     ## movenode?
     ## signal changes back to model
     tk_selected_items() = split(Tk.tcl(widget, "selection"))
-    function tk_item_to_path(item)
-        path = [parseint(Tk.tcl(widget, "index", item)) + 1]
-        parent = Tk.tcl(widget, "parent", item)
-        while parent != ""
-            unshift!(path, parseint(Tk.tcl(widget, "index", parent)) + 1)
-            parent = Tk.tcl(widget, "parent", parent)
-        end
-        path
-    end
     function tk_xy_to_path(x, y)
         col = Tk.tcl(widget, "identify", "column", x, y)
         col = parseint(col[2:end]) + 1 # strip off #
         item = Tk.tcl(widget, "identify", "item", x, y)
-        (tk_item_to_path(item), col)
+        (tk_item_to_path(widget, item), col)
     end
 
     bind(widget, "<<TreeviewSelect>>") do path
         sel_items = tk_selected_items()
-        paths = map(tk_item_to_path, sel_items)
+        paths = map(item -> tk_item_to_path(widget, item), sel_items)
         setValue(model, paths)
     end
     bind(widget, "<<TreeviewOpen>>") do path
         item = Tk.tcl(widget, "focus")
-        path = tk_item_to_path(item)
+        path = tk_item_to_path(widget, item)
         notify(model, "nodeExpanded", path)
     end
     bind(widget, "<<TreeviewClose>>") do path
         item = Tk.tcl(widget, "focus")
-        path = tk_item_to_path(item)
+        path = tk_item_to_path(widget, item)
         notify(model, "nodeCollapsed", path)
     end
     bind(widget, "<Button-1>") do path,  x, y
@@ -830,6 +829,26 @@ function treeview(::MIME"application/x-tcltk", parent::Container, store::TreeSto
     (widget, block)
 end
 
+function tk_item_to_path(widget, item)
+    path = [parseint(Tk.tcl(widget, "index", item)) + 1]
+    parent = Tk.tcl(widget, "parent", item)
+    while parent != ""
+            unshift!(path, parseint(Tk.tcl(widget, "index", parent)) + 1)
+        parent = Tk.tcl(widget, "parent", parent)
+    end
+    path
+end
+
+## path --> item
+function tk_path_to_item(widget, path::Vector{Int})
+    ## Is there no better way then to list all children
+    item = "{}"
+    while length(path) > 0
+        i = shift!(path)
+        item = split(Tk.tcl(widget, "children", item))[i]
+    end
+    item
+end
 ## Properties
 function getKeywidth(::MIME"application/x-tcltk", tr::TreeView)
     parseint(Tk.tcl(tr.o, "column", "#0", "-width"))
@@ -838,6 +857,14 @@ function setKeywidth(::MIME"application/x-tcltk", tr::TreeView, width::Int)
     Tk.tcl(tr.o, "column", "#0", width=width)
 end
     
+
+
+function setIcon(::MIME"application/x-tcltk", s::TreeView, path::Vector{Int}, icon::Icon)
+    widget = s.o
+    item = tk_path_to_item(widget, path)
+    Tk.tcl(widget, "item", item, image=get_icon(s.toolkit, icon), text=txt)
+end
+
 ## Images
 # function imageview(::MIME"application/x-tcltk", parent::Container, model::EventModel, img)
 

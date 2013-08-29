@@ -1,12 +1,14 @@
 combobox: editable
-buttons: images (stock gif images?)
+spinbox
 menubars, toolbars ...
 window: closeHandler (return logical, only one so not a model)
-spinbox
 window: geometry, menubar/statusbar, toolkit
-<del>child: padding</del>
 write tests
-images: put onto tree/array, 
+connector/plug? some innerbox, outerbox language to refer to block and the reciever of the block
+
+<del>buttons: images (stock gif images?)</del>
+<del>child: padding</del>
+<del>images: put onto tree/array, </del>
 <del>radiobox: (Make sure assignment is valid, before setting); rb should be vector valued.(not restricted to numeric);<del>
 <del>image: ? (imageview)</del>
 <del>checkbox</del>

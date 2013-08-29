@@ -69,7 +69,11 @@ function properties(o::Object)
     d = Dict()
     s = typeof(o)
     while s != Any
-        d[string(s)] = list_props(PROP(string(s)))
+        try 
+            d[string(s)] = list_props(PROP(string(s)))
+        catch e
+            nothing
+        end
         s = super(s)
     end
     d
