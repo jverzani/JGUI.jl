@@ -145,7 +145,7 @@ function insert_child(::MIME"application/x-tcltk", parent::BoxContainer, index, 
     slaves = split(Tk.tcl("pack", "slaves", getWidget(parent)))
     side = (getProp(parent, :direction) == :horizontal) ? "left" : "top"
     expand, fill, anchor =  compute_expand_fill_anchor(parent, child) 
-    spacing = parent.spacing
+    spacing = parent.attrs[:spacing]
 
     ## println(("Debug", expand, fill, anchor))
 

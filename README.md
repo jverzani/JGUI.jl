@@ -12,15 +12,21 @@ toolkits to be used.
 # Manipulate
 
 
-The easiest way to create a GUI is to use the `manipulate` function, which can be
-used to evaluate an expression parameterized by values coming from easily
-specified controls within a GUI. 
+The easiest way to create a GUI with this package is to use the
+`manipulate` function, which can be used to evaluate an expression
+parameterized by values coming from easily specified controls within a
+GUI.
 
-For example, consider the expression (using a modified version of Winston):
+For example, consider the expression below which computes a Winston plot object:
 
 ```
+using JGUI
 expr = quote
-     plot(x -> sin(u * x), 0, 2pi)
+     f(x) = sin(u*x)
+     p = FramedPlot()
+     x = linspace(0, 2pi)
+     add(p, Curve(x, map(f, x)))
+     p
 end
 ```
 
@@ -41,7 +47,12 @@ Here is a how one can add a title to the plot. First we modify the `plot` call t
 
 ```
 expr = quote
-     plot(x -> sin(u * x), 0, 2pi, title=title)
+     f(x) = sin(u*x)
+     p = FramedPlot()
+     x = linspace(0, 2pi)
+     add(p, Curve(x, map(f, x)))
+     setattr(p,  "title", title)
+     p
 end
 ```
 
@@ -65,11 +76,15 @@ Manipulate has other simple-to-specify controls:
 
 The expression can be a Winston plot object or any other object. Plot
 objects are plotted in a display, other objects are displayed as
-usual.
+text.
 
 ## A simplified GUI interface
 
-The `Tk` package provides a relatively easy to learn means to produce GUIs, but hopefully the `JGUI` package makes it easier without sacrificing too much. (The `JGUI` interface is primarily concerned with controls, and not things like a canvas widget.)
+Though, the `Tk` package provides a relatively easy to learn means to
+produce GUIs, this package makes provides a small API for creating
+GUIS that makes it even easier without sacrificing too much. (The
+`JGUI` interface is primarily concerned with controls, and not things
+like a canvas widget.) The API is written to allow (in theory) other GUI toolkits to be used.
 
 ## Examples
 
