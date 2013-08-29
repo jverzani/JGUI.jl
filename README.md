@@ -133,7 +133,7 @@ arguments, something like `connect(b, "clicked", () -> destroy(w))`.
 ### constructors
 
 Let's look at another example, this one mimics, the first manipulate
-example:
+example (using a modified `plot` function):
 
 ```
 using Winston
