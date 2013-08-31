@@ -209,6 +209,7 @@ list_props(::@PROP("Button")) = {:icon => "Set accompanying icon"}
 ## (valueChanged, (value))
 ## (activated, ())
 ## (keystroke, (key))
+
 type LineEdit <: WidgetModel
     o
     block
@@ -229,7 +230,8 @@ end
 ## 
 ## Signals:
 ## * `editingFinished` (value) called when <return> key is pressed or blur
-## * `blur` (value) called on focus out event
+## * `focusIn`  called on focus in event
+## * `focusOut` (value) called on focus out event
 ## * `textChanged` (key) called on each keystroke
 ## * `valueChanged` (value) called on each change, even keystrokes
 ##
@@ -251,6 +253,15 @@ function getValue(obj::LineEdit)
     isa(obj.coerce, Nothing) ? val : try obj.coerce(val) catch e nothing end
 end
 
+## placeholder text
+getPlaceholdertext(obj::LineEdit) = obj.attrs[:placeholdertext]
+function setPlaceholdertext(obj::LineEdit, txt::String)
+    obj.attrs[:placeholdertext] = txt
+    notify(obj.model, "placeholderTextChanged", txt)
+end
+
+list_props(::@PROP("LineEdit")) = {:placeholdertext => "Text to display when widget has no value and no focus."}
+
 ## TextEdit
 type TextEdit <: WidgetModel
     o
@@ -268,7 +279,8 @@ end
 ##
 ## Signals:
 ## * `activated` (value) called when blur occurs
-## * `blur` (value) called on focus out event
+## * `focusIn`  called on focus out event
+## * `focusOut` (value) called on focus out event
 ## * `textChanged` (key) called on each keystroke
 ## * `valueChanged` (value) called on each change, even keystrokes
 ## * 

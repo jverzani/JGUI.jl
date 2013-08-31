@@ -4,8 +4,9 @@ menubars, toolbars ...
 window: closeHandler (return logical, only one so not a model)
 window: geometry, menubar/statusbar, toolkit
 write tests
+focus method
 connector/plug? some innerbox, outerbox language to refer to block and the reciever of the block
-
+lineedit: placeholder text
 <del>buttons: images (stock gif images?)</del>
 <del>child: padding</del>
 <del>images: put onto tree/array, </del>

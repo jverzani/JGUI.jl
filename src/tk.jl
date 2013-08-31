@@ -17,10 +17,10 @@ end
 
 
 ## Widget methods
-enabled(::MIME"application/x-tcltk", o::Widget) = Tk.get_enabled(getWidget(o))
-enabled(::MIME"application/x-tcltk", o::Widget, value::Bool) = Tk.set_enabled(getWidget(o), value)
-visible(::MIME"application/x-tcltk", o::Widget) = Tk.get_visible(getWidget(o))
-visible(::MIME"application/x-tcltk", o::Widget, value::Bool) = Tk.set_visible(getWidget(o), value)
+getEnabled(::MIME"application/x-tcltk", o::Widget) = Tk.get_enabled(getWidget(o))
+setEnabled(::MIME"application/x-tcltk", o::Widget, value::Bool) = Tk.set_enabled(getWidget(o), value)
+getVisible(::MIME"application/x-tcltk", o::Widget) = Tk.get_visible(getWidget(o))
+setVisible(::MIME"application/x-tcltk", o::Widget, value::Bool) = Tk.set_visible(getWidget(o), value)
 getSize(::MIME"application/x-tcltk", o::Widget)  = [Tk.width(getWidget(o)), Tk.height(getWidget(o))]
 setSize(::MIME"application/x-tcltk", o::Widget, value)  = Tk.set_size(o.block, value)
 getFocus(::MIME"application/x-tcltk", o::Widget) = nothing
@@ -56,7 +56,6 @@ getTitle(::MIME"application/x-tcltk", o::Window) = Tk.wm(o.o, "title")
 setTitle(::MIME"application/x-tcltk", o::Window, value::String) = Tk.wm(o.o, "title", Tk.tk_string_escape(value))
 function getModal(::MIME"application/x-tcltk", o::Window) 
     val = tcl("grab", "status", o.o)
-    println("modal:", val)
     val == "" ? false : true
 end
 function setModal(::MIME"application/x-tcltk", o::Window, value::Bool) 
@@ -262,7 +261,6 @@ end
 
 function notebook_remove_child(::MIME"application/x-tcltk", parent::NoteBook, child::Widget)
     index = findin(child, parent)
-    println("remove child, index=$index")
     if index != 0
         Tk.tcl(getWidget(parent), "forget", index-1)
     end
@@ -316,20 +314,43 @@ function lineedit(::MIME"application/x-tcltk", parent::Container, model::Model)
     widget = Tk.Entry(getWidget(parent), getValue(model))
     connect(model, "valueChanged", widget, Tk.set_value)
 
-    ## SIgnals: keyrelease (keycode), activated (value)
+    placeholdertext = [""]
+    
+    ## SIgnals: keyrelease (keycode), activated (value), focusIn, focusOut, textChanged
     bind(widget, "<Return>", (path) -> notify(model, "editingFinished", getValue(model)))
-    bind(widget, "<FocusOut>") do (path)
-        notify(model, "blur", getValue(model))
+    bind(widget, "<FocusOut>") do path
+        if length(model.value) == 0 && length(placeholdertext[1]) > 0
+            Tk.tcl(widget, "delete", "@0", "end")
+            Tk.tcl(widget, "insert", "@0", Tk.tk_string_escape(placeholdertext[1]))
+            Tk.configure(widget, foreground="gray")
+        end
+        notify(model, "focusOut", getValue(model))
         notify(model, "editingFinished", getValue(model))
     end
-        
+    bind(widget, "<FocusIn>") do path
+        if model.value == ""
+            Tk.tcl(widget, "delete", "@0", "end")
+            Tk.tcl(widget, "insert", "@0", "{}")
+            Tk.configure(widget, foreground="black") # theme dependent?
+        end
+        notify(model, "focusIn")
+    end
     bind(widget, "<KeyRelease>") do path, W, A
         setValue(model, tcl(widget, "get")) # calls valueChanged
         notify(model, "textChanged", A)
     end
+    bind(widget, "<Button-1>") do path
+        notify(model, "clicked")
+    end
+    connect(model, "placeholderTextChanged") do txt
+        placeholdertext[1] = txt
+        Tk.tcl("event", "generate", widget,  "<FocusOut>")
+    end
+
 
     (widget, widget)
 end
+
 
 function textedit(::MIME"application/x-tcltk", parent::Container, model::Model)
     
@@ -341,9 +362,12 @@ function textedit(::MIME"application/x-tcltk", parent::Container, model::Model)
 
     connect(model, "valueChanged", widget, Tk.set_value)
 
-    ## Signals: valueChanged, editingFinished, blur, textChanged
+    ## Signals: valueChanged, editingFinished, focusIn, focusOut, textChanged
+    bind(widget, "<FocusIn>") do path
+        notify(model, "focusIn")
+    end
     bind(widget, "<FocusOut>") do path
-        notify(model, "blur", getValue(model))
+        notify(model, "focusOut", getValue(model))
         notify(model, "editingFinished", getValue(model))
     end
     bind(widget, "<KeyRelease>") do path, W, A
