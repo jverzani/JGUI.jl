@@ -53,7 +53,10 @@ end
 ## * `mode::Symbol` one of `:open`, `:multiple`, `:directory` or `:save`
 ## * `:message::String` message
 ## * `:title::String` title
-## * `:filetypes::MaybeVector{Tuple}` a vector of tuples in form `(label, extension`, as in `("jpeg", ".jpg")
+## * `:filetypes::MaybeVector{Tuple}` a vector of tuples in form
+##   `(label, extension`, as in `("jpeg", ".jpg") (In tcltk. For Qt,
+##   this can be relaxed to `("Description", "*.jpg *.gif *.png")`,
+##   say
 ## 
 ## Returns:
 ##
@@ -63,6 +66,8 @@ end
 ## * `directory` a directory name or `nothing`
 ## * `save` a filename or `nothing`
 ##
+## TODO:
+## setFile, setDirectory..., but hard to do with TclTk
 function filedialog(parent::Widget; 
                     mode::Symbol=:open, ## :open, :multiple, :directory, :save
                     message::String="",
@@ -89,7 +94,7 @@ type Dialog <: BinContainer
     attrs::Dict
     toolkit
     state::Union(Nothing, Symbol) ## (nothing, :accept, :reject)
-    show::Function
+    open::Function
     exec::Function
     accept::Function
     reject::Function
@@ -99,11 +104,10 @@ type Dialog <: BinContainer
     function Dialog(widget, block, toolkit, model) 
         self = new(widget, block,  model, {}, Dict(), toolkit, :reject)
         self.exec = () -> begin
-            setModal(self, true)
             show_dialog(self.toolkit, self, true)
+            setModal(self, true)
         end
-        self.show = () -> begin
-            setModaless(self, true) ## Need to define this better
+        self.open = () -> begin
             show_dialog(self.toolkit, self, true)
         end
         self.done = (value::Symbol) -> begin
@@ -115,7 +119,6 @@ type Dialog <: BinContainer
         self.result = () -> self.state
         self.close = () -> begin
             state = self.state
-            setModal(self.toolkit, self, false)
             show_dialog(self.toolkit, self, false)
             notify(self.model, "finished", self.state)
             self.state == :accept ? notify(self.model, "accepted") : 
@@ -133,17 +136,17 @@ end
 ## Its design follows Qt:
 ## * one creates a dialog instance with specified buttons, say `dlg`
 ## * one can add a widget to the dialog through `push!`. This is usually a container for other widgets.
-## * One displays the dialog by calling `dlg.exec()`
-## * As the dialog is not modal, to get a return value one connects to either the `finished (state)` signal or 
-##   the `accepted` or `rejected` signals.
+## * One displays the dialog by calling `dlg.exec()` or `dlg.open()`. If possible, `.exec()` will be modal.
+## * To get a return value one connects to either the `finished (state)` signal or 
+##   the `accepted` or `rejected` signals. Otherwise, `dlg.state` holds the last state of the dialog.
 ## 
-## The dialog is not actually closed, just hidden so one can call `dlg.exec()` again.
+## The dialog is not actually closed, just hidden so one can call `dlg.open()` or `dlg.exec()` again.
 ##
 ## Arguments
 ## * `parent::Widget` used to locate dialog
-## * `btns::Vector{Symbol}` vector of buttons from `:ok`, `:cancel`, `:close`, `:apply`, `:reset`, and `:help`.
-## * `default::MaybeSymbol` if specified makes button the default
-## * `title::String` title for dialog
+## * `buttons::Vector{Symbol}=[:ok]` vector of buttons from `:ok`, `:cancel`, `:close`, `:apply`, `:reset`, and `:help`.
+## * `default::MaybeSymbol=[:ok]` if specified makes button the default
+## * `title::String=""` title for dialog
 ## * `kwargs...` passed on as properties
 ##
 ## Signals

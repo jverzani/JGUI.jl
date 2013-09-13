@@ -1,6 +1,5 @@
-## Tk implementations
-
 using Tk
+using Winston
 
 ## Icons
 function get_icon(::MIME"application/x-tcltk", o::StockIcon)
@@ -10,7 +9,7 @@ function get_icon(::MIME"application/x-tcltk", o::StockIcon)
     nm
 end
 function get_icon(::MIME"application/x-tcltk", o::FileIcon)
-    nm = "icon_" * replace(basename("/tmp/test.png"), ".", "_")
+    nm = "icon_" * replace(basename(o.file), ".", "_")
     Tk.tcl("image", "create", "photo", nm, file=o.file)
     nm
 end
@@ -27,6 +26,7 @@ getFocus(::MIME"application/x-tcltk", o::Widget) = nothing
 setFocus(::MIME"application/x-tcltk", o::Widget, value::Bool) = value ? Tk.focus(getWidget(o)) : nothing
 getWidget(::MIME"application/x-tcltk", o::Widget) = o.o
 
+setSizepolicy(::MIME"application/x-tcltk", o::Widget, policies) =  o.attrs[:sizepolicy] = policies
 
 ## Containers
 
@@ -102,6 +102,11 @@ end
 function setMargin(::MIME"application/x-tcltk", parent::BoxContainer, px::Vector{Int})
     Tk.configure(parent[:widget], padding=[px[1], px[2], px[1], px[2]])
 end
+
+## XXX implement
+addspacing(::MIME"application/x-tcltk", parent::BoxContainer, val::Int) = nothing 
+addsstrut(::MIME"application/x-tcltk", parent::BoxContainer, val::Int) = nothing
+addstretch(::MIME"application/x-tcltk", parent::BoxContainer, val::Int) = nothing
 
 function compute_anchor(child::Widget)
     ## (:left, :right, :center, :justify), (:top, :bottom, :center) -> "news"
@@ -207,7 +212,7 @@ end
 
 ## Need to do something to configure rows and columns
 ## grid add child
-function grid_add_child(::MIME"application/x-tcltk", child::Widget, i, j)
+function grid_add_child(::MIME"application/x-tcltk", parent::GridContainer, child::Widget, i, j)
     sticky = compute_sticky(child)
     Tk.grid(child.block, i, j, sticky= (sticky == "" ? "{}" : sticky))
 end
@@ -234,7 +239,7 @@ function formlayout(::MIME"application/x-tcltk", parent::Container)
     (widget, widget)
 end
 
-function formlayout_add_child(::MIME"application/x-tcltk", child::Widget, label::Union(Nothing, String))
+function formlayout_add_child(::MIME"application/x-tcltk", parent::FormLayout, child::Widget, label::Union(Nothing, String))
     Tk.formlayout(child.block, label)
 end
 
@@ -260,7 +265,7 @@ function notebook_insert_child(::MIME"application/x-tcltk", parent::NoteBook, ch
 end
 
 function notebook_remove_child(::MIME"application/x-tcltk", parent::NoteBook, child::Widget)
-    index = findin(child, parent)
+    index = findin(child, parent.children)
     if index != 0
         Tk.tcl(getWidget(parent), "forget", index-1)
     end
@@ -407,7 +412,7 @@ function radiogroup(::MIME"application/x-tcltk", parent::Container, model::Vecto
 end
 
 ## buttongroup
-function buttongroup(::MIME"application/x-tcltk", parent::Container, model::VectorModel; exclusive::Bool=exclusive)
+function buttongroup(::MIME"application/x-tcltk", parent::Container, model::VectorModel; exclusive::Bool=true)
     ## pack buttons into box, exclusive or not
     widget = Tk.Frame(getWidget(parent))
     function add_button(val)
@@ -450,11 +455,15 @@ end
 
 
 ## 
-function combobox(::MIME"application/x-tcltk", parent::Container, model::VectorModel; editable::Bool=editable)
+function combobox(::MIME"application/x-tcltk", parent::Container, model::VectorModel; editable::Bool=false)
     widget = Tk.Combobox(getWidget(parent), getItems(model))
     
     if editable
         error("Need to implement editable")
+    end
+    
+    if !isa(getValue(model), Nothing)
+        Tk.set_value(widget, getValue(model))
     end
 
     connect(model, "valueChanged", widget, Tk.set_value)
@@ -511,7 +520,7 @@ type TkSlider2D <: Tk.Tk_Widget
     callback::Union(Nothing, Function)
 end
 
-function slider2d(::MIME"application/x-tcltk", parent::Container, model::TwoVectorModel)
+function slider2d(::MIME"application/x-tcltk", parent::Container, model::TwoDSliderModel)
     fr = Tk.Frame(getWidget(parent))
     cnv = TkCanvas(fr)
     cnv[:width] = 100; cnv[:height] = 100
@@ -748,14 +757,24 @@ function setWidths(::MIME"application/x-tcltk", s::ModelView, widths::Vector{Int
         Tk.tcl(s.o, "column", i, width=widths[i])
     end
 end
+## XXX set these?
+getHeights(::MIME"application/x-tcltk", s::ModelView) = nothing
+setHeights(::MIME"application/x-tcltk", s::ModelView, heights::Vector{Int}) = nothing
 
-function getHeader(::MIME"application/x-tcltk", s::StoreView)
+
+function getHeadervisible(::MIME"application/x-tcltk", s::StoreView)
     true
 end
-function setHeader(::MIME"application/x-tcltk", s::StoreView, val::Bool)
+function setHeadervisible(::MIME"application/x-tcltk", s::StoreView, val::Bool)
     if !val
         println("Can't hide header")
     end
+end
+
+function getRownamesvisible(::MIME"application/x-tcltk", s::StoreView)
+    true
+end
+function setRownamesvisible(::MIME"application/x-tcltk", s::StoreView, val::Bool)
 end
 
 function setIcon(::MIME"application/x-tcltk", s::StoreView, i::Int, icon::Icon)

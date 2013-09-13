@@ -5,7 +5,7 @@
 
 abstract Icon
 type StockIcon <: Icon
-    nm::Symbol
+    nm::Union(Nothing, Symbol)
     theme::Union(Nothing, Symbol)
 end
 

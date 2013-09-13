@@ -41,7 +41,8 @@ function setSizepolicy(o::Widget, value)
     ## must have proper policy (nothing, :fixed, :expand)
     x, y = value
     ## check
-    o.attrs[:sizepolicy] = value
+    setSizepolicy(o.toolkit, o, value)
+
 end
 
 ## `:alignment` is used to determine how a control is aligned in its
@@ -70,6 +71,10 @@ function setAlignment(o::Widget, value) #x::Union(Symbol, Nothing), y::Union(Sym
     end
     o.attrs[:alignment] = value
 end
+
+## for box containers, (not tcltk, but Qt)
+getStretch(o::Widget) = haskey(o.attrs, :stretch) ? o.attrs[:stretch] : 0
+setStretch(o::Widget, stretch::Int) = o.attrs[:stretch] = stretch
 
 ## icontheme
 getIcontheme(o::Widget) = getIcontheme(o.parent)
@@ -196,8 +201,8 @@ function setIcon(object::Button, icon::Icon;
     end
     setIcon(object.toolkit, object, icon)#; theme=theme, size=size)
 end
-setIcon(object::Button, nm::Union(Symbol, String)) = setIcon(object, icon(nm))
-setIcon(object::Button, nm::Nothing) = setIcon(object.toolkit, object, icon)
+setIcon(object::Button, nm::Union(Symbol, String)) = setIcon(object, StockIcon(nm))
+setIcon(object::Button, nm::Nothing) = setIcon(object.toolkit, object, StockIcon(nothing, nothing))
 
 list_props(::@PROP("Button")) = {:icon => "Set accompanying icon"}
 ##################################################
@@ -246,6 +251,7 @@ function lineedit(parent::Container, model::Model; coerce::Union(Nothing, Functi
 end
 lineedit(parent::Container, value::String; kwargs...) = lineedit(parent, ItemModel(value); kwargs...)
 lineedit(parent::Container, value::Number; kwargs...) = lineedit(parent, string(value); kwargs...)
+lineedit(parent::Container) = lineedit(parent, "")
 
 ## Call coerce if present. If can't be coerced, returns nothing
 function getValue(obj::LineEdit)
@@ -296,6 +302,7 @@ function textedit(parent::Container, model::Model)
 end
 textedit(parent::Container, value::String) = textedit(parent, ItemModel(value))
 textedit(parent::Container, value::Number) = textedit(parent, string(value))
+textedit(parent::Container) = textedit(parent, "")
 
 
 ##################################################
@@ -350,7 +357,7 @@ list_props(::@PROP("CheckBox")) = {:label => "checkbox label"}
 
 function setValue(o::WidgetVectorModel, value)
     ## is value in vector?
-    if any(value .== o[:items])
+    if isa(value, Nothing) || any(value .== o[:items])
         setValue(o.model, value)
     end
 end
@@ -460,7 +467,7 @@ function combobox(parent::Container, items::Vector, value; editable::Bool=false)
     model = VectorModel(items, value)
     combobox(parent, model, editable=editable)
 end
-combobox(parent::Container, items::Vector; editable::Bool=false) = combobox(parent, items, items[1], editable=editable)
+combobox(parent::Container, items::Vector; editable::Bool=false) = combobox(parent, items, nothing, editable=editable)
 
 
 
@@ -493,6 +500,8 @@ end
 ##
 ## * `valueChanged (value)` return value in vector that is selected
 ##
+## Notes:
+## use cb[:value] = nothing to deselect all 
 function slider(parent::Container, model::VectorModel; orientation::Symbol=:horizontal)
     widget, block = slider(parent.toolkit, parent, model, orientation=orientation)
     Slider(widget, block, model, parent, parent.toolkit, Dict())
@@ -536,14 +545,13 @@ end
 ## * `valueChanged (value)` is called when slider is moved. The value are [x,y] coordinates
 ##
 function slider2d(parent::Container, items1::Union(Range, Range1), items2::Union(Range, Range1)) 
-    model = TwoVectorModel(items1, items2)
+    model = TwoDSliderModel(items1, items2)
     widget, block = slider2d(parent.toolkit, parent, model)
 
     Slider2D(widget, block, model, parent, parent.toolkit, Dict())
 end
 
-getValue(o::Slider2D) = getValue(o.toolkit, o)
-setValue{T <: Real}(o::Slider2D, value::Vector{T}) = setValue(o.toolkit, o, value)
+
 
 ## spinbox
 
@@ -715,6 +723,7 @@ function storeview(parent::Container, store::Store; tpl=nothing, selectmode::Sym
     end
     self[:sizepolicy] = (:expand, :expand)
     self[:selectmode] = selectmode
+    self[:rownamesvisible] = false
     self
 end
 
@@ -741,8 +750,10 @@ end
     
 
 ## is header visible? (Can't suppress in Tk)
-getHeader(s::StoreView) = setHeader(s.toolkit, s)
-setHeader(s::StoreView, visible::Bool) = setHeader(s.toolkit, s, visible)
+getHeadervisible(s::StoreView) = setHeadervisible(s.toolkit, s)
+setHeadervisible(s::StoreView, visible::Bool) = setHeadervisible(s.toolkit, s, visible)
+getRownamesvisible(s::StoreView) = setRownamesvisible(s.toolkit, s)
+setRownamesvisible(s::StoreView, visible::Bool) = setRownamesvisible(s.toolkit, s, visible)
 
 getSelectmode(s::ModelView) = getSelectmode(s.toolkit, s)
 function setSelectmode(s::ModelView, val::Symbol)
@@ -753,6 +764,9 @@ end
 getWidths(s::ModelView) = getWidths(s.toolkit, s)
 setWidths(s::ModelView, widths::Vector{Int}) = setWidths(s.toolkit, s, widths)
 setWidths(s::ModelView, widths::Int) = setWidths(s, [widths])
+getHeights(s::ModelView) = getHeights(s.toolkit, s)
+setHeights(s::ModelView, heights::Vector{Int}) = setHeights(s.toolkit, s, heights)
+setHeights(s::ModelView, heights::Int) = setHeights(s, [heights])
 
 setIcon(s::StoreView, i::Int, icon::Icon) = setIcon(s.toolkit, s, i, icon)
 setIcon(s::StoreView, i::Int, icon::Symbol) = setIcon(s, i, StockIcon(icon, s[:icontheme]))
@@ -760,10 +774,13 @@ setIcon(s::StoreView, i::Int, icon::String) = setIcon(s, i, FileIcon(icon))
     
 
 list_props(::@PROP("ModelView")) = {:selectmode => "Either :single or :multiple",
-                                    :widths => "Vector of column widths, in pixels"
-                                 }
+                                    :widths => "Vector of column widths, in pixels",
+                                    :heights => "Vector of row heights, in pixels"
+                                    }
 
-list_props(::@PROP("StoreView")) = {:header => "Adjust if headers are displayed"}
+list_props(::@PROP("StoreView")) = {:headervisible => "Adjust if headers are displayed (if possible)",
+                                    :rownamesvisible => "Adjust if rownames are displayed (if possible)",
+}
 
 ## methods
 insert!(s::StoreView, i::Int, val) = insert!(s.store, i, val)

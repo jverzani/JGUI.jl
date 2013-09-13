@@ -1,7 +1,5 @@
 module JGUI
 
-using Tk
-using Winston
 
 ## for Images
 ##using Images XXX  merge in possibly...
@@ -45,8 +43,7 @@ export Store, TreeStore
 export treestore, expand_node, collapse_node, node_to_path, path_to_node, update_node
 
 export filedialog, messagebox, confirmbox, dialog
-
-export manipulate
+#export manipulate
 
 
 include("types.jl")
@@ -56,8 +53,18 @@ include("models.jl")
 include("containers.jl")
 include("widgets.jl")
 include("dialogs.jl")
-include("tk.jl")
-include("manipulate.jl")
+
+## specify ENV["Qt"] = true
+if haskey(ENV, "Tk")
+    default_toolkit = MIME("application/x-tcltk")
+    include("tk.jl")
+else
+    default_toolkit = MIME("application/x-qt")
+    include("qt.jl")
+end
+#include("manipulate.jl")
+
+
 
 
 end

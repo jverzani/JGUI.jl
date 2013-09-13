@@ -6,8 +6,7 @@ An package to simplify the creation of GUIs within Julia
 The `JGUI` package provides a few different means to simplify the
 creation of GUIs within `Julia`. These include a simplified
 implementation of Mathematica's `Manipulate` function, and a simple
-interface to julia's `Tk` package, that is written to allow other
-toolkits to be used.
+interface for using the `tcl/tk` or `Qt` toolkits within `Julia`.
 
 # Manipulate
 
@@ -17,23 +16,32 @@ The easiest way to create a GUI with this package is to use the
 parameterized by values coming from easily specified controls within a
 GUI.
 
-For example, consider the expression below which computes a Winston plot object:
+As one can use either the Tk libraries or Qt (via the `PySide` module
+and `PyCall), the first line is used to specify the undetlying
+toolkit. Mixing and matching within a `Julia` session will likely lead
+to crashes.
+
 
 ```
+ENV["Tk"] = true
 using JGUI
+```
+
+Now, consider the following expression  which computes a Winston plot object:
+
+
+```
 expr = quote
-     f(x) = sin(u*x)
-     p = FramedPlot()
-     x = linspace(0, 2pi)
-     add(p, Curve(x, map(f, x)))
+     plot(x -> sin(u*x), 0, 2pi)
      p
 end
 ```
 
-The unbound variable `u` will be filled in by `manipulate`, when the
-expression is evaluated. The modified `plot` command return a Winston
-plot object, which is then plotted. To create a control for `u`, we
-simply need to specify a range of values:
+We can use the `manipulate` function to fill in values for the unbound
+variable `u`, when the expression is evaluated. The `plot` command
+above returns a Winston plot object, which is then plotted. To create
+a control to specify values for `u`, we simply need to specify a
+range, as follows:
 
 ```
 a = manipulate(expr, (:u, 1:10), modules=[:Winston])
@@ -47,11 +55,7 @@ Here is a how one can add a title to the plot. First we modify the `plot` call t
 
 ```
 expr = quote
-     f(x) = sin(u*x)
-     p = FramedPlot()
-     x = linspace(0, 2pi)
-     add(p, Curve(x, map(f, x)))
-     setattr(p,  "title", title)
+     plot(x -> sin(u*x), 0, 2pi, title=title)
      p
 end
 ```
@@ -75,18 +79,19 @@ Manipulate has other simple-to-specify controls:
 * `(:symbol, Int)` - text edit with conversion to integer via `parseint`
 
 The expression can be a Winston plot object or any other object. Plot
-objects are plotted in a display, other objects are displayed as
-text.
+objects are plotted in a display.
+
+
+When using `Qt` (`ENV["Qt"] = true`) one can plot `PyPlot` calls, not `Winston` calls.
 
 ## A simplified GUI interface
 
-Though, the `Tk` package provides a relatively easy to learn means to
-produce GUIs, this package makes provides a small API for creating
-GUIS that makes it even easier without sacrificing too much. (The
+Though the `Tk` package provides a relatively easy to learn means to
+produce GUIs with `tcltk` and `PySide` does the same for `Qt`, this
+package makes provides a small API for creating GUIS that makes it
+even easier, though sacrificing a fair amount of flexibility. (The
 `JGUI` interface is primarily concerned with controls, and not things
-like a canvas widget.) The API is written to allow (in theory) other GUI toolkits to be used.
-
-## Examples
+like a canvas widget.) 
 
 Here is a simple example where a window has a button which when clicked will destroy the window:
 
@@ -96,6 +101,7 @@ w[:title] = "hello world"
 b = button(w, "Close")
 push!(w, b)
 connect(b, "clicked", w, destroy)
+raise(w)
 ```
 
 The first line creates a window object with an optional size
@@ -127,6 +133,7 @@ the window. This pattern follows Qt's signal-and-slots style. One can
 also just pass in a function to call instead of the last two
 arguments, something like `connect(b, "clicked", () -> destroy(w))`.
 
+Finally, the window is raised.
 
 ## Basics
 
@@ -205,6 +212,7 @@ b2 = button(g, "two")
 b3 = button(g, "three")
 
 g[:,:] = [b1 b2; nothing b3]
+raise(w)
 ```
 
 The expanding and alignment properties of how a child is placed into a
@@ -226,6 +234,7 @@ b = button(f, "expanding")
 b[:sizepolicy] = (:fixed, :expand)   # expand in y direction
 #b[:sizepolicy] = (:expand, :expand) # expand in both
 push!(b)
+raise(w)
 ```
 
 Some properties are dynamic, this one is not. It should be set before packing into a layout.
@@ -273,6 +282,7 @@ sl = slider(f, 1:20)
 l = label(f, sl[:value])
 append!(f, [sl, l])
 connect(sl, "valueChanged", l, setValue)
+raise(w)
 ```
 
 Some alternatives would be `connect(rb, "valueChanged", l, (l, value)
@@ -391,6 +401,8 @@ push!(sv)
 sv[:widths] = [100, 100, 100]	# column widths
 sv[:selectmode] = :multiple	# :single or :multiple
 id = connect(sv, "rowClicked", (row, col) -> println((row, col))) # sample handler
+
+raise(w)
 ```
 
 One can add and remove items through `insert!`, `splice!`; one can modify existing items through indexing:

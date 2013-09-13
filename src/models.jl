@@ -64,7 +64,7 @@ getValue(model::Observable) = model.value
 function setValue(model::Observable, value)
     if value != model.value
         model.value = value
-        notify(model, "valueChanged", value)
+        notify(model, "valueChanged", getValue(model))
     end
 end
 
@@ -101,17 +101,39 @@ type VectorModel <: AbstractArrayModel
     VectorModel(items, value) = new(Dict(), value, items)
 end
 
-type TwoVectorModel <: AbstractArrayModel
+## store index in 1:100, 1:100, getValue of widget converts
+type TwoDSliderModel <: AbstractArrayModel
     observers::Dict
     ##
     value
     items1::Vector
     items2::Vector
-    TwoVectorModel() = new(Dict(), nothing, {}, {})
-    TwoVectorModel(items1, items2) = new(Dict(), [items1[1], items2[1]], items1, items2)
-    TwoVectorModel(items1, items2, value) = new(Dict(), value, items1, items2)
+    TwoDSliderModel() = new(Dict(), nothing, {}, {})
+    TwoDSliderModel(items1, items2) = new(Dict(), [items1[1], items2[1]], items1, items2)
+    TwoDSliderModel(items1, items2, value) = new(Dict(), value, items1, items2)
 end
 
+function getValue(o::TwoDSliderModel)
+    i, j = o.value
+    x = iround(1 + (length(o.items1) - 1)/(100 -1)*(i - 1))
+    y = iround(1 + (length(o.items2) - 1)/(100 -1)*(j - 1))
+    [x,y]
+end
+
+## value in items coordinates, convert to index
+function setValue(o::TwoDSliderModel, value)
+    x, y = value
+    function item2ind(item, items) 
+        ix = indmin(abs(items - item))
+        iround( 1 + (100 - 1)/(length(items) - 1)*(ix -1))
+    end
+    i = item2ind(x, o.items1)
+    j = item2ind(y, o.items2)
+    if o.value != [i,j]
+        o.value = [i,j]
+        notify(o, "valueChanged", getValue(o))
+    end
+end
 
 type ArrayModel <: AbstractArrayModel
     observers::Dict
@@ -125,9 +147,9 @@ end
 
 ## o[:items] ...
 getItems(model::AbstractArrayModel) = model.items
-function settItems(model::AbstractArrayModel, items)
+function setItems(model::AbstractArrayModel, items)
     model.items = items
-    notify(model, "itemsChanged")
+    notify(model, "itemsChanged", items)
 end
 
 
@@ -154,6 +176,7 @@ end
 
 
 length(s::DataStore) = length(s.items)
+size(s::DataStore) = [length(s), length(names(s.items[1]))]
 
 function insert!(s::DataStore, i::Int, val)
     insert!(s.items, i, val)

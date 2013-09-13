@@ -51,7 +51,7 @@ end
 ## Main Window
 ## XXX deal with toolkit, menubar, statusbar
 ## kwargs are used to pass along properties to the constructor (size)
-function window(;toolkit::MIME=MIME("application/x-tcltk"), title::String="", kwargs...)
+function window(;toolkit::MIME=default_toolkit, title::String="", kwargs...)
     widget, block = window(toolkit)
     obj = Window(widget, block, nothing, EventModel(), toolkit, {}, Dict())
     obj[:title] = title
@@ -186,9 +186,13 @@ vbox(parent::Container; kwargs...) = boxcontainer(parent, direction=:vertical, k
 length(object::BoxContainer) = length(children(object))
 clear(object::BoxContainer)  = splice!(object, 1:length(object))
 
-## addStrut(px::int)
-## addStretch...
-## addSpacing...
+## add strut (minimum height or width)
+addstrut(parent::BoxContainer, px::Int) = addstruct(parent.toolkit, parent, px)
+## addStretch a stretching blank box
+addstretch(parent::BoxContainer, stretch::Int) = addstretch(parent.toolkit, parent, stretch)
+## addSpacing add blank space to layout
+addspacing(parent::BoxContainer, spacing::Int) = addspacing(parent.toolkit, parent, spacing)
+
 
 ## properties
 ## may be dynamic and adjust for just current chidren
@@ -371,7 +375,7 @@ function setindex!(parent::GridContainer, child::Widget, i::Union(Int, Range1), 
 
     ## How to organize children here? Could be a matrix, could carry ind info.... Useful for getindex..
     push!(parent.children, child) ## just a vector for now
-    grid_add_child(parent.toolkit, child, i, j)
+    grid_add_child(parent.toolkit, parent, child, i, j)
 end
 
 ## place children through grid notation
@@ -446,7 +450,7 @@ end
 function push!(parent::FormLayout, child::Widget, label::Union(Nothing, String))
     push!(parent.children, child)
     push!(parent.child_labels, label)
-    formlayout_add_child(parent.toolkit, child, label)
+    formlayout_add_child(parent.toolkit, parent, child, label)
 end
 
 ## return dictionary of control values
@@ -519,7 +523,7 @@ function setValue(object::NoteBook, i::Int)
 end
 getValue(object::NoteBook) = getValue(object.model)
 
-function insert!(parent::NoteBook, child::Widget, i::Int, label::String)
+function insert!(parent::NoteBook,  i::Int, child::Widget, label::String)
     if i < 0 || i > length(parent) + 1
         error("Index needs to be between 1 and n+1")
     end
@@ -528,8 +532,9 @@ function insert!(parent::NoteBook, child::Widget, i::Int, label::String)
     insert!(parent.children, i, child)
 
 end
-push!(parent::NoteBook, child::Widget, label::String) = insert!(parent, child, length(parent) + 1, label)
-unshift!(parent::NoteBook, child::Widget, label::String) = insert!(parent, child, 1, label)
+push!(parent::NoteBook, child::Widget, label::String) = insert!(parent,  length(parent) + 1, child, label)
+push!(child::Widget, label::String) = push!(child.parent, child, label)
+unshift!(parent::NoteBook, child::Widget, label::String) = insert!(parent, 1, child, label)
 
 ## Remove a child by index
 function splice!(parent::NoteBook, index::Int)
