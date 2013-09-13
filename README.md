@@ -17,7 +17,7 @@ parameterized by values coming from easily specified controls within a
 GUI.
 
 As one can use either the Tk libraries or Qt (via the `PySide` module
-and `PyCall), the first line is used to specify the undetlying
+and `PyCall), the first line is used to specify the underlying
 toolkit. Mixing and matching within a `Julia` session will likely lead
 to crashes.
 
@@ -143,6 +143,7 @@ Let's look at another example, this one mimics, the first manipulate
 example (using a modified `plot` function):
 
 ```
+## needs Tk
 using Winston
 w = window()
 f = hbox(w); push!(f)
@@ -161,17 +162,19 @@ In the above we have several constructors: `window`, `hbox`, `slider`,
 and `cairographics`. Each produces a widget. The `window` creates a
 toplevel window, and `slider` a slider. The `hbox` constructor creates
 a horizontal box container, which is used above to hold two children,
-the slider and a cairo graphic device produced by `cairographics`. 
+the slider and a cairo graphic device produced by
+`cairographics`. (The `pyplotgraphics` widget produces a device for
+graphics drawn via `PyPlot` and can be use with the `Qt` toolkit.)
 
-Constructors in `JGUI`, except for `window`, have a parent container
-passed as the first argument. Additional arguments are used to
-customize the constructor. For `hbox` and `cairographics`, there is no
-needed customization, though the latter may have a width and height
-argument specified. For a slider, one needs to specify the range that
-is slid over. Unlike most slider implementations, such as the one in
-`Tk`, a slider is used to select amongst the specified range or sorted
-vector. This reduces the need to specify a step size and is more in
-line with how `julia` produces sequences of values. 
+As mentioned, constructors in `JGUI`, except for `window`, have a
+parent container passed as the first argument. Additional arguments
+are used to customize the constructor. For `hbox` and `cairographics`,
+there is no needed customization, though the latter may have a width
+and height argument specified. For a slider, one needs to specify the
+range that is slid over. Unlike most slider implementations, such as
+the one in `Tk`, a slider is used to select amongst the specified
+range or sorted vector. This reduces the need to specify a step size
+and is more in line with how `julia` produces sequences of values.
 
 ### Containers
 
@@ -200,7 +203,7 @@ Containers are coupled with a layout manager which are utilized in a "julian" ma
 * The `formlayout` and `notebook` containers also implement the above
   for adding a child at a time, with an additional label.
 
-* The single-child containers, `labelframe` and `window`, use `push!` to add children. 
+* The single-child containers, `labelframe` and `window`, use `push!` to add their child. 
 
 * The `grid` container add children via matrix notation. There are two styles. One can add a matrix of widgets:
 
@@ -214,6 +217,9 @@ b3 = button(g, "three")
 g[:,:] = [b1 b2; nothing b3]
 raise(w)
 ```
+
+Or one can add a single child using `[row,column]` notation. These may
+be specified through a range to span multiple rows or columns.
 
 The expanding and alignment properties of how a child is placed into a
 parent are specified for the child, not the container. These are done
@@ -239,7 +245,7 @@ raise(w)
 
 Some properties are dynamic, this one is not. It should be set before packing into a layout.
 
-The main value of a widget is assigned the `value` property. For a button this is the label:
+The main value of a widget is assigned the `value` property. For a button this is its label:
 
 ```
 w = window(title="change label")
@@ -249,19 +255,20 @@ b[:value] = "new label"		# updates button
 b[:value]			# "new label"
 ```
 
-When a property, say ':prop' is looked up a search for
+When a property, say ':prop', is looked up a search for
 either a `getProp` or `setProp` method is made. Though not exported, save for `getValue` and `setValue`
-this can be useful when using the property in a callback.
+these function can be conveniently employed when using the property in a callback.
 
 ## signals
 
 The basic `connect` method is used to connect a callback to an
-event. The syntax follows Qt's signals and slots. It can take two
-forms: `connect(receiver, signal, obj, slot)` or `connect(receiver,
-signal, slot)`, where `slot` is a function. In the first instance, the
-call is `slot(obj, vals...)` and the second, just `slot(vals...)`
-where `vals...` depends on the signal: the basic `valueChanged` signal
-passes in the value; whereas, a button's `clicked` signal has no value passed.
+event. The syntax follows Qt's signals and slots usage. It can take
+two forms: `connect(receiver, signal, obj, slot)` or
+`connect(receiver, signal, slot)`, where `slot` is a function. In the
+first instance, the call is `slot(obj, vals...)` and the second, just
+`slot(vals...)` where `vals...` depends on the signal: the basic
+`valueChanged` signal passes in the value; whereas, a button's
+`clicked` signal has no value passed.
 
 Widgets have different signals defined. Mostly the names follow a
 small subset of those for the corresponding Qt widget (hence the names
@@ -281,6 +288,7 @@ f = hbox(w); push!(f)
 sl = slider(f, 1:20)
 l = label(f, sl[:value])
 append!(f, [sl, l])
+
 connect(sl, "valueChanged", l, setValue)
 raise(w)
 ```
@@ -335,7 +343,9 @@ The basic widgets are:
 
 * `treeview` used to display tree structured records
 
-* `cairographics`  used with `Winston` graphics
+* `cairographics`  used with `Winston` graphics (`Tk` only)
+
+* `pyplotgraphics` used with `PyPlot` graphics (`Qt` only)
 
 * `imageview` used to display `png` or `gif` image files.
 
