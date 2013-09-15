@@ -35,7 +35,7 @@ export label, separator, button, lineedit, textedit,
        checkbox, radiogroup, buttongroup, combobox,
        slider, slider2d,
        listview, storeview, treeview, 
-       cairographics, imageview,
+       imageview,
        icon
 
 export Store, TreeStore
@@ -43,7 +43,7 @@ export Store, TreeStore
 export treestore, expand_node, collapse_node, node_to_path, path_to_node, update_node
 
 export filedialog, messagebox, confirmbox, dialog
-#export manipulate
+export manipulate
 
 
 include("types.jl")
@@ -54,15 +54,22 @@ include("containers.jl")
 include("widgets.jl")
 include("dialogs.jl")
 
-## specify ENV["Qt"] = true
-if haskey(ENV, "Tk")
+
+## To use different toolkit try ENV["Tk"] = true, or ENV["Qt"] = true
+istk() = haskey(ENV,"Tk") && ENV["Tk"] == "true"
+isqt() = !istk()
+
+include("manipulate.jl")
+if istk()
     default_toolkit = MIME("application/x-tcltk")
     include("tk.jl")
-else
+    export cairographic
+elseif isqt()
     default_toolkit = MIME("application/x-qt")
     include("qt.jl")
+    export pyplotgraphic
 end
-#include("manipulate.jl")
+
 
 
 

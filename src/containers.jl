@@ -533,7 +533,6 @@ function insert!(parent::NoteBook,  i::Int, child::Widget, label::String)
 
 end
 push!(parent::NoteBook, child::Widget, label::String) = insert!(parent,  length(parent) + 1, child, label)
-push!(child::Widget, label::String) = push!(child.parent, child, label)
 unshift!(parent::NoteBook, child::Widget, label::String) = insert!(parent, 1, child, label)
 
 ## Remove a child by index

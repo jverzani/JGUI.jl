@@ -588,9 +588,9 @@ end
 ##
 ## TODO:
 ##
-function cairographics(parent::Container; width::Int=480, height::Int=400)
+function cairographic(parent::Container; width::Int=480, height::Int=400)
     model = EventModel()  # for event handling
-    widget, block = cairographics(parent.toolkit, parent, model, width=width, height=height)
+    widget, block = cairographic(parent.toolkit, parent, model, width=width, height=height)
     CairoGraphics(widget, block, model, parent, parent.toolkit, Dict())
 end
 

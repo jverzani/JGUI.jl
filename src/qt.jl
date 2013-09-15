@@ -69,6 +69,9 @@ function get_alignment(o::Widget)
 end
 ## Containers
 
+## get Qt layout
+getLayout(::MIME"application/x-qt", widget::Container) = widget[:widget][:layout]()
+getLayout(widget::Container) = getLayout(widget.toolkit, widget)
 
 
 
@@ -163,8 +166,7 @@ addstretch(::MIME"application/x-qt", parent::BoxContainer, val::Int) = parent[:w
 function insert_child(::MIME"application/x-qt", parent::BoxContainer, index, child::Widget)
     
     direction = getProp(parent, :direction)
-    ## get Layout
-    lyt = parent[:widget][:layout]()
+    lyt = parent[:layout]
     if isa(lyt, Nothing)
         lyt = (direction == :horizontal) ? Qt.QHBoxLayout(parent[:widget]) : Qt.QVBoxLayout(parent[:widget])
         parent[:widget][:setLayout](lyt)
@@ -243,18 +245,21 @@ row_stretch(::MIME"application/x-qt", object::GridContainer, i::Int, weight::Int
 ##################################################
 
 function formlayout(::MIME"application/x-qt", parent::Container)
-    widget = Qt.QFormLayout(parent[:widget])
+    widget = Qt.QWidget(parent[:widget])
+    lyt = Qt.QFormLayout(widget)
+    widget[:setLayout](lyt)
+                      
     (widget, widget)
 end
 
 ## XX labels..
 function formlayout_add_child(::MIME"application/x-qt", parent::FormLayout, child::Widget, label::Union(Nothing, String))
-    parent[:widget][:addRow](label, child.block)
+    parent[:layout][:addRow](label, child.block)
 end
 
 function setSpacing(::MIME"application/x-qt", object::FormLayout, px::Vector{Int})
-    parent[:widget][:setHorizontalSpacing](px[1])
-    parent[:widget][:setVerticalSpacing](px[2])
+    parent[:layout][:setHorizontalSpacing](px[1])
+    parent[:layout][:setVerticalSpacing](px[2])
 end
 
 ## Notebook
@@ -678,8 +683,8 @@ function pyplotgraphic(parent::Container)
     ## width height in inches, or pixels?
     widget = Qt.QWidget(parent[:widget])
     id = randstring(10)
-    PyPlot.pltm[:figure](id) # super hacky
-    manager = PyPlot.Gcf[:get_active]()
+    pltm[:figure](id) # super hacky
+    manager = Gcf[:get_active]()
     
 
     canvas = manager["canvas"]
@@ -697,31 +702,9 @@ function pyplotgraphic(parent::Container)
 end
 
 ## set this as active
-setActive(o::PyPlotGraphic, value) = PyPlot.pltm[:figure](o.id)
+setActive(o::PyPlotGraphic, value) = pltm[:figure](o.id)
 
 
-
-# ## cairographics
-# function cairographics(::MIME"application/x-tcltk", parent::Container, model::EventModel; width::Int=480, height::Int=400)
-#     block = Frame(getWidget(parent))
-#     widget = c = Tk.Canvas(block, width, height)
-#     pack(widget, expand=true, fill="both")
-
-#     ## can't put signal on canvas Map...
-#     bind(block, "<Map>", (path) -> notify(model, "realized"))
-
-#     ## mousebindings ...
-#     bind(c, "<ButtonPress-1>",   (path,x,y)->notify(model, "mousePress", x, y))
-#     bind(c, "<ButtonRelease-1>", (path,x,y)->notify(model, "mouseRelease", x, y))
-#     bind(c, "<Double-Button-1>", (path,x,y)->notify(model, "mouseDoubleClick", x, y))
-#     bind(c, "<KeyPress>",        (path, A) ->notify(model, "keyPress", A))
-#     bind(c, "<KeyRelease>",      (path, A) ->notify(model, "keyRelease", A))
-#     # The cursor is in motion over a widget
-#     bind(c, "<Motion>",          (path,x,y)->notify(model, "mouseMotion", x, y)) # name?
-#     bind(c, "<Button1-Motion>",  (path,x,y)->notify(model, "mouseMove", x, y))
-#     ##
-#     (widget, block)
-# end
 
 ## Views
 function item_to_values(item)
@@ -1082,7 +1065,7 @@ setTitle(::MIME"application/x-qt", parent::Dialog, value::String) = dlg[:widget]
 ## make deafult button a property?
 
 function set_child(::MIME"application/x-qt", parent::Dialog, child::Widget)
-    lyt = parent[:widget][:layout]()
+    lyt = parent[:layout]
 #    child[:sizepolicy] = (:expand, :expand)
     lyt[:insertWidget](0, child.block, 100)
 end
@@ -1240,3 +1223,10 @@ function confirmbox(::MIME"application/x-qt", parent::Widget, text::String; icon
 end
 
 
+
+
+
+## manipulate
+function Display(::MIME"application/x-qt", self::ManipulateObject, x; kwargs...) 
+    "XXX nothing here, though should do text output..."
+end

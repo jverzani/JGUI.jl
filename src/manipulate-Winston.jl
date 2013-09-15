@@ -13,7 +13,7 @@ function Display(self::ManipulateObject, x::FramedPlot; kwargs...)
         pop!(oa)
     end
     ## add one
-    cnv = cairographics(oa, width=480, height=480)
+    cnv = cairographic(oa, width=480, height=480)
     cnv[:sizepolicy] = (:expand, :expand)
     push!(oa, cnv)
     Winston.display(cnv.o, x)

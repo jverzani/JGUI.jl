@@ -17,7 +17,7 @@ parameterized by values coming from easily specified controls within a
 GUI.
 
 As one can use either the Tk libraries or Qt (via the `PySide` module
-and `PyCall), the first line is used to specify the underlying
+and `PyCall`), the first line is used to specify the underlying
 toolkit. Mixing and matching within a `Julia` session will likely lead
 to crashes.
 
@@ -82,7 +82,8 @@ The expression can be a Winston plot object or any other object. Plot
 objects are plotted in a display.
 
 
-When using `Qt` (`ENV["Qt"] = true`) one can plot `PyPlot` calls, not `Winston` calls.
+When using `Qt` (`ENV["Qt"] = true`) one can plot `PyPlot` calls, not
+`Winston` calls. The `modules` argument should include `PyPlot`.
 
 ## A simplified GUI interface
 
@@ -149,7 +150,7 @@ w = window()
 f = hbox(w); push!(f)
 
 sl = slider(f, 1:10)
-cnv = cairographics(f)
+cnv = cairographic(f)
 
 append!(f, [sl, cnv])
 connect(sl, "valueChanged") do u
@@ -159,16 +160,16 @@ end
 ```
 
 In the above we have several constructors: `window`, `hbox`, `slider`,
-and `cairographics`. Each produces a widget. The `window` creates a
+and `cairographic`. Each produces a widget. The `window` creates a
 toplevel window, and `slider` a slider. The `hbox` constructor creates
 a horizontal box container, which is used above to hold two children,
 the slider and a cairo graphic device produced by
-`cairographics`. (The `pyplotgraphics` widget produces a device for
+`cairographic`. (The `pyplotgraphic` widget produces a device for
 graphics drawn via `PyPlot` and can be use with the `Qt` toolkit.)
 
 As mentioned, constructors in `JGUI`, except for `window`, have a
 parent container passed as the first argument. Additional arguments
-are used to customize the constructor. For `hbox` and `cairographics`,
+are used to customize the constructor. For `hbox` and `cairographic`,
 there is no needed customization, though the latter may have a width
 and height argument specified. For a slider, one needs to specify the
 range that is slid over. Unlike most slider implementations, such as
@@ -343,9 +344,9 @@ The basic widgets are:
 
 * `treeview` used to display tree structured records
 
-* `cairographics`  used with `Winston` graphics (`Tk` only)
+* `cairographic`  used with `Winston` graphics (`Tk` only)
 
-* `pyplotgraphics` used with `PyPlot` graphics (`Qt` only)
+* `pyplotgraphic` used with `PyPlot` graphics (`Qt` only)
 
 * `imageview` used to display `png` or `gif` image files.
 
@@ -354,20 +355,20 @@ The basic widgets are:
 
 
 
-#### Cairographics example
+#### Cairo graphic example
 
-The `cairographics` widget is a light wrapper around
+The `cairographic` widget is a light wrapper around
 `Tk.Canvas`. (Meaning it won't be portable across GUI toolkits, should
 that ever happen.) To use the canvas, access the `:widget` property of the
-`cairographics` object:
+`cairographic` object:
 
 ```
 ## update two graphics windows...
 using Winston
 w = window()
 f = grid(w); push!(f)
-g1 = cairographics(f, width=480, height=400)
-g2 = cairographics(f, width=480, height=400)
+g1 = cairographic(f, width=480, height=400)
+g2 = cairographic(f, width=480, height=400)
 b = button(f, "update"); b[:alignment] = (:right, :center)
 f[:,:] = [g1 g2; nothing b]
 connect(b, "clicked") do

@@ -611,8 +611,8 @@ end
 
 
 
-## cairographics
-function cairographics(::MIME"application/x-tcltk", parent::Container, model::EventModel; width::Int=480, height::Int=400)
+## cairographic
+function cairographic(::MIME"application/x-tcltk", parent::Container, model::EventModel; width::Int=480, height::Int=400)
     block = Frame(getWidget(parent))
     widget = c = Tk.Canvas(block, width, height)
     pack(widget, expand=true, fill="both")
@@ -1135,3 +1135,44 @@ function confirmbox(::MIME"application/x-tcltk", parent::Widget, text::String; i
 end
 
 
+
+
+### Manipulate. Display FramedPlot
+
+## Default is text
+function Display(::MIME"application/x-tk", self::ManipulateObject, x; kwargs...) 
+    if isa(x, Nothing) return end
+    value = string(x)
+
+    oa = self.output_area
+    ## add new textedit area if needed
+    if length(children(oa)) > 0 && isa(oa.children[1], TextEdit)
+        setValue(oa.children[1], value)
+        return
+    elseif length(children(oa)) > 0
+        pop!(oa)
+    end
+    ## add one
+    te = textedit(oa, value)
+    te[:sizepolicy] = (:expand, :expand)
+    push!(oa, te)
+end
+
+
+function Display(::MIME"application/x-tk", self::ManipulateObject, x::FramedPlot; kwargs...) 
+    if isa(x, Nothing) return end
+    oa = self.output_area
+    
+    if length(children(oa)) > 0 && isa(oa.children[1], CairoGraphics)
+        cnv = oa.children[1]
+        Winston.display(cnv.o, x)
+        return
+    elseif length(children(oa)) > 0
+        pop!(oa)
+    end
+    ## add one
+    cnv = cairographic(oa, width=480, height=480)
+    cnv[:sizepolicy] = (:expand, :expand)
+    push!(oa, cnv)
+    Winston.display(cnv.o, x)
+end

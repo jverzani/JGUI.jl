@@ -96,46 +96,6 @@ setindex!(object::ManipulateObject, value,  x::Symbol) = setValue(object, x, val
 
 ClearDisplay(self::ManipulateObject) = ClearDisplay(self.toolkit, self)
 
-## Default is text
-function Display(self::ManipulateObject, x; kwargs...) 
-    if isa(x, Nothing) return end
-    value = string(x)
-
-    oa = self.output_area
-    ## add new textedit area if needed
-    if length(children(oa)) > 0 && isa(oa.children[1], TextEdit)
-        setValue(oa.children[1], value)
-        return
-    elseif length(children(oa)) > 0
-        pop!(oa)
-    end
-    ## add one
-    te = textedit(oa, value)
-    te[:sizepolicy] = (:expand, :expand)
-    push!(oa, te)
-end
-
-## How tomake this conditional on Winston?
-using Winston
-function Display(self::ManipulateObject, x::FramedPlot; kwargs...) 
-    if isa(x, Nothing) return end
-    oa = self.output_area
-    
-    if length(children(oa)) > 0 && isa(oa.children[1], CairoGraphics)
-        cnv = oa.children[1]
-        Winston.display(cnv.o, x)
-        return
-    elseif length(children(oa)) > 0
-        pop!(oa)
-    end
-    ## add one
-    cnv = cairographics(oa, width=480, height=480)
-    cnv[:sizepolicy] = (:expand, :expand)
-    push!(oa, cnv)
-    Winston.display(cnv.o, x)
-end
-
-
 
 
 
@@ -174,7 +134,7 @@ end
 ## Creates a window with controls to manipulate the expression. The
 ## return value is of type `ManipulateObject`.
 function manipulate(expr, args...; 
-                    toolkit::MIME=MIME("application/x-tcltk"),
+                    toolkit::MIME=default_toolkit, ##MIME("application/x-tcltk"),
                     title::String="Manipulate",
                     control_placement::Symbol=:left, ## or :left  
                     modules::Vector=[],              # eg. [:Winston, :SymPy]
@@ -195,12 +155,8 @@ function manipulate(expr, args...;
         end
         eval(context, Expr(:using, i))
     end
-    eval(context, Expr(:using, :Manipulate))
+
     eval(context, :($(:self) = $self))
-    ## user-facing interface to Display
-#    eval(context, quote Display(x; kwargs...) = Manipulate.Display(self, x; kwargs...) end)
-    ## curried version
-#    eval(context, quote Display(; kwargs...) = x -> Manipulate.Display(self, x; kwargs...) end)
 
 
     function update_gui(value)
@@ -209,7 +165,7 @@ function manipulate(expr, args...;
         dict_to_module(d, context)
         p = eval(context, expr)
         if !isa(p, Nothing)
-            Display(self, p) 
+            Display(toolkit, self, p) 
         end
     end
 
@@ -219,7 +175,7 @@ function manipulate(expr, args...;
     
     ## layout
     self.window = w = window(toolkit=toolkit, title=title, size=[width, height])
-    Tk.pack_stop_propagate(w.o)
+    istk() && pack_stop_propogate(w)
 
     f = hbox(w)
     push!(w, f)
@@ -230,6 +186,7 @@ function manipulate(expr, args...;
 
     self.output_area = rb = vbox(f)
     rb[:sizepolicy] = (:expand, :expand)
+    isqt() && push!(rb, pyplotgraphic(rb))
 
     push!(f, lb)
     push!(f, rb)
@@ -275,6 +232,7 @@ function manipulate(expr, args...;
 
     self.controls = controls
     [setValue(self, k, v) for (k, v) in set_these] # initialize any values
+    raise(w)
     update_gui(nothing)
 
     self
