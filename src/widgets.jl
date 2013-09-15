@@ -201,7 +201,7 @@ function setIcon(object::Button, icon::Icon;
     end
     setIcon(object.toolkit, object, icon)#; theme=theme, size=size)
 end
-setIcon(object::Button, nm::Union(Symbol, String)) = setIcon(object, StockIcon(nm))
+setIcon(object::Button, nm::Union(Symbol, String)) = setIcon(object, icon(nm))
 setIcon(object::Button, nm::Nothing) = setIcon(object.toolkit, object, StockIcon(nothing, nothing))
 
 list_props(::@PROP("Button")) = {:icon => "Set accompanying icon"}
