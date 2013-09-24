@@ -62,7 +62,9 @@ end
 ## This allows o[:value] to work.
 getValue(model::Observable) = model.value
 function setValue(model::Observable, value)
+    println(("setValue", value, model.value))
     if value != model.value
+        println("change value")
         model.value = value
         notify(model, "valueChanged", getValue(model))
     end
@@ -221,8 +223,9 @@ abstract AbstractTreeStore <: DataStore
 type TreeStore <: DataStore
     model::Observable
     children::Vector{TreeNode}
-    TreeStore() = new(ItemModel(), TreeNode[])
-    TreeStore(items) = new(ItemModel(), items)
+    attrs::Dict
+    TreeStore() = new(ItemModel(), TreeNode[], Dict())
+    TreeStore(items) = new(ItemModel(), items, Dict())
 end
 
 ## A store for display through `treeview`
@@ -281,13 +284,14 @@ function index_of(node::TreeNode)
     findfirst(parentnode.children, node)
 end
 
-## A path is 1-base index through children
+## A path is 1-based index through children
 ## this finds path from a node
 function node_to_path(node::TreeNode)
     path = Int[]
     path = [index_of(node)]
     parent = node.parent
     while !isa(parent, Union(TreeStore, Nothing))
+        println(("node_to_path", parent))
         unshift!(path, index_of(parent))
     end
     path
@@ -309,6 +313,7 @@ function insert!(store::TreeStore, parentnode::Union(Nothing, TreeNode), i::Int,
     if parentnode == nothing
         parentnode = store
     end
+
     childnode.parent = parentnode
     insert!(parentnode.children, i, childnode)
     notify(store.model, "insertNode", parentnode, i, childnode)
@@ -339,7 +344,8 @@ end
 function pop!(store::TreeStore, node::TreeNode)
     parentnode = node.parent
     ### how to get indexof node
-    i = index_of(store, node)
+    i = index_of(node)
+
     splice!(store, parentnode, i)
 end
 

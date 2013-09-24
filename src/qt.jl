@@ -363,7 +363,6 @@ function lineedit(::MIME"application/x-qt", parent::Container, model::Model)
     end
 
     connect(model, "placeholderTextChanged") do txt
-        println(("place holder", txt))
         widget[:setPlaceholderText](txt)
     end
 
@@ -484,7 +483,6 @@ function buttongroup(::MIME"application/x-qt", parent::Container, model::VectorM
     connect(model, "valueChanged") do value 
         ## XXX need to look up which button to set
         ## value is a vector of String[] type
-        println("changed:", value)
         btns = widget[:buttons]()
 
         map(btns) do btn
@@ -494,7 +492,6 @@ function buttongroup(::MIME"application/x-qt", parent::Container, model::VectorM
     qconnect(widget, :buttonReleased) do btn
         checked = filter(b -> b[:isChecked](), widget[:buttons]())
         vals = String[b[:text]() for b in  checked]
-        println("released:", vals)
         if length(checked) == 0
             setValue(model, String[])
         else
@@ -652,6 +649,8 @@ function slider2d(::MIME"application/x-qt", parent::Container, model::TwoDSlider
 
     (scene, view)
 end
+getValue(::MIME"application/x-qt", widget::Slider2D) = getValue(widget.model)
+setValue(::MIME"application/x-qt", widget::Slider2D, value) = setValue(widget.model, value)
 
 ## spinbox
 
@@ -879,126 +878,346 @@ function setIcon(::MIME"application/x-qt", s::StoreView, i::Int, icon::Icon)
 end
 
 ##################################################
+##
+## StoreProxyModel
+## XXX This failed due to inability to write [:parent] method...
+# qnew_class("TreeStoreProxyModel", "QtCore.QAbstractItemModel")
+# function tree_store_proxy_model(parent, store::TreeStore; tpl=nothing)
+#     if tpl == nothing
+#         record = store.items[1]
+#     else
+#         record = tpl
+#     end
+#     nms = names(record)
+
+#     m = qnew_class_instance("TreeStoreProxyModel")
+
+#     ## helpers to translate qtmodel <--> treestore
+#     function index_to_path(index)
+#         ind = index
+#         ## return node in tree store for index
+#         ## get path by crawling back
+#         path = Int[]
+#         println("index_to_node, index:", ind)
+#         while ind[:isValid]()
+#             println((ind[:isValid](),  ind[:row]() ))
+#             path = unshift!(path, ind[:row]() + 1)
+#             println((path, ind))
+#             ind = ind[:parent]()
+#         end
+#         println("====")
+#         path
+#     end
+#     function index_to_node(index)
+#         path = index_to_path(index)
+#         if length(path) > 0
+#             path_to_node(store, path) # in models.jl
+#         else
+#             nothing
+#         end
+#     end
+#     function node_to_index(node)
+#         ## return qtindex fro a give node
+#         path = node_to_path(node) # in models.jl
+#         path_to_index(path)
+#     end
+#     function path_to_index(path)
+#         ## return index from 1-based path
+#         index = Qt.QModelIndex()
+#         println("path to index")
+#         println((path, index))
+#         while length(path) > 0
+#             r = shift!(path)
+#             index = m[:index](r + 1, 0, index)
+#             println((path, index))
+#         end
+#         println("====")
+#         index
+#     end
+
+#     m[:setParent](parent)       
+#     ## add functions
+#     ## parent, rowcount, columncount, data
+
+#     ## Returns the parent of the model item with the given index. 
+#     ## If the item has no parent, an invalid QModelIndex is returned.
+#     m[:parent] = (index) -> begin
+#         path = index_to_path(index)
+#         if length(path) > 1
+#             pop!(path)
+#             path_to_index(path)
+#         else
+#             PySide.QtCore.QModelIndex()
+#         end
+#     end
+#     m[:rowCount] = (index) -> begin
+#         println("rowCount")
+#         node = index_to_node(index)
+#         if isa(node, Nothing)
+#             return 0
+#         else
+#             parent = node.parent
+#             length(parent.items)
+#         end
+#     end
+#     m[:columnCount] = (index) -> length(names(record))
+#     m[:headerData] = (section::Int, orient, role) -> begin
+#         if orient.o ==  qt_enum("Horizontal").o #  match pointers
+#             ## column, section is column
+#             role == convert(Int, qt_enum("DisplayRole")) ?  nms[section + 1] : nothing
+#         else
+#              role == convert(Int, qt_enum("DisplayRole")) ?  string(section + 1) : nothing
+#         end
+#     end
+#     m[:data] = (index, role) -> begin
+#         println("data")
+#         node = index_to_node(index)
+#         if isa(node, Nothing)
+#             return nothing
+#         end
+
+#         record = node.data
+#         nms = names(record)
+        
+#         col = index[:column]() + 1
+#         ## http://qt-project.org/doc/qt-5.0/qtcore/qt.html#ItemDataRole-enum
+#         if role == int(qt_enum("DisplayRole"))
+#             nm = nms[col]
+#             return(string(node.(symbol(nm))))
+#         end
+#         other_roles = ["EditRole", "DecorationRole", "TextAlignmentRole", "BackgroundRole", "ForegroundRole", "ToolTipRole", "WhatsThisRole"]
+#         for r in other_roles
+#             if role == int(qt_enum(r))
+#                 if haskey(store.attrs, r)
+#                     ## store roles in dict keyed by hash(row, col) 
+#                     ## e.g., store.attrs[RoleName][hash(row, col)] = value
+#                     ## XXX need to do icon via
+#                     ## store.attrs["DecorationRole"] = Dict()
+#                     ## store.attrs["DecorationRole"][hash(1, 3)] = Qt.QIcon("ok.gif") ...
+#                     d = store.attrs[r]
+#                     key = hash(index[row]() + 1, col)
+#                     if haskey(d, key)
+#                         return string(d[key])
+#                     end
+#                 end
+#                 return nothing
+#             end
+#         end
+#         if role == int(qt_enum("TextAlignmentRole")) 
+#             return(qt_enum("AlignLeft")) ## XXX adjust to variable type?
+#         end
+#         return(nothing)
+#     end
+#     m[:index] = (row, column, parent) -> begin
+#         m[:createIndex](row, column)
+#     end
+#     m[:insertRows] = (row, count, index) -> begin
+#        println("insert rows")
+#        m[:beginInsertRows](index, row-1, row-1)
+#        m[:endInsertRows]()
+#        notify(store.model, "rowInserted", index_to_node(index), row)
+#        true
+#    end
+#    m[:removeRows] = (row, count, index) -> begin
+#        println("remove rows")
+#        m[:beginRemoveRows](index, row-1, 1)
+#        m[:endRemoveRows]()
+#        notify(store.model, "rowRemoved", index_to_node(index), row)
+#        true
+#    end
+
+#    ## connect model to store so that store changes propagate XXX
+#    connect(store.model, "rowInserted") do parent_node, i
+#        m[:insertRows](i, 1, node_to_index(parent_node))
+#    end
+
+#    connect(store.model, "rowRemoved") do parent_node, i 
+#        m[:removeRows](i, 1, node_to_index(parent_node))
+#    end
+#    connect(store.model, "rowUpdated") do parent_node, i 
+#        ## XXX
+#        topleft = m[:index](i-1,0)
+#        lowerright = m[:index](i, 0)
+#        m[:emit](PySide.QtCore[:SIGNAL]("dataChanged"))(topleft, lowerright)
+#    end
+
+
+
+#    ## return model
+#    m
+# end
+
 ## Tree view
 ## tpl: a template for the type, otherwise from tr.children[1]
-function treeview(::MIME"application/x-tcltk", parent::Container, store::TreeStore; tpl=nothing)
-    block = Tk.Frame(getWidget(parent))
-    widget = Tk.Treeview(block)
-    scrollbars_add(block, widget)
-    
+function treeview(::MIME"application/x-qt", parent::Container, store::TreeStore; tpl=nothing)
+    widget = Qt.QTreeWidget(parent[:widget])
     model = store.model
-    ## add headers from type, connect header click
-    if isa(tpl, Nothing)
-        tpl = store.children[1]
-    end
-    nms = map(string, names(tpl))
-    configure(widget, show="tree headings", columns = [1:length(nms)])
+
     ## headers
-    map(i -> tcl(widget, "heading", i, 
-                 text=Tk.tk_string_escape(string(nms[i])), 
-                 command=(path) -> notify(model, "headerClicked", i)),
-        1:length(nms))
-    Tk.tcl(widget, "column", length(nms), stretch=true)
+    if isa(tpl, Nothing)
+        tpl = store.children[1].data
+    end
+    widget[:setHeaderLabels](names(tpl))
 
-    ## connect to model
-    ## insertNode, removeNode, updatedNode, expandNode, collapseNode
-    connect(model, "insertNode") do parent, i, child
-        index = isa(parent, TreeStore) ? "{}" : parent.index
-        if isa(child.data, Nothing)
-            index = Tk.tcl(widget, "insert", index, i, text=child.text)
-        else
-            index = Tk.tcl(widget, "insert", index, i, text=child.text, values= item_to_values(child.data))
+    ## set flags ...
+
+    ## helper functions
+    function node_to_values(node)
+        d = node.data
+        ## make string array of values
+        values = String[to_string(d, d.(nm)) for nm in names(d)]
+    end
+    function path_to_item(path)
+        ## return QTreeWidgetItem from path
+        length(path) == 0 && return nothing
+        root = shift!(path)
+        item = widget[:topLevelItem](root - 1)
+        while length(path) > 0
+            i = shift!(path)
+            item = item[:child](i-1)
         end
-        child.index = index     # can I look this up? Can get index from item, but item from index?
+        item
     end
-    connect(model, "removeNode") do parent, i
-        child = parent.children[i]
-        Tk.tcl(widget, "detach", child.index)
+    function node_to_item(node)
+        path_to_item(node_to_path(node))
     end
-    connect(model, "updatedNode") do node
-        if isa(node.data, Nothing)
-            Tk.tcl(widget, "item", node.index, text=node.text, values = item_to_values(node.data))
-        else
-            Tk.tcl(widget, "item", node.index, text=node.text)
+    function item_to_path(item)
+        path = Int[]
+        parent = item[:parent]()
+        while !isa(parent, Nothing)
+            unshift!(path, parent[:indexOfChild](item) + 1)
+            item = parent
+            parent = parent[:parent]()
         end
-    end
-    connect(model, "expandNode") do node
-        Tk.tcl(widget, "item", node.index, open=true)
-    end
-    connect(model, "collapseNode") do node
-        Tk.tcl(widget, "item", node.index, open=false)
-    end
-    ## movenode?
-    ## signal changes back to model
-    tk_selected_items() = split(Tk.tcl(widget, "selection"))
-    function tk_xy_to_path(x, y)
-        col = Tk.tcl(widget, "identify", "column", x, y)
-        col = parseint(col[2:end]) + 1 # strip off #
-        item = Tk.tcl(widget, "identify", "item", x, y)
-        (tk_item_to_path(widget, item), col)
+        unshift!(path, widget[:indexOfTopLevelItem](item) + 1)
+        path
     end
 
-    bind(widget, "<<TreeviewSelect>>") do path
-        sel_items = tk_selected_items()
-        paths = map(item -> tk_item_to_path(widget, item), sel_items)
-        setValue(model, paths)
+    ## connect model and widget
+    function insertNode(parentnode, i, childnode)
+        item = PySide.Qt.QTreeWidgetItem(node_to_values(childnode))
+
+        if isa(parentnode, Union(Nothing, TreeStore)) # TreeStore is root, TreeNode is node
+            widget[:insertTopLevelItem](i-1, item)
+        else
+            parent_path = node_to_path(parentnode)
+            parent_item = path_to_item(parent_path)
+            parent_item[:insertChild](i-1, item)
+        end
     end
-    bind(widget, "<<TreeviewOpen>>") do path
-        item = Tk.tcl(widget, "focus")
-        path = tk_item_to_path(widget, item)
-        notify(model, "nodeExpanded", path)
+    connect(model, "insertNode", insertNode)
+
+    function removeNode(parentnode, i)
+        if isa(parentnode, TreeStore) 
+            widget[:takeTopLevelItem](i-1)
+        else
+            item = node_to_item(parentnode)
+            item[:takeChild](i-1)
+        end
     end
-    bind(widget, "<<TreeviewClose>>") do path
-        item = Tk.tcl(widget, "focus")
-        path = tk_item_to_path(widget, item)
-        notify(model, "nodeCollapsed", path)
+    connect(model, "removeNode", removeNode)
+
+    function updatedNode(node)
+        item = node_to_item(node)
+        nms = names(node.data)
+        for i in 1:length(nms)
+            item[:setText](i-1, to_string(node, node.data.(nms[i])))
+        end
     end
-    bind(widget, "<Button-1>") do path,  x, y
-        item, column = tk_xy_to_path(x, y)
-        notify(model, "clicked", path, column)
+    connect(model, "updatedNode", updatedNode)
+
+    function expandNode(node)
+        item = node_to_item(node)
+        item[:setExpanded](true)
     end
-    bind(widget, "<Double-Button-1>") do path, x, y
-        item, column = tk_xy_to_path(x, y)
-        notify(model, "DoubleClicked", path, column)
+    connect(model, "expandNode", expandNode)
+
+    function collapseNode(node)
+        item = node_to_item(node)
+        item[:setExpanded](false)
     end
+    connect(model, "collapseNode", expandNode)
+
+    connect(model, "valueChanged") do value
+        println(("valueChanged", value))
+        item = path_to_item(value)
+        widget[:setCurrentItem](item)
+    end
+
+    ## iterate of tstore children to set things
+    function add_children(parentnode)
+        if length(parentnode.children) > 0
+            for i in 1:length(parentnode.children)
+                child = parentnode.children[i]
+                insertNode(parentnode, i, child)
+                add_children(child)
+            end
+        end
+    end
+    add_children(store)
+
+
+
+    ## connect widget to model
+    qconnect(widget, :itemSelectionChanged) do
+        sel_item = widget[:selectedItems]()[1]
+        path = item_to_path(sel_item)
+        setValue(model, path)
+    end
+    qconnect(widget, :itemExpanded) do item
+        path = item_to_path(item)
+        notify(model, "nodeExpand", path)
+    end
+    qconnect(widget, :itemCollapsed) do item
+        path = item_to_path(item)
+        notify(model, "nodeCollapse", path)
+    end
+    qconnect(widget, :itemClicked) do item, column
+        path = item_to_path(item)
+        notify(model, "clicked", path, column + 1)
+    end
+    qconnect(widget, :itemDoubleClicked) do item, column
+        path = item_to_path(item)
+        notify(model, "doubleClicked", path, column + 1)
+    end
+
     
-    (widget, block)
+    
+    (widget, widget)
 end
 
-function tk_item_to_path(widget, item)
-    path = [parseint(Tk.tcl(widget, "index", item)) + 1]
-    parent = Tk.tcl(widget, "parent", item)
-    while parent != ""
-            unshift!(path, parseint(Tk.tcl(widget, "index", parent)) + 1)
-        parent = Tk.tcl(widget, "parent", parent)
-    end
-    path
-end
-
-## path --> item
-function tk_path_to_item(widget, path::Vector{Int})
-    ## Is there no better way then to list all children
-    item = "{}"
-    while length(path) > 0
-        i = shift!(path)
-        item = split(Tk.tcl(widget, "children", item))[i]
-    end
-    item
-end
 ## Properties
-function getKeywidth(::MIME"application/x-tcltk", tr::TreeView)
-    parseint(Tk.tcl(tr.o, "column", "#0", "-width"))
+
+
+## keywidth is first column
+function getKeywidth(::MIME"application/x-qt", tr::TreeView)
+    tr[:widget][:columnWidth](0)
 end
-function setKeywidth(::MIME"application/x-tcltk", tr::TreeView, width::Int)
-    Tk.tcl(tr.o, "column", "#0", width=width)
+function setKeywidth(::MIME"application/x-qt", tr::TreeView, width::Int)
+    tr[:widget][:setColumnWidth](0, width)
 end
     
 
 
-function setIcon(::MIME"application/x-tcltk", s::TreeView, path::Vector{Int}, icon::Icon)
-    widget = s.o
-    item = tk_path_to_item(widget, path)
-    Tk.tcl(widget, "item", item, image=get_icon(s.toolkit, icon), text=txt)
+function setIcon(::MIME"application/x-qt", s::TreeView, path::Vector{Int}, icon::Icon)
+    widget = s[:widget]
+    function path_to_item(path) # DRY!!
+        ## return QTreeWidgetItem from path
+        length(path) == 0 && return nothing
+        root = shift!(path)
+        item = widget[:topLevelItem](root - 1)
+        while length(path) > 0
+            i = shift!(path)
+            item = item[:child](i-1)
+        end
+        item
+    end
+    item = path_to_item(path)
+    if isa(icon.theme, Nothing) 
+        icon.theme = s[:icontheme]
+    end
+    widget[:widget][:setIcon]()
+    item[:setIcon](get_icon(s.toolkit, icon))
 end
 
 ## Images

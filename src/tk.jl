@@ -317,9 +317,13 @@ end
 function lineedit(::MIME"application/x-tcltk", parent::Container, model::Model)
     
     widget = Tk.Entry(getWidget(parent), getValue(model))
-    connect(model, "valueChanged", widget, Tk.set_value)
-
     placeholdertext = [""]
+
+
+    connect(model, "valueChanged") do value
+        Tk.configure(widget, foreground="black")
+        Tk.set_value(widget)
+    end
     
     ## SIgnals: keyrelease (keycode), activated (value), focusIn, focusOut, textChanged
     bind(widget, "<Return>", (path) -> notify(model, "editingFinished", getValue(model)))
@@ -691,12 +695,16 @@ function storeview(::MIME"application/x-tcltk", parent::Container, store::Store,
         all_nodes = split(tcl(widget, "children", "{}"))
         findin(all_nodes, selected)
     end
+
     ## TreeviewSelect signal
     bind(widget, "<<TreeviewSelect>>") do path
         sel = selected_nodes()
+        println(sel)
         setValue(model, sel)
         notify(model, "selectionChanged", model[:value])
     end
+
+
     ## update selection if model changesq
     function select_nodes(inds::Vector{Int})
         nodes = split(Tk.tcl(widget, "children", "{}"))[inds]
@@ -715,7 +723,9 @@ function storeview(::MIME"application/x-tcltk", parent::Container, store::Store,
     end
     
     Tk.bind(widget, "<Button-1>") do path, W, x, y
+        println(("Button -1", W, x, y))
         (row, col) = find_row_col(W, x, y)
+        println(( row, col))
         notify(model, "rowClicked", row, col)
     end
     Tk.bind(widget, "<Double-Button-1>") do path, W, x, y
@@ -788,12 +798,11 @@ end
 ##################################################
 ## Tree view
 ## tpl: a template for the type, otherwise from tr.children[1]
-function treeview(::MIME"application/x-tcltk", parent::Container, store::TreeStore; tpl=nothing)
+function treeview(::MIME"application/x-tcltk", parent::Container, store::TreeStore, model; tpl=nothing)
     block = Tk.Frame(getWidget(parent))
     widget = Tk.Treeview(block)
     scrollbars_add(block, widget)
     
-    model = store.model
     ## add headers from type, connect header click
     if isa(tpl, Nothing)
         tpl = store.children[1]
@@ -810,7 +819,7 @@ function treeview(::MIME"application/x-tcltk", parent::Container, store::TreeSto
     ## connect to model
     ## insertNode, removeNode, updatedNode, expandNode, collapseNode
     connect(model, "insertNode") do parent, i, child
-        index = isa(parent, TreeStore) ? "{}" : parent.index
+        index = isa(parent, Nothing) ? "{}" : parent.index
         if isa(child.data, Nothing)
             index = Tk.tcl(widget, "insert", index, i, text=child.text)
         else
@@ -842,6 +851,8 @@ function treeview(::MIME"application/x-tcltk", parent::Container, store::TreeSto
         col = Tk.tcl(widget, "identify", "column", x, y)
         col = parseint(col[2:end]) + 1 # strip off #
         item = Tk.tcl(widget, "identify", "item", x, y)
+        item == "" && error("no item at x, y")
+
         (tk_item_to_path(widget, item), col)
     end
 
@@ -861,12 +872,18 @@ function treeview(::MIME"application/x-tcltk", parent::Container, store::TreeSto
         notify(model, "nodeCollapsed", path)
     end
     bind(widget, "<Button-1>") do path,  x, y
-        item, column = tk_xy_to_path(x, y)
-        notify(model, "clicked", path, column)
+        try
+            item, column = tk_xy_to_path(x, y)
+            notify(model, "clicked", path, column)
+        catch e
+        end
     end
     bind(widget, "<Double-Button-1>") do path, x, y
-        item, column = tk_xy_to_path(x, y)
-        notify(model, "DoubleClicked", path, column)
+        try
+            item, column = tk_xy_to_path(x, y)
+            notify(model, "doubleClicked", path, column)
+        catch e
+        end
     end
     
     (widget, block)

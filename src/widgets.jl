@@ -550,7 +550,9 @@ function slider2d(parent::Container, items1::Union(Range, Range1), items2::Union
 
     Slider2D(widget, block, model, parent, parent.toolkit, Dict())
 end
-
+## get and set value override
+getValue(widget::Slider2D) = getValue(widget.toolkit, widget)
+setValue(widget::Slider2D, value) = setValue(widget.toolkit, widget, value)
 
 
 ## spinbox
@@ -827,6 +829,7 @@ type TreeView <: ModelView
     o
     block
     store
+    model
     parent
     toolkit
     attrs
@@ -853,11 +856,11 @@ end
 ##
 ## * `clicked (path, column)` gives path and column user clicks on
 ## 
-## * `DoubleClicked(path, column)` gives path and column user clicks on
+## * `doubleClicked(path, column)` gives path and column user clicks on
 ##
 function treeview(parent::Container, store::TreeStore; tpl=nothing)
     widget, block = treeview(parent.toolkit, parent, store; tpl=tpl)
-    TreeView(widget, block, store, parent, parent.toolkit, Dict())
+    TreeView(widget, block, store, store.model, parent, parent.toolkit, Dict())
 end
 
 ## properties
