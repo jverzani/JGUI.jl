@@ -848,7 +848,7 @@ end
 ##
 ## Signals:
 ##
-## * `valueChanged (value)` gives selected paths
+## * `valueChanged (value)` gives selected path
 ##
 ## * `nodeExpand (path)` gives path when node expands
 ##
@@ -858,9 +858,13 @@ end
 ## 
 ## * `doubleClicked(path, column)` gives path and column user clicks on
 ##
+## Notes:
+## There are two models: one for the store where we can insert! and friends and one for the widget
+## where the valueChanged, nodeExpand, ... are held. These are not shared between views of the same model
 function treeview(parent::Container, store::TreeStore; tpl=nothing)
-    widget, block = treeview(parent.toolkit, parent, store; tpl=tpl)
-    TreeView(widget, block, store, store.model, parent, parent.toolkit, Dict())
+    model = ItemModel()
+    widget, block = treeview(parent.toolkit, parent, store, model; tpl=tpl)
+    TreeView(widget, block, store, model, parent, parent.toolkit, Dict())
 end
 
 ## properties
@@ -874,6 +878,9 @@ setIcon(s::TreeView, path::Vector{Int}, icon::Icon) = setIcon(s.toolkit, s, path
 setIcon(s::TreeView, path::Vector{Int}, icon::Symbol) = setIcon(s, path, StockIcon(icon, s[:icontheme]))
 setIcon(s::TreeView, path::Vector{Int}, icon::String) = setIcon(s, path, FileIcon(icon))
     
+## expand the node is a view property, not model
+expand_node(view::TreeView, node::TreeNode) = notify(view.model, "expandNode", node)
+collapse_node(view::TreeView, node::TreeNode) = notify(view.model, "collapseNode", node)
 
 ## svg device
 

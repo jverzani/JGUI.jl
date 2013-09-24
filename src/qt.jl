@@ -706,14 +706,6 @@ setActive(o::PyPlotGraphic, value) = pltm[:figure](o.id)
 
 
 ## Views
-function item_to_values(item)
-    values = String[to_string(item, item.(nm)) for nm in names(item)]
-end
-
-function type_to_headings(item)
-
-end
-
 ## StoreProxyModel
 qnew_class("StoreProxyModel", "QtCore.QAbstractTableModel")
 function store_proxy_model(parent, store::Store; tpl=nothing)
@@ -1049,9 +1041,8 @@ end
 
 ## Tree view
 ## tpl: a template for the type, otherwise from tr.children[1]
-function treeview(::MIME"application/x-qt", parent::Container, store::TreeStore; tpl=nothing)
+function treeview(::MIME"application/x-qt", parent::Container, store::TreeStore, model::ItemModel; tpl=nothing)
     widget = Qt.QTreeWidget(parent[:widget])
-    model = store.model
 
     ## headers
     if isa(tpl, Nothing)
@@ -1061,14 +1052,10 @@ function treeview(::MIME"application/x-qt", parent::Container, store::TreeStore;
 
     ## set flags ...
 
-    ## helper functions
-    function node_to_values(node)
-        d = node.data
-        ## make string array of values
-        values = String[to_string(d, d.(nm)) for nm in names(d)]
-    end
+    ## helper functions relating
     function path_to_item(path)
         ## return QTreeWidgetItem from path
+        path = copy(path)
         length(path) == 0 && return nothing
         root = shift!(path)
         item = widget[:topLevelItem](root - 1)
@@ -1092,7 +1079,8 @@ function treeview(::MIME"application/x-qt", parent::Container, store::TreeStore;
         unshift!(path, widget[:indexOfTopLevelItem](item) + 1)
         path
     end
-
+    
+    ###########################
     ## connect model and widget
     function insertNode(parentnode, i, childnode)
         item = PySide.Qt.QTreeWidgetItem(node_to_values(childnode))
@@ -1105,7 +1093,7 @@ function treeview(::MIME"application/x-qt", parent::Container, store::TreeStore;
             parent_item[:insertChild](i-1, item)
         end
     end
-    connect(model, "insertNode", insertNode)
+    connect(store.model, "insertNode", insertNode)
 
     function removeNode(parentnode, i)
         if isa(parentnode, TreeStore) 
@@ -1115,7 +1103,7 @@ function treeview(::MIME"application/x-qt", parent::Container, store::TreeStore;
             item[:takeChild](i-1)
         end
     end
-    connect(model, "removeNode", removeNode)
+    connect(store.model, "removeNode", removeNode)
 
     function updatedNode(node)
         item = node_to_item(node)
@@ -1124,8 +1112,9 @@ function treeview(::MIME"application/x-qt", parent::Container, store::TreeStore;
             item[:setText](i-1, to_string(node, node.data.(nms[i])))
         end
     end
-    connect(model, "updatedNode", updatedNode)
-
+    connect(store.model, "updatedNode", updatedNode)
+    
+    ## expand Node on view model, not store model
     function expandNode(node)
         item = node_to_item(node)
         item[:setExpanded](true)
@@ -1136,10 +1125,9 @@ function treeview(::MIME"application/x-qt", parent::Container, store::TreeStore;
         item = node_to_item(node)
         item[:setExpanded](false)
     end
-    connect(model, "collapseNode", expandNode)
+    connect(model, "collapseNode", collapseNode)
 
     connect(model, "valueChanged") do value
-        println(("valueChanged", value))
         item = path_to_item(value)
         widget[:setCurrentItem](item)
     end
@@ -1162,6 +1150,7 @@ function treeview(::MIME"application/x-qt", parent::Container, store::TreeStore;
     qconnect(widget, :itemSelectionChanged) do
         sel_item = widget[:selectedItems]()[1]
         path = item_to_path(sel_item)
+        ## some how this totally fails, yet
         setValue(model, path)
     end
     qconnect(widget, :itemExpanded) do item
@@ -1196,7 +1185,18 @@ end
 function setKeywidth(::MIME"application/x-qt", tr::TreeView, width::Int)
     tr[:widget][:setColumnWidth](0, width)
 end
-    
+function getWidths(::MIME"application/x-qt", tr::TreeView)
+    "XXX"
+end
+function setWidths(::MIME"application/x-qt", tr::TreeView, widths::Vector{Int})
+    "XXX"
+end
+function getHeights(::MIME"application/x-qt", tr::TreeView)
+    "XXX"
+end
+function setHeights(::MIME"application/x-qt", tr::TreeView, heights::Vector{Int})
+    "XXX"
+end
 
 
 function setIcon(::MIME"application/x-qt", s::TreeView, path::Vector{Int}, icon::Icon)

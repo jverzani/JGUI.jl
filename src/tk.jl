@@ -638,12 +638,6 @@ function cairographic(::MIME"application/x-tcltk", parent::Container, model::Eve
 end
 
 ## Views
-function item_to_values(item)
-    values = String[to_string(item, item.(nm)) for nm in names(item)]
-end
-function type_to_headings(item)
-
-end
 ## storeview
 function storeview(::MIME"application/x-tcltk", parent::Container, store::Store, model::ItemModel; tpl=nothing)
     ## Widget
@@ -666,7 +660,7 @@ function storeview(::MIME"application/x-tcltk", parent::Container, store::Store,
 
     ## main callbacks
     function insert_row(i::Int, item)
-        values = item_to_values(item)
+        values = composite_instance_to_values(item)
         tcl(widget, "insert", "{}", i-1, values=values)
     end
     connect(store.model, "rowInserted", i -> insert_row(i, store.items[i]))
@@ -681,7 +675,7 @@ function storeview(::MIME"application/x-tcltk", parent::Container, store::Store,
     function update_row(i::Int)
         item = store.items[i]
         row = split(Tk.tcl(widget, "children", "{}"))[i]
-        values = item_to_values(item)
+        values = composite_instance_to_values(item)
         tcl(widget, "item", row, values=values)
     end
     connect(store.model, "rowUpdated", update_row)
@@ -798,7 +792,7 @@ end
 ##################################################
 ## Tree view
 ## tpl: a template for the type, otherwise from tr.children[1]
-function treeview(::MIME"application/x-tcltk", parent::Container, store::TreeStore, model; tpl=nothing)
+function treeview(::MIME"application/x-tcltk", parent::Container, store::TreeStore, model::ItemModel; tpl=nothing)
     block = Tk.Frame(getWidget(parent))
     widget = Tk.Treeview(block)
     scrollbars_add(block, widget)
@@ -823,7 +817,7 @@ function treeview(::MIME"application/x-tcltk", parent::Container, store::TreeSto
         if isa(child.data, Nothing)
             index = Tk.tcl(widget, "insert", index, i, text=child.text)
         else
-            index = Tk.tcl(widget, "insert", index, i, text=child.text, values= item_to_values(child.data))
+            index = Tk.tcl(widget, "insert", index, i, text=child.text, values=node_to_values(child))
         end
         child.index = index     # can I look this up? Can get index from item, but item from index?
     end
@@ -833,7 +827,7 @@ function treeview(::MIME"application/x-tcltk", parent::Container, store::TreeSto
     end
     connect(model, "updatedNode") do node
         if isa(node.data, Nothing)
-            Tk.tcl(widget, "item", node.index, text=node.text, values = item_to_values(node.data))
+            Tk.tcl(widget, "item", node.index, text=node.text, values = node_to_values(node))
         else
             Tk.tcl(widget, "item", node.index, text=node.text)
         end

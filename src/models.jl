@@ -62,9 +62,7 @@ end
 ## This allows o[:value] to work.
 getValue(model::Observable) = model.value
 function setValue(model::Observable, value)
-    println(("setValue", value, model.value))
     if value != model.value
-        println("change value")
         model.value = value
         notify(model, "valueChanged", getValue(model))
     end
@@ -215,6 +213,15 @@ type TreeNode <: Object
     children::Vector            # TreeNodes
 end
 
+## make string array of values
+function composite_instance_to_values(d)
+    String[to_string(d, d.(nm)) for nm in names(d)]
+end
+function node_to_values(node::TreeNode)
+    d = node.data
+    composite_instance_to_values(d)
+end
+
 
 
 abstract AbstractTreeStore <: DataStore
@@ -360,6 +367,3 @@ function update_node(store::TreeStore, node::TreeNode; text::Union(Nothing, Stri
     notify(store.model, "updatedNode", node)
 end
 
-## expand the node
-expand_node(store::TreeStore, node::TreeNode) = notify(store.model, "expandNode", node)
-collapse_node(store::TreeStore, node::TreeNode) = notify(store.model, "collapseNode", node)
