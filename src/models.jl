@@ -171,6 +171,7 @@ type Store{T} <: DataStore
     model::Observable
     items::Vector{T}
     Store(items::Vector{T}) = new(ItemModel(), items)
+    Store() = new(ItemModel(), T[])
 end
 
 
@@ -298,7 +299,6 @@ function node_to_path(node::TreeNode)
     path = [index_of(node)]
     parent = node.parent
     while !isa(parent, Union(TreeStore, Nothing))
-        println(("node_to_path", parent))
         unshift!(path, index_of(parent))
     end
     path
@@ -325,6 +325,7 @@ function insert!(store::TreeStore, parentnode::Union(Nothing, TreeNode), i::Int,
     insert!(parentnode.children, i, childnode)
     notify(store.model, "insertNode", parentnode, i, childnode)
 end
+## data an instance of a type of nothing
 function insert!(store::TreeStore, parentnode::Union(Nothing, TreeNode), i::Int, text::String, data) 
     childnode = TreeNode(text, nothing, data, nothing, parentnode, {})
     insert!(store, parentnode, i, childnode)

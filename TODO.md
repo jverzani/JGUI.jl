@@ -1,17 +1,17 @@
 combobox: editable
 spinbox
 menubars, toolbars ...
-window: geometry
+window: geometry x,y positions
+
 
 # Qt
 
 imageview -- ain't working
-treeview -- 
 
 
 # Tk
 
-
+warnings on loading Tk
 
 window: closeHandler (return logical, only one so not a model)
 window: geometry, menubar/statusbar, toolkit

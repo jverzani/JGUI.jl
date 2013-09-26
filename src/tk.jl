@@ -54,6 +54,14 @@ function setSize(::MIME"application/x-tcltk", o::Window, sz::Vector{Int})
 end
 getTitle(::MIME"application/x-tcltk", o::Window) = Tk.wm(o.o, "title")
 setTitle(::MIME"application/x-tcltk", o::Window, value::String) = Tk.wm(o.o, "title", Tk.tk_string_escape(value))
+getPosition(::MIME"application/x-tcltk", o::Window) = [int(Tk.winfo(o[:widget], prop)) for prop in ["rootx", "rooty"]]
+function setPosition(::MIME"application/x-tcltk", o::Window, value::Vector{Int}) 
+    toplevel = Tk.winfo(o[:widget], "toplevel")
+    x, y = value[1:2]
+    Tk.wm(toplevel, "geometry", "+$x+$y")
+end
+
+
 function getModal(::MIME"application/x-tcltk", o::Window) 
     val = tcl("grab", "status", o.o)
     val == "" ? false : true
@@ -720,11 +728,11 @@ function storeview(::MIME"application/x-tcltk", parent::Container, store::Store,
         println(("Button -1", W, x, y))
         (row, col) = find_row_col(W, x, y)
         println(( row, col))
-        notify(model, "rowClicked", row, col)
+        notify(model, "clicked", row, col)
     end
     Tk.bind(widget, "<Double-Button-1>") do path, W, x, y
         (row, col) = find_row_col(W, x, y)
-        notify(model, "rowDoubleClicked", row, col)
+        notify(model, "doubleClicked", row, col)
     end
 
     ## insert initial rows
@@ -801,7 +809,7 @@ function treeview(::MIME"application/x-tcltk", parent::Container, store::TreeSto
     if isa(tpl, Nothing)
         tpl = store.children[1]
     end
-    nms = map(string, names(tpl))
+    nms = map(string, names(tpl.data))
     configure(widget, show="tree headings", columns = [1:length(nms)])
     ## headers
     map(i -> tcl(widget, "heading", i, 
@@ -812,8 +820,8 @@ function treeview(::MIME"application/x-tcltk", parent::Container, store::TreeSto
 
     ## connect to model
     ## insertNode, removeNode, updatedNode, expandNode, collapseNode
-    connect(model, "insertNode") do parent, i, child
-        index = isa(parent, Nothing) ? "{}" : parent.index
+    function insertNode(parent, i, child)
+        index = isa(parent, Union(TreeStore, Nothing)) ? "{}" : parent.index
         if isa(child.data, Nothing)
             index = Tk.tcl(widget, "insert", index, i, text=child.text)
         else
@@ -821,11 +829,13 @@ function treeview(::MIME"application/x-tcltk", parent::Container, store::TreeSto
         end
         child.index = index     # can I look this up? Can get index from item, but item from index?
     end
-    connect(model, "removeNode") do parent, i
+    connect(store.model, "insertNode", insertNode)
+
+    connect(store.model, "removeNode") do parent, i
         child = parent.children[i]
         Tk.tcl(widget, "detach", child.index)
     end
-    connect(model, "updatedNode") do node
+    connect(store.model, "updatedNode") do node
         if isa(node.data, Nothing)
             Tk.tcl(widget, "item", node.index, text=node.text, values = node_to_values(node))
         else
@@ -839,6 +849,21 @@ function treeview(::MIME"application/x-tcltk", parent::Container, store::TreeSto
         Tk.tcl(widget, "item", node.index, open=false)
     end
     ## movenode?
+
+
+    ## iterate of tstore children to set things
+    function add_children(parentnode)
+        if length(parentnode.children) > 0
+            for i in 1:length(parentnode.children)
+                child = parentnode.children[i]
+                insertNode(parentnode, i, child)
+                add_children(child)
+            end
+        end
+    end
+    add_children(store)
+
+
     ## signal changes back to model
     tk_selected_items() = split(Tk.tcl(widget, "selection"))
     function tk_xy_to_path(x, y)

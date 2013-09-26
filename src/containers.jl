@@ -51,7 +51,7 @@ end
 ## Main Window
 ## XXX deal with toolkit, menubar, statusbar
 ## kwargs are used to pass along properties to the constructor (size)
-function window(;toolkit::MIME=default_toolkit, title::String="", kwargs...)
+function window(;toolkit::MIME=default_toolkit, title::String="",  kwargs...)
     widget, block = window(toolkit)
     obj = Window(widget, block, nothing, EventModel(), toolkit, {}, Dict())
     obj[:title] = title
@@ -83,9 +83,11 @@ getTitle(o::Window) = getTitle(o.toolkit, o)
 setTitle(o::Window, value::String) = setTitle(o.toolkit, o, value)
 getModal(o::Window) = getModal(o.toolkit, o)
 setModal(o::Window, value::Bool) = setModal(o.toolkit, o, value)
-
+getPosition(o::Window) = getPosition(o.toolkit, o)
+setPosition(o::Window, value::Vector{Int}) = setPosition(o.toolkit, o, value)
 list_props(::@PROP("Window")) = {:title => "window title",
-                                 :modal => "make window modal"
+                                 :modal => "make window modal",
+                                 :position => "move to position [x,y]"
                                  }
                                  
 ## addToolBar, addMenuBar, addStatusBar...

@@ -93,6 +93,8 @@ destroy_window(::MIME"application/x-qt", o::Window) = o[:widget][:destroy](true)
 ## window properties
 getTitle(::MIME"application/x-qt", o::Window) = o[:widget][:windowTitle]()
 setTitle(::MIME"application/x-qt", o::Window, value::String) = o[:widget][:setWindowTitle](value)
+getPosition(::MIME"application/x-qt", o::Window) = [o[:widget][:x](), o[:widget][:y]()]
+setPosition(::MIME"application/x-qt", o::Window, value::Vector{Int}) = o[:widget][:move](value[1], value[2])
 
 ## XXX
 function getModal(::MIME"application/x-tcltk", o::Window) 
@@ -736,7 +738,7 @@ function store_proxy_model(parent, store::Store; tpl=nothing)
         row = index[:row]() + 1
         col = index[:column]() + 1
         ## http://qt-project.org/doc/qt-5.0/qtcore/qt.html#ItemDataRole-enum
-        roles = ["DisplayRole", "EditRole", "TextAlignmentRole", "BackgroundRole", "ForegroundRole", "ToolTipRole", "WhatsThisRole"]
+        roles = ["DisplayRole"] 
         for r in roles
             if role == int(qt_enum(r))
                 item = store.items[row]
@@ -750,20 +752,19 @@ function store_proxy_model(parent, store::Store; tpl=nothing)
         if row == 1 && role == int(qt_enum("DecorationRole"))
             return(nothing) # XXX icons...
         end
-
+        ## More roles, but not now...: "EditRole",  "BackgroundRole", "ForegroundRole", "ToolTipRole", "WhatsThisRole"]
         return(nothing)
     end
 
    m[:insertRows] = (row, count, index) -> begin
        m[:beginInsertRows](index, row-1, row-1)
        m[:endInsertRows]()
-       notify(store.model, "rowInserted", row)
+       ## notify model? Was getting recursive call in that case.
        true
    end
    m[:removeRows] = (row, count, index) -> begin
        m[:beginRemoveRows](index, row-1, 1)
        m[:endRemoveRows]()
-       notify(store.model, "rowRemoved", row)
        true
    end
 
@@ -772,12 +773,13 @@ function store_proxy_model(parent, store::Store; tpl=nothing)
        m[:insertRows](i, 1, PySide.QtCore[:QModelIndex]())
    end
 
-   connect(store.model, "rowRemoved", i -> m[:removeRows](i, 1, PySide.QtCore[:QModelIndex]()))
-   connect(store.model, "rowUpdated", i -> begin
-       topleft = m[:index](i-1,0)
-       lowerright = m[:index](i, 0)
-       m[:emit](PySide.QtCore[:SIGNAL]("dataChanged"))(topleft, lowerright)
-   end)
+    connect(store.model, "rowRemoved", i -> m[:removeRows](i, 1, PySide.QtCore[:QModelIndex]()))
+    function rowUpdated(i::Int)
+        topleft = m[:index](i-1,0)
+        lowerright = m[:index](i, 0)
+        m[:emit](PySide.QtCore[:SIGNAL]("dataChanged"))(topleft, lowerright)
+    end
+    connect(store.model, "rowUpdated", rowUpdated)
 
 
 
@@ -802,10 +804,10 @@ function storeview(::MIME"application/x-qt", parent::Container, store::Store, mo
         notify(model, "selectionChanged", indices)
     end
     qconnect(widget, :clicked) do index
-        notify(model, "rowClicked", index[:row]() + 1, index[:column]() + 1)
+        notify(model, "clicked", index[:row]() + 1, index[:column]() + 1)
     end
     qconnect(widget, :doubleClicked) do index
-        notify(model, "rowDoubleClicked", index[:row]() + 1, index[:column]() + 1)
+        notify(model, "doubleClick", index[:row]() + 1, index[:column]() + 1)
     end
     qconnect(widget[:horizontalHeader](), :sectionClicked) do index
         notify(model, "headerClicked", index + 1)
@@ -1048,7 +1050,8 @@ function treeview(::MIME"application/x-qt", parent::Container, store::TreeStore,
     if isa(tpl, Nothing)
         tpl = store.children[1].data
     end
-    widget[:setHeaderLabels](names(tpl))
+    ## first column is for key
+    widget[:setHeaderLabels](append([""],names(tpl)))
 
     ## set flags ...
 
@@ -1083,7 +1086,11 @@ function treeview(::MIME"application/x-qt", parent::Container, store::TreeStore,
     ###########################
     ## connect model and widget
     function insertNode(parentnode, i, childnode)
-        item = PySide.Qt.QTreeWidgetItem(node_to_values(childnode))
+        vals = [child.text]
+        if !isa(child.data, Nothing)
+            vals = append!(vals, node_to_values(childnode))
+        end
+        item = PySide.Qt.QTreeWidgetItem(vals)
 
         if isa(parentnode, Union(Nothing, TreeStore)) # TreeStore is root, TreeNode is node
             widget[:insertTopLevelItem](i-1, item)

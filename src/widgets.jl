@@ -707,8 +707,8 @@ end
 ## * `selectionChanged value` (indices)
 ## * `rowInserted, i`
 ## * `rowRemoved, i`
-## * `rowClicked, i,j`
-## * `rowDoubleClicked, i, j`
+## * `clicked, i,j`
+## * `doubleClicked, i, j`
 ## * `headerClicked, j`
 ##
 ##
