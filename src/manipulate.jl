@@ -175,7 +175,7 @@ function manipulate(expr, args...;
     
     ## layout
     self.window = w = window(toolkit=toolkit, title=title, size=[width, height])
-    istk() && pack_stop_propogate(w)
+    istk() && Tk.pack_stop_propagate(w[:widget])
 
     f = hbox(w)
     push!(w, f)

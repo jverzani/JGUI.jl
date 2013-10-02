@@ -724,9 +724,10 @@ function store_proxy_model(parent, store::Store; tpl=nothing)
     m[:rowCount] = (index) -> length(store.items)
     m[:columnCount] = (index) -> length(names(record))
     m[:headerData] = (section::Int, orient, role) -> begin
+        
         if orient.o ==  qt_enum("Horizontal").o #  match pointers
             ## column, section is column
-            role == convert(Int, qt_enum("DisplayRole")) ?  nms[section + 1] : nothing
+            role == convert(Int, qt_enum("DisplayRole")) ?  replace(nms[section + 1],"_", " ") : nothing
         else
              role == convert(Int, qt_enum("DisplayRole")) ?  string(section + 1) : nothing
         end
@@ -774,10 +775,11 @@ function store_proxy_model(parent, store::Store; tpl=nothing)
    end
 
     connect(store.model, "rowRemoved", i -> m[:removeRows](i, 1, PySide.QtCore[:QModelIndex]()))
+
     function rowUpdated(i::Int)
         topleft = m[:index](i-1,0)
         lowerright = m[:index](i, 0)
-        m[:emit](PySide.QtCore[:SIGNAL]("dataChanged"))(topleft, lowerright)
+        m[:emit](PySide.QtCore[:SIGNAL]("dataChanged"))#(topleft, lowerright)
     end
     connect(store.model, "rowUpdated", rowUpdated)
 
@@ -795,6 +797,10 @@ function storeview(::MIME"application/x-qt", parent::Container, store::Store, mo
     widget[:setModel](proxy_model)
 
     widget[:setSelectionBehavior](widget[:SelectRows])
+
+    ## configure
+    widget[:setAlternatingRowColors](true)
+    widget[:horizontalHeader]()[:setStretchLastSection](true)
 
     ## set up callbacks
     ## this uses a slot

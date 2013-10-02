@@ -1,25 +1,26 @@
 combobox: editable
 spinbox
-menubars, toolbars ...
-window: geometry x,y positions
+menubars, toolbars, statusbar,...
+window: closeHandler (return logical, only one so not a model)
+write tests
 
+treeview, storeview -- get headers from var names. Use a_b convention to map to "a b"
 
 # Qt
 
 imageview -- ain't working
+icons in storeview
 
 
 # Tk
 
 warnings on loading Tk
 
-window: closeHandler (return logical, only one so not a model)
-window: geometry, menubar/statusbar, toolkit
-write tests
-focus method
-connector/plug? some innerbox, outerbox language to refer to block and the reciever of the block
-slider2d:  check
 
+<del>focus method</del>
+<del>connector/plug? some innerbox, outerbox language to refer to block and the reciever of the block</del>
+<del>slider2d:  check</del>
+<del>window: geometry x,y positions</del>
 <del>lineedit: placeholder text</del>
 <del>buttons: images (stock gif images?)</del>
 <del>child: padding</del>

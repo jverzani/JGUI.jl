@@ -8,7 +8,9 @@ module JGUI
 
 
 import Base: show
-import Base: getindex, setindex!, length, push!, append!, prepend!, insert!, splice!, shift!, unshift!, pop!, findin
+import Base: getindex, setindex!, length, 
+             push!, append!, prepend!, insert!, splice!, shift!, unshift!, pop!,
+             findin
 import Base: size, endof, ndims
 import Base: connect, notify
 
@@ -16,6 +18,7 @@ import Base: connect, notify
 export properties
 
 export getValue, setValue, setIcon
+export replace!
 
 export disconnect
 

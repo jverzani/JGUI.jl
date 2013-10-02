@@ -1,6 +1,6 @@
 ## object methods
 
-show(io::IO, o::Object) = println(io, "Object of type $(typeof(o))")
+Base.show(io::IO, o::Object) = println(io, "Object of type $(typeof(o))")
 
 
 
@@ -65,6 +65,17 @@ macro PROP(s)
 end
 
 ## list properties
+immutable ObjectProperties
+    x::Dict
+end
+function Base.show(io::IO, p::ObjectProperties) 
+    for (k, v) in p.x
+        println(k)
+        [println(io, "\t$k => $v") for (k,v) in v]
+    end
+end
+
+## return available properties for a widget
 function properties(o::Object)
     d = Dict()
     s = typeof(o)
@@ -76,5 +87,5 @@ function properties(o::Object)
         end
         s = super(s)
     end
-    d
+    ObjectProperties(d)
 end

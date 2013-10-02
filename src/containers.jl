@@ -90,7 +90,7 @@ list_props(::@PROP("Window")) = {:title => "window title",
                                  :position => "move to position [x,y]"
                                  }
                                  
-## addToolBar, addMenuBar, addStatusBar...
+## XXX addToolBar, addMenuBar, addStatusBar...
 
 ## what name for this?
 ## not that useful as is, need to use Module.DataType, as these aren't exported

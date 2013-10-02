@@ -330,7 +330,7 @@ function lineedit(::MIME"application/x-tcltk", parent::Container, model::Model)
 
     connect(model, "valueChanged") do value
         Tk.configure(widget, foreground="black")
-        Tk.set_value(widget)
+        Tk.set_value(widget, value)
     end
     
     ## SIgnals: keyrelease (keycode), activated (value), focusIn, focusOut, textChanged
@@ -701,7 +701,6 @@ function storeview(::MIME"application/x-tcltk", parent::Container, store::Store,
     ## TreeviewSelect signal
     bind(widget, "<<TreeviewSelect>>") do path
         sel = selected_nodes()
-        println(sel)
         setValue(model, sel)
         notify(model, "selectionChanged", model[:value])
     end
@@ -725,9 +724,7 @@ function storeview(::MIME"application/x-tcltk", parent::Container, store::Store,
     end
     
     Tk.bind(widget, "<Button-1>") do path, W, x, y
-        println(("Button -1", W, x, y))
         (row, col) = find_row_col(W, x, y)
-        println(( row, col))
         notify(model, "clicked", row, col)
     end
     Tk.bind(widget, "<Double-Button-1>") do path, W, x, y
@@ -1176,7 +1173,7 @@ end
 ### Manipulate. Display FramedPlot
 
 ## Default is text
-function Display(::MIME"application/x-tk", self::ManipulateObject, x; kwargs...) 
+function Display(::MIME"application/x-tcltk", self::ManipulateObject, x; kwargs...) 
     if isa(x, Nothing) return end
     value = string(x)
 
@@ -1195,7 +1192,7 @@ function Display(::MIME"application/x-tk", self::ManipulateObject, x; kwargs...)
 end
 
 
-function Display(::MIME"application/x-tk", self::ManipulateObject, x::FramedPlot; kwargs...) 
+function Display(::MIME"application/x-tcltk", self::ManipulateObject, x::FramedPlot; kwargs...) 
     if isa(x, Nothing) return end
     oa = self.output_area
     
