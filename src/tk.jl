@@ -993,8 +993,8 @@ end
 
 ## modeless dialog
 ##
-function dialog(::MIME"application/x-tcltk", parent::Widget, model,
-                btns::Vector{Symbol}; 
+function dialog(::MIME"application/x-tcltk", parent::Widget, model;
+                buttons::Vector{Symbol}=[:ok],
                 default::Union(Symbol, Nothing)=nothing,
                 title::String="")
     
@@ -1027,7 +1027,7 @@ function dialog(::MIME"application/x-tcltk", parent::Widget, model,
                     :help => ("help", :help)
                     }
     
-    for b in reverse!(btns)
+    for b in reverse!(buttons)
         nm, state = defined_btns[b]
         btn = Tk.Button(bbox, nm)
         Tk.pack(btn, side="right", padx=2, pady=2)

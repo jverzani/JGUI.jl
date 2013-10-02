@@ -156,14 +156,15 @@ end
 ##
 ## TODO:
 ## implement default
-function dialog(parent::Widget, btns::Vector{Symbol}; 
+function dialog(parent::Widget;
+                buttons::Vector{Symbol} = [:ok],
                 default::Union(Symbol, Nothing)=nothing,
                 title::String="", 
                 kwargs...)
     
     model = EventModel()
 
-    widget, block = dialog(parent.toolkit, parent, model, btns; default=default, title=title) # use parent for placement too!
+    widget, block = dialog(parent.toolkit, parent, model, buttons=buttons; default=default, title=title) # use parent for placement too!
 
     dlg = Dialog(widget, block,  parent.toolkit, model)
     connect(model, "done", state -> dlg.done(state))

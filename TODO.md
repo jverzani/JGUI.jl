@@ -10,6 +10,7 @@ treeview, storeview -- get headers from var names. Use a_b convention to map to 
 
 imageview -- ain't working
 icons in storeview
+dialog return value -- must look up in dlg.state
 
 
 # Tk

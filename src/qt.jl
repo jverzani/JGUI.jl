@@ -1275,7 +1275,7 @@ function dialog(::MIME"application/x-qt", parent::Widget, model;
                     :help    => button_box[:Help], 
                     }
 
-    button_box[:setStandardButtons](sum(map(k -> int(defined_btns[k]), btns)))
+    button_box[:setStandardButtons](sum(map(k -> int(defined_btns[k]), buttons)))
     if !isa(default, Nothing)
         button = button_box[:button](defined_btns[default])
         button[:setDefault](true)
@@ -1314,6 +1314,7 @@ function add_bindings(::MIME"application/x-qt", dlg::Dialog)
         if !isa(x, Nothing)
             notify(dlg.model, x)
         end
+        s
     end
     qconnect(button_box, :accepted,      f("accepted", :accept))
     qconnect(button_box, :rejected,      f("rejected", :reject))

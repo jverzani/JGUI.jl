@@ -3,10 +3,22 @@
 An package to simplify the creation of GUIs within Julia
 
 
-The `JGUI` package provides a few different means to simplify the
+The `JGUI` package provides a few different means to ease the
 creation of GUIs within `Julia`. These include a simplified
 implementation of Mathematica's `Manipulate` function, and a simple
 interface for using the `tcl/tk` or `Qt` toolkits within `Julia`.
+
+# Installation
+
+The `JGUI` package installs with `Pkg.add("JGUI")`. For it to work one
+needs to have installed the `Tk` package or the `PySide` package. The
+latter requires an installation of the `Qt` libraries
+(http://qt-project.org/downloads), `Python` (http://www.python.org/download/), the `PySide`
+(http://qt-project.org/wiki/Get-PySide) interface between `Python` and
+`Qt`, and the `PyCall` package to connect `Python` with `Julia`
+(installed with the `PySide` package). The Anaconda
+(http://docs.continuum.io/anaconda/) packaging of `Python` should be a
+one-stop installation, though the `Qt` part can be buggy.
 
 # Manipulate
 
@@ -33,7 +45,6 @@ Now, consider the following expression  which computes a Winston plot object:
 ```
 expr = quote
      plot(x -> sin(u*x), 0, 2pi)
-     p
 end
 ```
 
@@ -56,7 +67,6 @@ Here is a how one can add a title to the plot. First we modify the `plot` call t
 ```
 expr = quote
      plot(x -> sin(u*x), 0, 2pi, title=title)
-     p
 end
 ```
 
@@ -94,13 +104,15 @@ even easier, though sacrificing a fair amount of flexibility. (The
 `JGUI` interface is primarily concerned with controls, and not things
 like a canvas widget.) 
 
-Here is a simple example where a window has a button which when clicked will destroy the window:
+Here is a simple example where a window has a button which when clicked will destroy the window. 
 
 ```
 w = window(size=[200, 200])
 w[:title] = "hello world"
+
 b = button(w, "Close")
 push!(w, b)
+
 connect(b, "clicked", w, destroy)
 raise(w)
 ```
@@ -136,16 +148,24 @@ arguments, something like `connect(b, "clicked", () -> destroy(w))`.
 
 Finally, the window is raised.
 
+Though simple, the above example demonstrates most all the procedures
+when creating a GUI: creating GUI objects, accessing their properties,
+laying out the objects, and creating interactivity by assigning
+callbacks to user-initiated events.
+
+
 ## Basics
 
 ### constructors
 
 Let's look at another example, this one mimics, the first manipulate
-example (using a modified `plot` function):
+example.
 
 ```
 ## needs Tk
-using Winston
+ENV["Tk"] = true
+using JGUI, Winston
+
 w = window()
 f = hbox(w); push!(f)
 
@@ -153,6 +173,7 @@ sl = slider(f, 1:10)
 cnv = cairographic(f)
 
 append!(f, [sl, cnv])
+
 connect(sl, "valueChanged") do u
   p = plot(x -> sin(u * x), 0, 2pi)
   Winston.display(cnv.o, p)
@@ -172,21 +193,25 @@ parent container passed as the first argument. Additional arguments
 are used to customize the constructor. For `hbox` and `cairographic`,
 there is no needed customization, though the latter may have a width
 and height argument specified. For a slider, one needs to specify the
-range that is slid over. Unlike most slider implementations, such as
+range that is stepped over. Unlike most slider implementations, such as
 the one in `Tk`, a slider is used to select amongst the specified
 range or sorted vector. This reduces the need to specify a step size
 and is more in line with how `julia` produces sequences of values.
+
+For a slider, the `valueChanged` signal passes the new value to the
+callback. This value is then used within the callback that produces
+the graphic. One could also access this value within the callback with `sl[:value]`.
 
 ### Containers
 
 Constructors produce basically two types of objects: controls and
 containers. The containers available in this package are few:
 
-* `hbox` and `vbox` produce horizontal and vertical box containers
+* `hbox` and `vbox` produce horizontal and vertical box containers. 
 
-* `grid` makes a container for arranging its children in a grid
+* `grid` makes a container for arranging its children in a grid.
 
-* `notebook` provides a tabbed notebook for organizing its children
+* `notebook` provides a tabbed notebook for organizing its children. 
 
 * `formlayout` provides a simple way to lay out label/controls in a grid
 
@@ -195,18 +220,17 @@ containers. The containers available in this package are few:
 
 Containers are coupled with a layout manager which are utilized in a "julian" manner:
 
-* The `hbox` and `vbox` containers have methods `push!`, `insert!`,
-  `insert!` for adding children to the layout and `pop!` and
+* The `hbox` and `vbox` containers have methods `push!`, `insert!`, and
+  `insert!` for adding children to the layout;  `pop!` and
   `splice!` for removing children. In the above example, we use
   `append!` to add two children at a time. 
-
 
 * The `formlayout` and `notebook` containers also implement the above
   for adding a child at a time, with an additional label.
 
 * The single-child containers, `labelframe` and `window`, use `push!` to add their child. 
 
-* The `grid` container add children via matrix notation. There are two styles. One can add a matrix of widgets:
+* Children of a `grid` container are managed via matrix notation. There are two styles. One can add a matrix of widgets:
 
 ```
 w = window(title="Matrix of widgets")
@@ -237,9 +261,11 @@ size policy  of a widget, we have:
 w = window(size=[300, 300])
 f = hbox(w); push!(f)
 b = button(f, "expanding")
+
 #b[:sizepolicy] = (:expand, :fixed)  # expand in x direction
 b[:sizepolicy] = (:fixed, :expand)   # expand in y direction
 #b[:sizepolicy] = (:expand, :expand) # expand in both
+
 push!(b)
 raise(w)
 ```
@@ -258,7 +284,7 @@ b[:value]			# "new label"
 
 When a property, say ':prop', is looked up a search for
 either a `getProp` or `setProp` method is made. Though not exported, save for `getValue` and `setValue`
-these function can be conveniently employed when using the property in a callback.
+these functions can be conveniently employed when using the property in a callback.
 
 ## signals
 
@@ -358,13 +384,15 @@ The basic widgets are:
 #### Cairo graphic example
 
 The `cairographic` widget is a light wrapper around
-`Tk.Canvas`. (Meaning it won't be portable across GUI toolkits, should
-that ever happen.) To use the canvas, access the `:widget` property of the
+`Tk.Canvas`. Currently, it can only be used within a `Tk` GUI.
+
+To use the canvas, access the `:widget` property of the
 `cairographic` object:
 
 ```
 ## update two graphics windows...
-using Winston
+ENV["Tk"] = true
+using JGUI, Winston
 w = window()
 f = grid(w); push!(f)
 g1 = cairographic(f, width=480, height=400)
@@ -494,8 +522,10 @@ There are some standard modal dialogs
 In addition, the `dialog` constructor can be used to generate dialogs, somewhat similar to Qt's base Dialog class:
 
 ```
-w = window()
-dlg = dialog(w, [:cancel, :ok])
+using JGUI
+w = window()			        # Some parent to position the dialog near
+
+dlg = dialog(w, buttons=[:cancel, :ok]) # default is just `:ok`
 f = vbox(dlg); push!(f)
 
 l = label(f, "More complicated controls go here"); push!(l)
