@@ -21,8 +21,6 @@ abstract WidgetVectorModel <: WidgetModel
 abstract Style <: Widget
 
 
-abstract Menu <: Widget
-abstract MenuBar <: Widget
 
 ## imlement these?
 abstract AbstractButton <: Widget

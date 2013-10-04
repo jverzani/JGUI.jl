@@ -46,6 +46,15 @@ export Store, TreeStore
 export treestore, expand_node, collapse_node, node_to_path, path_to_node, update_node
 
 export filedialog, messagebox, confirmbox, dialog
+
+export action, menubar, menu,
+       addMenu, addAction
+
+
+
+
+
+
 export manipulate
 
 
@@ -56,6 +65,7 @@ include("models.jl")
 include("containers.jl")
 include("widgets.jl")
 include("dialogs.jl")
+include("menu.jl")
 
 
 ## To use different toolkit try ENV["Tk"] = true, or ENV["Qt"] = true

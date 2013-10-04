@@ -333,7 +333,9 @@ end
 ##
 function checkbox(parent::Container, model::Model, label::Union(Nothing, String))
     widget, block = checkbox(parent.toolkit, parent, model, label)
-    CheckBox(widget, block, model, parent, parent.toolkit, Dict())
+    o = CheckBox(widget, block, model, parent, parent.toolkit, Dict())
+    o[:label] = label
+    o
 end
 
 function checkbox(parent::Container, value::Bool, label::Union(Nothing, String) )
@@ -344,8 +346,11 @@ end
 checkbox(parent::Container, value::Bool) = checkbox(parent, value, nothing)
 checkbox(parent::Container, label::String) = checkbox(parent, true, label)
 
-getLabel(o::CheckBox) = getLabel(o.toolkit, o)
-setLabel(o::CheckBox, value::String) = setLabel(o.toolkit, o, value)
+getLabel(o::CheckBox) =  o.attrs[:label]
+function setLabel(o::CheckBox, value::String) 
+    o.attrs[:label] = value
+    setLabel(o.toolkit, o, value)
+end
 
 list_props(::@PROP("CheckBox")) = {:label => "checkbox label"}
 

@@ -1455,8 +1455,97 @@ function confirmbox(::MIME"application/x-qt", parent::Widget, text::String; icon
     ret == int(msgbox[:Ok]) ? :accept : :reject
 end
 
+##################################################
+## Menus
+
+function action(::MIME"application/x-qt", parent)
+    Qt.QAction(parent[:widget])
+end
+
+getEnabled(::MIME"application/x-qt", action::Action) = action[:widget][:isEnabled]()
+setEnabled(::MIME"application/x-qt", action::Action, value::Bool) = action[:widget][:setEnabled](value)
+
+getLabel(::MIME"application/x-qt", action::Action) = action[:widget][:text]()
+setLabel(::MIME"application/x-qt", action::Action, value::String) = action[:widget][:setText](value)
 
 
+getIcon(::MIME"application/x-qt", action::Action)   = "XXX"
+function setIcon(::MIME"application/x-qt", action::Action, value::Icon)
+    icon = XXX(value)
+    action[:widget][:setIcon](icon)
+end
+
+
+getShortcut(::MIME"application/x-qt", action::Action)  = "XXX"
+function setShortcut(::MIME"application/x-qt", action::Action, value::String)
+    action[:widget][:setShortcut](value)
+end
+
+
+getTooltip(::MIME"application/x-qt", action::Action) = action[:widget][:toolTip]()
+setTooltip(::MIME"application/x-qt", action::Action, value::String) = action[:widget][:setToolTip](value)
+
+
+function setCommand(::MIME"application/x-qt", action::Action, value::Function)
+    qconnect(action[:widget], :triggered, value)
+end
+
+
+## menus
+function menubar(::MIME"application/x-qt", parent::Window)
+    mainwindow = parent[:widget]
+    mainwindow[:menuBar]()
+end
+
+## toplevel menu item
+function menu(::MIME"application/x-qt", parent::MenuBar, label)
+    parent[:widget][:addMenu](label)
+end
+
+## submenu
+function menu(::MIME"application/x-qt", parent::Menu, label)
+    parent[:widget][:addMenu](label)
+end
+
+## popup
+function menu(::MIME"application/x-qt", parent::Widget)
+    ## XXX
+end
+
+## add actions
+function addAction(::MIME"application/x-qt", parent::Menu, action::Action)
+    parent[:widget][:addAction](action[:widget])
+end
+
+function addAction(::MIME"application/x-qt", parent::Menu, value::Separator)
+    parent[:widget][:addSeparator]()
+end
+
+function addAction(::MIME"application/x-qt", parent::Menu, value::RadioGroup)
+    widget = Qt.QActionGroup(parent[:widget])
+    widget[:setExclusive](true)
+    for item in value.model.items
+        action = Qt.QAction(item, parent[:widget])
+        action[:setCheckable](true)
+        widget[:addAction](action)
+        parent[:widget][:addAction](action)
+    end
+    qconnect(widget, :triggered) do action
+        notify(value.model, "valueChanged", action[:text]())
+    end
+end
+
+function addAction(::MIME"application/x-qt", parent::Menu, value::CheckBox)
+    widget = Qt.QAction(value[:label], parent[:widget])
+    widget[:setCheckable](true)
+    ## widget[:setIcon](...)
+    qconnect(widget, :changed) do 
+        notify(value.model, "valueChanged", widget[:isChecked]())
+    end
+
+    parent[:widget][:addAction](widget)
+
+end
 
 
 ## manipulate
