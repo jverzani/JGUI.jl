@@ -37,6 +37,16 @@ setSize(::MIME"application/x-qt", o::Widget, value)  =  o[:widget][:resize](valu
 getFocus(::MIME"application/x-qt", o::Widget) = o[:widget][:focus]
 setFocus(::MIME"application/x-qt", o::Widget, value::Bool) =  o[:widget][:setFocus](value)
 
+## Does not preserve types! (1,"one") -> [1, "one"]
+getContext(::MIME"application/x-qt", o::Widget) = o[:widget][:attrs][:context]
+function setContext(::MIME"application/x-qt", o::Widget, ctx)
+     o.attrs[:context] = ctx
+end
+## this is called when a custom context menu is requested. Use pt to add informationt to
+## a widget's context
+update_context(::MIME"application/x-qt", o::Widget, pt) = nothing
+
+
 getWidget(::MIME"application/x-qt", o::Widget) = o.o
 
 function setSizepolicy(::MIME"application/x-qt", o::Widget, policies) 
@@ -49,7 +59,7 @@ function setSizepolicy(::MIME"application/x-qt", o::Widget, policies)
                 :expand => QtGui["QSizePolicy"]["Expanding"],
                 nothing => QtGui["QSizePolicy"]["Fixed"]
                 }
-    
+  
     o[:widget][:setSizePolicy](hpolicies[policies[1]], vpolicies[policies[2]])
 end
 
@@ -727,7 +737,7 @@ function store_proxy_model(parent, store::Store; tpl=nothing)
         
         if orient.o ==  qt_enum("Horizontal").o #  match pointers
             ## column, section is column
-            role == convert(Int, qt_enum("DisplayRole")) ?  replace(nms[section + 1],"_", " ") : nothing
+            role == convert(Int, qt_enum("DisplayRole")) ?  nms[section + 1] : nothing ##replace(nms[section + 1],"_", " ") : nothing
         else
              role == convert(Int, qt_enum("DisplayRole")) ?  string(section + 1) : nothing
         end
@@ -876,6 +886,14 @@ end
 function setIcon(::MIME"application/x-qt", s::StoreView, i::Int, icon::Icon)
     ## XXX need to set decoration role for item in row i, column 1
 end
+
+function update_context(::MIME"application/x-qt", s::StoreView, pt)
+    view = s[:widget]
+    index = view[:indexAt](pt)
+    ## want [i,j] here for row and column
+    s[:context] = [index[:row]() + 1, index[:column]() + 1]
+end
+
 
 ##################################################
 ##
@@ -1508,8 +1526,18 @@ function menu(::MIME"application/x-qt", parent::Menu, label)
 end
 
 ## popup
+## this is flaky! separator/checkbox overplot
+
 function menu(::MIME"application/x-qt", parent::Widget)
-    ## XXX
+    parent[:widget][:setContextMenuPolicy](PySide.QtCore["Qt"][:CustomContextMenu])
+    m = PySide.Qt.QMenu(parent[:widget])
+
+    qconnect(parent[:widget], :customContextMenuRequested) do pt
+        update_context(parent.toolkit, parent, pt)
+        m[:popup](parent[:widget][:mapToGlobal](pt))
+    end
+
+    m
 end
 
 ## add actions
@@ -1542,9 +1570,8 @@ function addAction(::MIME"application/x-qt", parent::Menu, value::CheckBox)
     qconnect(widget, :changed) do 
         notify(value.model, "valueChanged", widget[:isChecked]())
     end
-
+    
     parent[:widget][:addAction](widget)
-
 end
 
 

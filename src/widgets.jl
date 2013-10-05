@@ -19,13 +19,18 @@ setEnabled(o::Widget, value::Bool) = setEnabled(o.toolkit, o, value)
 getVisible(o::Widget) = getVisible(o.toolkit, o)
 setVisible(o::Widget, value::Bool) = setVisible(o.toolkit, o, value)
 
+## `:focus` can be used to set the focus on a control
+getFocus(o::Widget) = getFocus(o.toolkit, o)
+setFocus(o::Widget, value::Bool) = setFocus(o.toolkit, o, value)
+
+## `:context` is used to pass information to context menus
+getContext(o::Widget) = o.attrs[:context]
+setContext(o::Widget, ctx) = o.attrs[:context] = ctx
+
 ## `:size` controls the size request of a widget. Can be useful for top-level windows
 getSize(o::Widget) = getSize(o.toolkit, o)
 setSize{T <: Int}(o::Widget, sz::Vector{T}) = setSize(o.toolkit, o, sz)
 
-## `:focus` can be used to set the focus on a control
-getFocus(o::Widget) = getFocus(o.toolkit, o)
-setFocus(o::Widget, value::Bool) = setFocus(o.toolkit, o, value)
 
 ## `:sizepolicy` determines how a widget expands to fill its allocated
 ## space.  The value is specified as a tuple (x,y) with each being be

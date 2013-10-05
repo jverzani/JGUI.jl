@@ -25,6 +25,8 @@ setSize(::MIME"application/x-tcltk", o::Widget, value)  = Tk.set_size(o.block, v
 getFocus(::MIME"application/x-tcltk", o::Widget) = nothing
 setFocus(::MIME"application/x-tcltk", o::Widget, value::Bool) = value ? Tk.focus(getWidget(o)) : nothing
 getWidget(::MIME"application/x-tcltk", o::Widget) = o.o
+getContext(::MIME"application/x-tcltk", o::Widget) = o.attrs[:context]
+setContext(::MIME"application/x-tcltk", o::Widget, ctx) = o.attrs[:context] = ctx
 
 setSizepolicy(::MIME"application/x-tcltk", o::Widget, policies) =  o.attrs[:sizepolicy] = policies
 
@@ -1167,7 +1169,76 @@ function confirmbox(::MIME"application/x-tcltk", parent::Widget, text::String; i
     ret == "ok" ? :accept : :reject
 end
 
+##################################################
+## Menus
 
+
+function action(::MIME"application/x-tcltk", parent)
+    nothing
+end
+
+## XXX ???
+getEnabled(::MIME"application/x-tcltk", action::Action) = action[:widget][:isEnabled]()
+setEnabled(::MIME"application/x-tcltk", action::Action, value::Bool) = action[:widget][:setEnabled](value)
+
+## not tk specific bits to add to actions
+setLabel(::MIME"application/x-tcltk", action::Action, value::String) = nothing
+setIcon(::MIME"application/x-tcltk", action::Action, value::Icon) = nothing
+setShortcut(::MIME"application/x-tcltk", action::Action, value::String) = nothing
+setTooltip(::MIME"application/x-tcltk", action::Action, value::String) = nothing
+setCommand(::MIME"application/x-tcltk", action::Action, value::Function) = nothing
+
+
+## menus
+function menubar(::MIME"application/x-tcltk", parent::Window)
+    Tk.Menu(parent.o)           # not :widget!
+end
+
+## toplevel menu item
+function menu(::MIME"application/x-tcltk", parent::MenuBar, label)
+    Tk.menu_add(parent[:widget], label)
+end
+
+## submenu
+function menu(::MIME"application/x-tcltk", parent::Menu, label)
+    Tk.menu_add(parent[:widget], label)
+end
+
+## popup
+function menu(::MIME"application/x-tcltk", parent::Widget)
+    m = Tk.Menu(parent[:widget])
+    ## XXX How to get context in here?
+    Tk.tk_popup(parent[:widget], m)
+    m
+end
+
+## add actions
+function addAction(::MIME"application/x-tcltk", parent::Menu, action::Action)
+    Tk.menu_add(parent[:widget], action.label, (path) -> action.command()) # icon, ...
+end
+
+function addAction(::MIME"application/x-tcltk", parent::Menu, value::Separator)
+    Tk.menu_add(parent[:widget], value[:widget])
+end
+
+function addAction(::MIME"application/x-tcltk", parent::Menu, value::RadioGroup)
+    ## bypass Tk.menu_add
+    var = Tk.cget(value[:widget].buttons[1], "variable")
+    items = value[:items]
+    for i in 1:length(items)
+        tcl(parent[:widget], "add", "radiobutton", label = items[i], value = items[i],
+            variable = var,
+            command = (path) -> value[:value] = items[i])
+    end
+end
+
+function addAction(::MIME"application/x-tcltk", parent::Menu, value::CheckBox)
+    ## bypass Tk.menu_add
+    Tk.tcl(parent[:widget], "add", "checkbutton", label=value[:label], 
+           variable = value[:widget][:variable],
+           command = (path) -> value[:value] = Tk.get_value(value[:widget])
+           ) 
+end
 
 
 ### Manipulate. Display FramedPlot

@@ -1,6 +1,6 @@
 combobox: editable
 spinbox
-menubars, toolbars, statusbar,...
+menubars: shortcuts, icons
 window: closeHandler (return logical, only one so not a model)
 write tests
 
@@ -17,7 +17,7 @@ dialog return value -- must look up in dlg.state
 
 warnings on loading Tk
 
-
+<del>menubar</del>
 <del>focus method</del>
 <del>connector/plug? some innerbox, outerbox language to refer to block and the reciever of the block</del>
 <del>slider2d:  check</del>

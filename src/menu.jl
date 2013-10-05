@@ -27,8 +27,11 @@ getWidget(action::Action) = action.o
 getEnabled(action::Action) = getEnabled(action.toolkit, action)
 setEnabled(action::Action, value::Bool) = setEnabled(action.toolkit, action, value)
 
-getLabel(action::Action)  = getLabel(action.toolkit, action)
-setLabel(action::Action, label::String) = setLabel(action.toolkit, action, label)
+getLabel(action::Action)  = action.label
+function setLabel(action::Action, label::String) 
+    action.label = label
+    setLabel(action.toolkit, action, label)
+end
 
 getIcon(action::Action) = a.icon
 function setIcon(action::Action, icon::Icon) 
@@ -48,7 +51,10 @@ function setTooltip(action::Action, tooltip::String)
     setTooltip(action.toolkit, action, tooltip)
 end
 
-setCommand(action::Action, command::Function) = setCommand(action.toolkit, action, command)
+function setCommand(action::Action, command::Function) 
+    action.command = command
+    setCommand(action.toolkit, action, command)
+end
 
 ## MenuBar for attaching to a window
 type MenuBar <: Container
@@ -83,11 +89,15 @@ function menu(parent::MenuBar, label::String)
     Menu(widget, parent.toolkit)
 end
 
+## Add a sub menu to a parent menu
 function menu(parent::Menu, label::String)
     widget = menu(parent.toolkit, parent, label)
     Menu(widget, parent.toolkit)
 end
 
+## Used for context menus
+## Context, if any, is set via `widget[:context]`
+## 
 function menu(parent::Widget)
     widget = menu(parent.toolkit, parent)
     Menu(widget, parent.toolkit)
