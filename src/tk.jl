@@ -647,6 +647,23 @@ function cairographic(::MIME"application/x-tcltk", parent::Container, model::Eve
     (widget, block)
 end
 
+function menu(::MIME"application/x-tcltk", parent::CairoGraphics)
+    m = Tk.Menu(parent.block)
+    ## tk_popup code here
+    function handler(path, X, Y, x, y)
+        parent[:context] = [int(x), int(y)]
+        tcl("tk_popup", m, X, Y)
+    end
+        
+    if OS_NAME == :Darwin
+        Tk.bind(parent[:widget].c.path, "<Button-2>", handler)
+    end
+    Tk.bind(parent[:widget].c.path, "<Control-Button-1>", handler)
+
+    m
+end
+
+
 ## Views
 ## storeview
 function storeview(::MIME"application/x-tcltk", parent::Container, store::Store, model::ItemModel; tpl=nothing)
@@ -744,6 +761,33 @@ function storeview(::MIME"application/x-tcltk", parent::Container, store::Store,
     
 
     (widget, block)
+end
+
+## context menu
+function menu(::MIME"application/x-tcltk", parent::StoreView)
+    m = Tk.Menu(parent[:widget])
+
+    function find_row_col(W, x, y)
+        col = Tk.tcl(W,"identify", "column", x, y)  #   "#3"
+        row = Tk.tcl(W,"identify", "row", x, y)     #   "I002"
+        
+        col = parseint(col[2:end])
+        row = findfirst(split(Tk.tcl(W, "children", "{}")), row)
+        (row, col)
+    end
+    
+    ## tk_popup code here
+    function handler(path, W, X, Y, x, y)
+        parent[:context] = find_row_col(W, x, y)
+        tcl("tk_popup", m, X, Y)
+    end
+        
+    if OS_NAME == :Darwin
+        Tk.bind(parent[:widget], "<Button-2>", handler)
+    end
+    Tk.bind(parent[:widget], "<Control-Button-1>", handler)
+
+    m
 end
 
 
@@ -1177,9 +1221,9 @@ function action(::MIME"application/x-tcltk", parent)
     nothing
 end
 
-## XXX ???
-getEnabled(::MIME"application/x-tcltk", action::Action) = action[:widget][:isEnabled]()
-setEnabled(::MIME"application/x-tcltk", action::Action, value::Bool) = action[:widget][:setEnabled](value)
+## XXX Need to do work here, as at present action no knows about its proxies XXX
+getEnabled(::MIME"application/x-tcltk", action::Action) = nothing
+setEnabled(::MIME"application/x-tcltk", action::Action, value::Bool) = nothing
 
 ## not tk specific bits to add to actions
 setLabel(::MIME"application/x-tcltk", action::Action, value::String) = nothing
@@ -1207,7 +1251,6 @@ end
 ## popup
 function menu(::MIME"application/x-tcltk", parent::Widget)
     m = Tk.Menu(parent[:widget])
-    ## XXX How to get context in here?
     Tk.tk_popup(parent[:widget], m)
     m
 end

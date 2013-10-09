@@ -1483,24 +1483,21 @@ end
 getEnabled(::MIME"application/x-qt", action::Action) = action[:widget][:isEnabled]()
 setEnabled(::MIME"application/x-qt", action::Action, value::Bool) = action[:widget][:setEnabled](value)
 
-getLabel(::MIME"application/x-qt", action::Action) = action[:widget][:text]()
 setLabel(::MIME"application/x-qt", action::Action, value::String) = action[:widget][:setText](value)
 
 
-getIcon(::MIME"application/x-qt", action::Action)   = "XXX"
 function setIcon(::MIME"application/x-qt", action::Action, value::Icon)
-    icon = XXX(value)
-    action[:widget][:setIcon](icon)
+    if !isa(icon, Nothing)
+        action[:widget][:setIcon](get_icon(widget.toolkit, icon))
+    end
 end
 
 
-getShortcut(::MIME"application/x-qt", action::Action)  = "XXX"
 function setShortcut(::MIME"application/x-qt", action::Action, value::String)
     action[:widget][:setShortcut](value)
 end
 
 
-getTooltip(::MIME"application/x-qt", action::Action) = action[:widget][:toolTip]()
 setTooltip(::MIME"application/x-qt", action::Action, value::String) = action[:widget][:setToolTip](value)
 
 

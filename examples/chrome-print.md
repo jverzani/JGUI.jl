@@ -6,7 +6,7 @@ However, the radio buttons aren't really radio buttons, as the label for one is 
 using JGUI
 w = window()
 g = grid(w)
-push!(g)
+push!(w, g)
 ```
 
 We have four widgets:
@@ -47,7 +47,7 @@ If the user click into the  `pages_edit` area it should select the checkbox:
 connect(pages_edit, "clicked", ()->pages_cb[:value] = true)
 ```
 
-(In `Tk`, tabbing will not enter that box while it is disabled. For mouseless navigatione, one can tab to the accompanying checkbox and select that with the space bar.)
+(In `Tk`, tabbing will not enter that box while it is disabled. For mouseless navigation, one can tab to the accompanying checkbox and select that with the space bar.)
 
 Finally, we set the value of `all_cb` to the initial state:
 

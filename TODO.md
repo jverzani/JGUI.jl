@@ -3,7 +3,7 @@ spinbox
 menubars: shortcuts, icons
 window: closeHandler (return logical, only one so not a model)
 write tests
-
+cairographics: (x,y) in which coordinates? pixels? Use Tim Holy's conversion to user coordinates?
 treeview, storeview -- get headers from var names. Use a_b convention to map to "a b"
 
 # Qt

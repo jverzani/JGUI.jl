@@ -574,7 +574,7 @@ setValue(widget::Slider2D, value) = setValue(widget.toolkit, widget, value)
 
 
 ## CairoGraphics (for Winston)
-type CairoGraphics <: Widget
+type CairoGraphics <: WidgetModel
     o
     block
     model
@@ -598,6 +598,7 @@ end
 ## * `mouseMotion (x,y)`
 ## * `mouseMove (x, y)`
 ##
+## The context is [x,y] in relative pixel coordinates
 ## TODO:
 ##
 function cairographic(parent::Container; width::Int=480, height::Int=400)
