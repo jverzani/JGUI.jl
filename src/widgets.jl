@@ -108,15 +108,17 @@ list_props(::@PROP("Widget")) = {:value => "Value of object",
 ##
 ## The signals are emitted by the model. These definitions bring
 ## connect, disconnect and notify to the widget for convenience
-function connect(o::WidgetModel, signal::String, obj, slot::Function)
-    connect(o.model, signal, obj, slot)
-end
-function connect(o::WidgetModel, signal::String, slot::Function)
-    connect(o.model, signal, nothing, slot)
-end
-connect(slot::Function, o::WidgetModel, signal::String) = connect(o, signal, slot)
+connect(o::WidgetModel, signal::String, obj, slot::Function) = connect(o.model, signal, obj, slot)
+connect(o::WidgetModel, signal::Symbol, obj, slot::Function) = connect(o, string(signal), obj, slot)
+connect(o::WidgetModel, signal::String, slot::Function) = connect(o.model, signal, nothing, slot)
+connect(o::WidgetModel, signal::Symbol, slot::Function) = connect(o, string(signal), slot)
+connect(slot::Function, o::WidgetModel, signal::Union(Symbol, String)) = connect(o, signal, slot)
+
+
 disconnect(o::WidgetModel, id::String) = disconnect(o.model, id)
+
 notify(o::WidgetModel, signal::String) = notify(o.model, signal)
+notify(o::WidgetModel, signal::Symbol) = notify(o, string(signal))
 
 
 ##################################################
@@ -261,7 +263,7 @@ lineedit(parent::Container) = lineedit(parent, "")
 ## Call coerce if present. If can't be coerced, returns nothing
 function getValue(obj::LineEdit)
     val = getValue(obj.model)
-    isa(obj.coerce, Nothing) ? val : try obj.coerce(val) catch e nothing end
+    isa(obj.coerce, Nothing) ? val : try obj.coerce(string(val)) catch e nothing end
 end
 
 ## placeholder text
@@ -721,7 +723,8 @@ end
 ## * `clicked, i,j`
 ## * `doubleClicked, i, j`
 ## * `headerClicked, j`
-##
+## 
+## TODO: add activated signal
 ##
 ## Methods:
 ##

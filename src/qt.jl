@@ -35,7 +35,7 @@ end
 setSize(::MIME"application/x-qt", o::Widget, value)  =  o[:widget][:resize](value[1], value[2])
 
 getFocus(::MIME"application/x-qt", o::Widget) = o[:widget][:focus]
-setFocus(::MIME"application/x-qt", o::Widget, value::Bool) =  o[:widget][:setFocus](value)
+setFocus(::MIME"application/x-qt", o::Widget, value::Bool) =  value && o[:widget][:setFocus]()
 
 ## Does not preserve types! (1,"one") -> [1, "one"]
 getContext(::MIME"application/x-qt", o::Widget) = o[:widget][:attrs][:context]
@@ -811,6 +811,9 @@ function storeview(::MIME"application/x-qt", parent::Container, store::Store, mo
     ## configure
     widget[:setAlternatingRowColors](true)
     widget[:horizontalHeader]()[:setStretchLastSection](true)
+
+    ## connect model to view
+
 
     ## set up callbacks
     ## this uses a slot

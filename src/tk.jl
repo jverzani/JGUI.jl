@@ -21,7 +21,13 @@ setEnabled(::MIME"application/x-tcltk", o::Widget, value::Bool) = Tk.set_enabled
 getVisible(::MIME"application/x-tcltk", o::Widget) = Tk.get_visible(getWidget(o))
 setVisible(::MIME"application/x-tcltk", o::Widget, value::Bool) = Tk.set_visible(getWidget(o), value)
 getSize(::MIME"application/x-tcltk", o::Widget)  = [Tk.width(getWidget(o)), Tk.height(getWidget(o))]
-setSize(::MIME"application/x-tcltk", o::Widget, value)  = Tk.set_size(o.block, value)
+function setSize(::MIME"application/x-tcltk", o::Widget, value)  
+    try
+        Tk.set_size(o.block, value)
+    catch e
+        Tk.configure(o.block, width=value[1], height=value[2])
+    end
+end
 getFocus(::MIME"application/x-tcltk", o::Widget) = nothing
 setFocus(::MIME"application/x-tcltk", o::Widget, value::Bool) = value ? Tk.focus(getWidget(o)) : nothing
 getWidget(::MIME"application/x-tcltk", o::Widget) = o.o
@@ -114,25 +120,43 @@ function setMargin(::MIME"application/x-tcltk", parent::BoxContainer, px::Vector
 end
 
 ## XXX implement
-addspacing(::MIME"application/x-tcltk", parent::BoxContainer, val::Int) = nothing 
-addsstrut(::MIME"application/x-tcltk", parent::BoxContainer, val::Int) = nothing
-addstretch(::MIME"application/x-tcltk", parent::BoxContainer, val::Int) = nothing
+function addstrut(::MIME"application/x-tcltk", parent::BoxContainer, px::Int) 
+    label = Tk.Label(parent[:widget], " ")
+    parent[:direction] == :vertical ? Tk.configure(label, width=px) : Tk.configure(label, height=px)
+    Tk.pack(label)
+end
+
+function addstretch(::MIME"application/x-tcltk", parent::BoxContainer, stretch::Int)
+    label = Tk.Label(parent[:widget])
+    Tk.pack(label, expand=true, fill= parent[:direction] == :vertical ? "y" : "x")
+end
+function addspacing(::MIME"application/x-tcltk", parent::BoxContainer, spacing::Int) 
+    label = Tk.Label(parent[:widget], " ")
+    parent[:direction] == :vertical ? Tk.configure(label, width=px) : Tk.configure(label, height=px)
+    Tk.pack(label)
+end
+ 
+
 
 function compute_anchor(child::Widget)
     ## (:left, :right, :center, :justify), (:top, :bottom, :center) -> "news"
     d = {:left=>"w", :right=>"e", :center=>"", :justify=>"", :top=>"n", :bottom=>"s", nothing=>""}
     (x, y) = child[:alignment]
     anchor = d[y] * d[x]
-    anchor == "" ? "center" : anchor
+    anchor
 end
     
 function compute_expand_fill_anchor(parent::BoxContainer, child::Widget) 
+
+    anchor = compute_anchor(child)
+
     policy = child[:sizepolicy]
     side = getProp(parent, :direction)
-    if policy[1] == nothing
+
+    if anchor == "" && policy[1] == nothing
         policy = (side == :horizontal ? :fixed : :expand, policy[2])
     end
-    if policy[2] == nothing
+    if anchor == "" && policy[2] == nothing
         policy = (policy[1], side == :horizontal ? :expand : :fixed)
     end
     
@@ -147,9 +171,8 @@ function compute_expand_fill_anchor(parent::BoxContainer, child::Widget)
         expand=false; fill="none"
     end
    
-    anchor = compute_anchor(child)
 
-    expand, fill, anchor
+    expand, fill, anchor == "" ? "center" : anchor
 end
 
 
@@ -224,6 +247,7 @@ end
 ## grid add child
 function grid_add_child(::MIME"application/x-tcltk", parent::GridContainer, child::Widget, i, j)
     sticky = compute_sticky(child)
+    println("Add child with sticky ", sticky)
     Tk.grid(child.block, i, j, sticky= (sticky == "" ? "{}" : sticky))
 end
 
@@ -302,6 +326,7 @@ function button(::MIME"application/x-tcltk", parent::Container, model::Model)
     
     widget = Tk.Button(getWidget(parent), getValue(model))
     connect(model, "valueChanged", widget, Tk.set_value)
+
     bind(widget, "command", (path) -> notify(model, "clicked"))
 
     (widget, widget)
@@ -332,7 +357,7 @@ function lineedit(::MIME"application/x-tcltk", parent::Container, model::Model)
 
     connect(model, "valueChanged") do value
         Tk.configure(widget, foreground="black")
-        Tk.set_value(widget, value)
+        Tk.set_value(widget, string(value))
     end
     
     ## SIgnals: keyrelease (keycode), activated (value), focusIn, focusOut, textChanged
@@ -678,11 +703,14 @@ function storeview(::MIME"application/x-tcltk", parent::Container, store::Store,
     end
     nms = map(string, names(tpl))
     configure(widget, show="headings", columns = [1:length(nms)])
-    ## headers
-    map(i -> tcl(widget, "heading", i, 
-                 text=Tk.tk_string_escape(string(nms[i])), 
-                 command=(path) -> notify(model, "headerClicked", i)),
-        1:length(nms))
+    ## headers, initial widths
+    map(1:length(nms)) do i
+        Tk.tcl(widget, "heading", i, 
+               text=Tk.tk_string_escape(string(nms[i])), 
+               command=(path) -> notify(model, "headerClicked", i))
+        Tk.tcl(widget, "column", i, width=100) # initial size, not 200
+    end
+
     Tk.tcl(widget, "column", length(nms), stretch=true)
 
     ## main callbacks
@@ -751,6 +779,9 @@ function storeview(::MIME"application/x-tcltk", parent::Container, store::Store,
         notify(model, "doubleClicked", row, col)
     end
 
+    ## arrow navigation when widget has focus
+
+
     ## insert initial rows
     for i in 1:length(store.items)
         item = store.items[i]
@@ -800,6 +831,11 @@ function setSelectmode(::MIME"application/x-tcltk", s::ModelView, val::Symbol)
     val = {:single => "browse", :multiple => "extended"}[val]
     Tk.configure(s.o, selectmode=val)
 end
+
+## This needs to be generalized
+#function setSize(::MIME"application/x-tcltk", s::StoreView, value)
+#    Tk.configure(s.block, width=value[1], height=value[2])
+#end
 
 ## getWidths
 function getWidths(::MIME"application/x-tcltk", s::ModelView)
