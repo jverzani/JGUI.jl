@@ -3,7 +3,8 @@ is to illustrate the usage of different containers for layout
 purposes, but it also illustrates how we can connect components to
 make the user experience a bit easier.
 
-This works best with `Tk` for now, though there is no compelling reason that this will always be the case.
+This works best with `Tk` for now, though there is no compelling
+reason that this will always be the case.
 
 ```
 ENV["Tk"] = true
@@ -11,7 +12,7 @@ using JGUI
 ```
 
 A `storeview` widget shows records as rows. A record is nothing more
-than a composite type. This ensures that each column in the storeview
+than an instance composite type. This ensures that each column in the storeview
 has the same type of data, similar to a data frame. In this example,
 we don't pull in the `DataFrame` class, rather we create a rather
 inefficient means to hold a factor (as it keeps the levels in the
@@ -30,6 +31,7 @@ Base.string(x::Factor) = string(x.x)
 
 
 The record is straightforward:
+
 ```
 if !isdefined(:Record)
     type Record
@@ -38,7 +40,7 @@ if !isdefined(:Record)
         serial::Integer
     end
 end
-``
+```
 
 We have some simple functions that should be cleaned up for
 abstracting the getting and setting of values from the record.
