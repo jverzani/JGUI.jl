@@ -254,7 +254,8 @@ end
 ## ...
 function lineedit(parent::Container, model::Model; coerce::Union(Nothing, Function)=nothing)
     widget, block = lineedit(parent.toolkit, parent, model)
-    LineEdit(widget, block, model, parent, parent.toolkit, coerce, Dict())
+    obj = LineEdit(widget, block, model, parent, parent.toolkit, coerce, Dict())
+    obj
 end
 lineedit(parent::Container, value::String; kwargs...) = lineedit(parent, ItemModel(value); kwargs...)
 lineedit(parent::Container, value::Number; kwargs...) = lineedit(parent, string(value); kwargs...)
@@ -273,7 +274,12 @@ function setPlaceholdertext(obj::LineEdit, txt::String)
     notify(obj.model, "placeholderTextChanged", txt)
 end
 
-list_props(::@PROP("LineEdit")) = {:placeholdertext => "Text to display when widget has no value and no focus."}
+## typeahead
+setTypeahead{T<:String}(obj::LineEdit, items::Vector{T}) = setTypeahead(obj.toolkit, obj, items)
+
+list_props(::@PROP("LineEdit")) = {:placeholdertext => "Text to display when widget has no value and no focus.",
+                                   :typeahead => "Items to use for type ahead suggestions (Qt only)"
+                                   }
 
 ## TextEdit
 type TextEdit <: WidgetModel
@@ -567,7 +573,23 @@ getValue(widget::Slider2D) = getValue(widget.toolkit, widget)
 setValue(widget::Slider2D, value) = setValue(widget.toolkit, widget, value)
 
 
-## spinbox
+## spinbox: integer or real
+type SpinBox <: WidgetModel
+    o
+    block
+    model
+    parent
+    toolkit
+    attrs
+end    
+    
+function spinbox(parent::Container, model::Model, rng::Union(Range, Range1))
+    widget, block = spinbox(parent.toolkit, parent, model, rng)
+    SpinBox(widget, block, model, parent, parent.toolkit, Dict())
+end
+spinbox(parent::Container, rng::Union(Range, Range1)) = spinbox(parent, ItemModel(rng.start), rng)
+
+setRange(obj::SpinBox, value) = setRange(obj.toolkit, obj, value)
 
 
 ##################################################

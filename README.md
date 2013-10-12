@@ -221,7 +221,7 @@ containers. The containers available in this package are few:
 Containers are coupled with a layout manager which are utilized in a "julian" manner:
 
 * The `hbox` and `vbox` containers have methods `push!`, `insert!`, and
-  `insert!` for adding children to the layout;  `pop!` and
+  `append!` for adding children to the layout;  `pop!` and
   `splice!` for removing children. In the above example, we use
   `append!` to add two children at a time. 
 

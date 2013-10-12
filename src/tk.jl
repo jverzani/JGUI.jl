@@ -395,6 +395,9 @@ function lineedit(::MIME"application/x-tcltk", parent::Container, model::Model)
     (widget, widget)
 end
 
+## XXX implement
+setTypeahead(::MIME"application/x-tcltk", obj::LineEdit, items) = nothing
+
 
 function textedit(::MIME"application/x-tcltk", parent::Container, model::Model)
     
@@ -647,8 +650,33 @@ function setValue{T <: Real}(widget::TkSlider2D, value::Vector{T})
 end
 
 ## spinbox
+function spinbox(::MIME"application/x-tcltk", parent::Container, model::ItemModel, rng::Union(Range, Range1))
+    widget = Tk.Spinbox(parent[:widget])
+    ## work around integer values in Tk.Spinbox
+    step = isa(rng, Range1) ? 1 : rng.step
+    Tk.configure(widget, from=rng.start, to=rng.start + (rng.len-1)*step, increment=step)
+    Tk.tcl(widget, "set", rng.start)
 
+    connect(model, "valueChanged") do value
+        value = isa(rng.start, Integer) ? int(value) : value
+        Tk.tcl(widget, "set", value)
+    end
 
+    function handler(path) 
+        value = parsefloat(tcl(widget, "get"))
+        value = isa(rng.start, Integer) ? int(value) : value
+        setValue(model, value)
+    end
+    bind(widget, "command", handler)
+    bind(widget, "<Return>", handler)
+
+    (widget, widget)
+end
+
+function setRange(::MIME"application/x-tcltk", obj::SpinBox, rng)
+    step = isa(rng, Range1) ? 1 : rng.step
+    Tk.configure(obj[:widget], from=rng.start, to=rng.start + (rng.len-1)* step, increment= step)
+end
 
 ## cairographic
 function cairographic(::MIME"application/x-tcltk", parent::Container, model::EventModel; width::Int=480, height::Int=400)

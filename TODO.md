@@ -1,10 +1,8 @@
-combobox: editable
-spinbox
-menubars: shortcuts, icons
 window: closeHandler (return logical, only one so not a model)
 write tests
 cairographics: (x,y) in which coordinates? pixels? Use Tim Holy's conversion to user coordinates?
 treeview, storeview -- get headers from var names. Use a_b convention to map to "a b"
+menubars: shortcuts
 
 # Qt
 
@@ -18,6 +16,11 @@ box: strectch and expand argument...
 
 warnings on loading Tk
 
+
+
+<del>spinbox</del>
+<del>lineedit: typeahead (Tk) -- too lazy to implement for Tk</del>
+<del>combobox: editable -- don't want this</del>
 <del>menubar</del>
 <del>focus method</del>
 <del>connector/plug? some innerbox, outerbox language to refer to block and the reciever of the block</del>

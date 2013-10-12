@@ -36,7 +36,7 @@ export labelframe,
 
 export label, separator, button, lineedit, textedit,
        checkbox, radiogroup, buttongroup, combobox,
-       slider, slider2d,
+       slider, slider2d, spinbox,
        listview, storeview, treeview, 
        imageview,
        icon
