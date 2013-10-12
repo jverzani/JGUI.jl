@@ -68,12 +68,18 @@ type Menu <: Container
     toolkit
 end
 
-function menubar(parent)
-    mb = menubar(parent.toolkit, parent::Window)
+## This is also menu
+function menubar(parent::Window)
+    mb = menubar(parent.toolkit, parent)
     MenuBar(mb, parent.toolkit)
 end
 
+menu(parent::Window) = menubar(parent)
+
+
 ## return Menu Instance
+## not primary interface, use menu() instead.
+## This is here, as Qt has it.
 function addMenu(menubar::MenuBar, label::String)
     menu(menubar, label)
 end

@@ -1,24 +1,31 @@
-## Simple workspace viewer.
-## Needs to be hooked up.
-using JGUI
+This example shows a simple workspace browser using the `storeview` widget. The store view widget displays records which are instances of a composite type. In this example, the type holds the variable name and a short summary. 
 
-## get unique id from an object
-unique_id(v::Symbol, m::Module) = isdefined(m,v) ? unique_id(eval(m,v)) : ""
-unique_id(x) = string(object_id(x))
-
-## create a short summary of an object. Generalize...
-short_summary(x) = summary(x)
-short_summary(x::String) = "A string"
-
-
-
-## Simple type to store data
+```
 type Summary 
     nm::String
     descr::String
 end
+```
 
-## Type to store workspace state
+
+To begin we define a means to identify different values and describe a summary:
+
+```
+unique_id(v::Symbol, m::Module) = isdefined(m,v) ? unique_id(eval(m,v)) : ""
+unique_id(x) = string(object_id(x))
+
+short_summary(x) = summary(x)
+short_summary(x::String) = "A string"
+```
+
+
+
+The bulk of the work is do maintain a `Store` with each item representing an object in the workspace. As objects can be renamed, we need to check each time we update the state. The bulk of the work below is the `update` method which does several things.
+
+
+```
+using JGUI
+
 type State 
     nms::Vector{Symbol}
     ids::Vector{ASCIIString}
@@ -106,18 +113,23 @@ type State
         self
     end
 end
+```
 
-## create state object.
-## Call state.update() to refresh view
+The basic object is just an instance of `State`. The key method of this object is `update`, as in `state.udpate()`.
+
+```
 state = State()
+```
 
-## Make a simple GUI
+Our GUI is very simple here, we just use a store view to display the store created in `state`.
+
+```
 w = window()
 sv = storeview(w, state.store)
 push!(sv)
 raise(w)
 w[:size] = [300, 400]
+```
 
-
-
+To integrate this, one needs to call `state.udpate` either through a time or through an event driven manner.
 

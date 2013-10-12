@@ -3,20 +3,19 @@ is to illustrate the usage of different containers for layout
 purposes, but it also illustrates how we can connect components to
 make the user experience a bit easier.
 
-This works best with `Tk` for now, though there is no compelling
-reason that this will always be the case.
-
+For now, we demonstrate with `Tk`:
 ```
 ENV["Tk"] = true
 using JGUI
 ```
 
 A `storeview` widget shows records as rows. A record is nothing more
-than an instance composite type. This ensures that each column in the storeview
-has the same type of data, similar to a data frame. In this example,
-we don't pull in the `DataFrame` class, rather we create a rather
-inefficient means to hold a factor (as it keeps the levels in the
-record):
+than an instance of some composite type. This ensures that each column
+in the store view has the same type of data, similar to a data
+frame. One type we want, is a factor type, where a value is chosen from a given set of levels.
+In this example, we don't pull in the `DataFrame` class, rather
+we create a rather inefficient means to hold a factor (as each instance keeps the
+levels):
 
 ```
 if !isdefined(:Factor)
@@ -59,29 +58,32 @@ blank_record() = Record("", Factor(nothing, ["General", "Sergeant", "Private"]),
 
 Each value in the store view may be edited by row. We could hardcode
 the editors, but rather use the more `Julian` multiple dispatch to
-pick the editor for us.
+pick the editor for us. The basic editor for strings is a line edit widget:
 
 ```
 function editor(x::String, container; empty::Bool=false)
     widget = lineedit(container, "")
-    if !empty
-        widget[:value] = x
-    end
+    !empty && widget[:value] = x
     widget
 end
+```
 
+For a factor, where we select a single level from potentially many a combobox is typical. 
+
+```
 function editor(x::Factor, container; empty::Bool=false)
     widget = combobox(container, x.levels)
-    if !empty
-        widget[:value] = x.x
-    end
+    !empty && widget[:value] = x.x
     widget
 end
+```
+
+Integer values can be edited in different ways. Here we use a line edit widget with coercion to integer:
+
+```
 function editor(x::Integer, container; empty::Bool=false)
     widget = lineedit(container, "", coerce=parseint)
-    if !empty
-        widget[:value] = string(x)
-    end
+    !empty && widget[:value] = string(x)
     widget
 end
 ```
@@ -113,7 +115,7 @@ both directions if space is available.
 
 In the left panel, we will pack in a `formlayout` wich makes arranging
 a widget with a label easy.  First we add the `formlayout` object into
-box container `lp`:
+the box container `lp`:
 
 ```
 fl = formlayout(lp)
@@ -184,11 +186,13 @@ connect(add_record, "clicked") do
     item = blank_record()
     push!(store, item)
     view[:index] = length(store)
-    ## adjust sensitity of remove button
-    remove_record[:enabled] = length(store) > 0
-    submit_button[:enabled] = length(store) > 0
     ## move focus
     widgets[names(item)[1]][:focus] = true
+end
+## adjust sensitity of remove button
+connect(add_record, "clicked") do
+    remove_record[:enabled] = length(store) > 0
+    submit_button[:enabled] = length(store) > 0
 end
 ```
 
@@ -214,6 +218,8 @@ connect(remove_record, "clicked") do
         end
         add_record[:focus] = true
     end
+end
+connect(remove_record, "clicked") do
     remove_record[:enabled] = length(store) > 0
     submit_button[:enabled] = length(store) > 0
 end
@@ -244,7 +250,7 @@ end
 
 When the submit button is clicked, the values in the editors are used
 to update a record. When this is done, the focus is set on the
-view. This allows the user to navigate with the arrow keys.
+view. This allows the user to navigate between records with the arrow keys.
 
 ```
 connect(submit_button, "clicked") do
@@ -254,8 +260,8 @@ connect(submit_button, "clicked") do
         set_value!(item, i, item.(i), widgets[i][:value])
     end
     replace!(store, row, item)
-    view[:focus] = true         # move focus
 end
+connect(submit_button, "clicked", () -> view[:focus] = true)
 ```
 
 Finally, we set the initial index and then display the window.

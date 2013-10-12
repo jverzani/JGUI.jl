@@ -27,7 +27,7 @@ export window,
        destroy, raise, lower
 
 export labelframe,
-       hbox, vbox, 
+       hbox, vbox, addstretch, addstrut, addspacing,
        formlayout,
        notebook,
        children,

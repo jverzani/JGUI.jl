@@ -59,8 +59,8 @@ function setSizepolicy(::MIME"application/x-qt", o::Widget, policies)
                 :expand => QtGui["QSizePolicy"]["Expanding"],
                 nothing => QtGui["QSizePolicy"]["Fixed"]
                 }
-  
-    o[:widget][:setSizePolicy](hpolicies[policies[1]], vpolicies[policies[2]])
+    sizepolicy = [hpolicies[policies[1]], vpolicies[policies[2]]]
+    o[:widget][:setSizePolicy](sizepolicy...)
 end
 
 function get_alignment(o::Widget)
@@ -75,7 +75,14 @@ function get_alignment(o::Widget)
               :bottom => "AlignBottom",
               nothing => "AlignVCenter"
               }
-    qt_enum([halign[o[:alignment][1]], valign[o[:alignment][2]]])
+
+    req_align = o[:alignment]
+    if req_align == (nothing, nothing)
+        return 0
+    else
+        align = [halign[req_align[1]], valign[req_align[2]]]
+        qt_enum(align)
+    end
 end
 ## Containers
 
@@ -774,7 +781,7 @@ function store_proxy_model(parent, store::Store; tpl=nothing)
        true
    end
    m[:removeRows] = (row, count, index) -> begin
-       m[:beginRemoveRows](index, row-1, 1)
+       m[:beginRemoveRows](index, row-1, row - 1 + count - 1)
        m[:endRemoveRows]()
        true
    end
@@ -784,7 +791,9 @@ function store_proxy_model(parent, store::Store; tpl=nothing)
        m[:insertRows](i, 1, PySide.QtCore[:QModelIndex]())
    end
 
-    connect(store.model, "rowRemoved", i -> m[:removeRows](i, 1, PySide.QtCore[:QModelIndex]()))
+    connect(store.model, "rowRemoved") do i
+        m[:removeRows](i, 1, PySide.QtCore[:QModelIndex]())
+    end
 
     function rowUpdated(i::Int)
         topleft = m[:index](i-1,0)
@@ -812,9 +821,12 @@ function storeview(::MIME"application/x-qt", parent::Container, store::Store, mo
     widget[:setAlternatingRowColors](true)
     widget[:horizontalHeader]()[:setStretchLastSection](true)
 
-    ## connect model to view
-
-
+    ## connect model to view on index changed
+    connect(model, "valueChanged") do rows
+        map(rows) do row
+            widget[:selectRow](row - 1)
+        end
+    end
     ## set up callbacks
     ## this uses a slot
     qconnect(widget[:selectionModel](), :selectionChanged) do selected, deselected

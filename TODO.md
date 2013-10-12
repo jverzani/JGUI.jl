@@ -12,6 +12,7 @@ imageview -- ain't working
 icons in storeview
 dialog return value -- must look up in dlg.state
 storeview: hooke up model -> view callbacks 
+box: strectch and expand argument...
 
 # Tk
 
