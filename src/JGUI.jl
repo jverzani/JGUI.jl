@@ -58,6 +58,22 @@ export action, menubar, menu,
 export manipulate
 
 
+
+## To use different toolkit try ENV["Tk"] = true, or ENV["Qt"] = true
+if !haskey(ENV, "toolkit")
+    ENV["toolkit"] = "Tk"
+end
+
+isqt() = lowercase(ENV["toolkit"]) == lowercase("Qt")
+istk() = lowercase(ENV["toolkit"]) == lowercase("Tk") || !isqt()
+
+if istk()
+    using Tk
+elseif isqt()
+    using PySide
+end
+
+
 include("types.jl")
 include("methods.jl")
 include("icons.jl")
@@ -67,14 +83,6 @@ include("widgets.jl")
 include("dialogs.jl")
 include("menu.jl")
 
-
-## To use different toolkit try ENV["Tk"] = true, or ENV["Qt"] = true
-if !haskey(ENV, "toolkit")
-    ENV["toolkit"] = "Tk"
-end
-
-isqt() = lowercase(ENV["toolkit"]) == lowercase("Qt")
-istk() = lowercase(ENV["toolkit"]) == lowercase("Tk") || !isqt()
 
 include("manipulate.jl")        # code depends on Tk or Qt
 
