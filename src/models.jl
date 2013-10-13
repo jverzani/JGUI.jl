@@ -179,6 +179,10 @@ end
 length(s::DataStore) = length(s.items)
 size(s::DataStore) = [length(s), length(names(s.items[1]))]
 
+getindex(s::DataStore, i::Int) = s.items[i]
+setindex!(s::DataStore, val, i::Int) = replace!(s, i, val)
+
+
 function insert!(s::DataStore, i::Int, val)
     insert!(s.items, i, val)
     notify(s.model, "rowInserted", i)

@@ -5,7 +5,7 @@ An package to simplify the creation of GUIs within Julia
 
 The `JGUI` package provides a few different means to ease the
 creation of GUIs within `Julia`. These include a simplified
-implementation of Mathematica's `Manipulate` function, and a simple
+implementation of Mathematica's `Manipulate` function, and a simplified
 interface for using the `tcl/tk` or `Qt` toolkits within `Julia`.
 
 # Installation
@@ -35,11 +35,11 @@ to crashes.
 
 
 ```
-ENV["Tk"] = true
+ENV["Tk"] = true		# default, can be skipped
 using JGUI
 ```
 
-Now, consider the following expression  which computes a Winston plot object:
+Now, consider the following expression  which when evaluated produces a Winston plot object:
 
 
 ```
@@ -88,7 +88,7 @@ Manipulate has other simple-to-specify controls:
 * `(:symbol, Real)` - text edit with conversion to float via `parsefloat`
 * `(:symbol, Int)` - text edit with conversion to integer via `parseint`
 
-The expression can be a Winston plot object or any other object. Plot
+The expression can evaluate to a Winston plot object or any other object. Plot
 objects are plotted in a display.
 
 
@@ -97,12 +97,13 @@ When using `Qt` (`ENV["Qt"] = true`) one can plot `PyPlot` calls, not
 
 ## A simplified GUI interface
 
-Though the `Tk` package provides a relatively easy to learn means to
+Though the `Tk` package provides a relatively easy-to-learn means to
 produce GUIs with `tcltk` and `PySide` does the same for `Qt`, this
-package makes provides a small API for creating GUIS that makes it
+package makes provides a small API for creating GUIs that makes it
 even easier, though sacrificing a fair amount of flexibility. (The
-`JGUI` interface is primarily concerned with controls, and not things
-like a canvas widget.) 
+`JGUI` interface is primarily concerned with simpler things like
+controls, and not more involved interfaces like those with a canvas
+widget.)
 
 Here is a simple example where a window has a button which when clicked will destroy the window. 
 
@@ -176,8 +177,10 @@ append!(f, [sl, cnv])
 
 connect(sl, "valueChanged") do u
   p = plot(x -> sin(u * x), 0, 2pi)
-  Winston.display(cnv.o, p)
+  Winston.display(cnv[:widget], p)
 end
+
+notify(sl, "valueChanged", 1) # draw initial graphic
 ```
 
 In the above we have several constructors: `window`, `hbox`, `slider`,
@@ -201,6 +204,10 @@ and is more in line with how `julia` produces sequences of values.
 For a slider, the `valueChanged` signal passes the new value to the
 callback. This value is then used within the callback that produces
 the graphic. One could also access this value within the callback with `sl[:value]`.
+
+The last line is one hacky way to get the initial graphic drawn. The
+`notify` method of the underlying model notifies any observers of a
+"valueChanged" event for a specified value.
 
 ### Containers
 
@@ -251,7 +258,7 @@ parent are specified for the child, not the container. These are done
 through the properties `:sizepolicy` and `:alignment`. Padding is done
 through the `:spacing` properties of the containers.
 
-### properties 
+### Properties 
 
 Widgets have properties that can be queried and set through index
 notation where a symbol is used for indexing. For example, to set the
@@ -282,11 +289,11 @@ b[:value] = "new label"		# updates button
 b[:value]			# "new label"
 ```
 
-When a property, say ':prop', is looked up a search for
-either a `getProp` or `setProp` method is made. Though not exported, save for `getValue` and `setValue`
+When a property, say `:prop`, is looked up a search for
+either a `getProp` or `setProp` method is made. Though not exported, save for `getValue` and `setValue`,
 these functions can be conveniently employed when using the property in a callback.
 
-## signals
+## Signals
 
 The basic `connect` method is used to connect a callback to an
 event. The syntax follows Qt's signals and slots usage. It can take
@@ -295,7 +302,8 @@ two forms: `connect(receiver, signal, obj, slot)` or
 first instance, the call is `slot(obj, vals...)` and the second, just
 `slot(vals...)` where `vals...` depends on the signal: the basic
 `valueChanged` signal passes in the value; whereas, a button's
-`clicked` signal has no value passed.
+`clicked` signal has no value passed. One can also use the `do` syntax
+to specify the slot as a function.
 
 Widgets have different signals defined. Mostly the names follow a
 small subset of those for the corresponding Qt widget (hence the names
@@ -325,7 +333,7 @@ Some alternatives would be `connect(rb, "valueChanged", l, (l, value)
 l[:value] = value)`.
 
 
-As an aside, this can also be done by sharing the underlying model, as with:
+As an aside, this can also be done just by sharing the underlying model, as with:
 
 ```
 w = window(title="label and slider")
@@ -408,9 +416,18 @@ notify(b, "clicked")	# roundabout way to draw initial graphic, ...
 
 #### Storeview example
 
-A store is a vector of a composite type displayed in a grid with each
-row representing an item.  Here is an example. First we define a type for
-our items and some instances:
+A common widget is a tabular display of data, where each row
+represents a case, and column some measurement associate to that
+case. Basically a spreadsheet with some consistency in the usage. The
+`storeview` widget can display such data.
+
+A `Store` is a vector of records, or cases. Each record is an instance
+of a composite type. The records are displayed in a grid , one row per
+record. The `storeview` widget is used to display values in an
+underlying `Store` object.
+
+Here is an example. First we define a type for our items and some
+instances:
 
 ```
 type Test 
@@ -448,11 +465,11 @@ One can add and remove items through `insert!`, `splice!`; one can modify existi
 
 ```
 t4 = Test(4, 4.0, "four")
-push!(sv, t4)
-splice!(sv, 1)
-item = sv[1]
+push!(store, t4)
+splice!(store, 1)
+item = store[1]
 item.z = uppercase(item.z)
-sv[1] = item
+store[1] = item
 ```
 
 The `valueChanged` signal passes the index (or indices) that are
@@ -485,7 +502,7 @@ tv = JGUI.treeview(w, tstore, tpl=t1) ## pass in something to determine columns,
 push!(tv)	      
 ```
 
-To manage child items, we have `insert!`:
+To manage child items, we have `insert!` (with signature `(store, parent, sibling position, label, [data])`):
 
 ```
 node = insert!(tstore, nothing, 1, "label1", t1)

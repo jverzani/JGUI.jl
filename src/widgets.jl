@@ -117,8 +117,8 @@ connect(slot::Function, o::WidgetModel, signal::Union(Symbol, String)) = connect
 
 disconnect(o::WidgetModel, id::String) = disconnect(o.model, id)
 
-notify(o::WidgetModel, signal::String) = notify(o.model, signal)
-notify(o::WidgetModel, signal::Symbol) = notify(o, string(signal))
+notify(o::WidgetModel, signal::String, args...) = notify(o.model, signal, args...)
+notify(o::WidgetModel, signal::Symbol, args...) = notify(o, string(signal), args...)
 
 
 ##################################################
@@ -143,9 +143,13 @@ end
 ##
 ## Signals:
 ## * `valueChanged (value)` called when label text is updated.
-function label(parent::Container, model::Model)
+function label(parent::Container, model::Model; kwargs...)
     widget, block = label(parent.toolkit, parent, model)
-    Label(widget, block, model, parent, parent.toolkit, Dict())
+    obj = Label(widget, block, model, parent, parent.toolkit, Dict())
+    for (k, v) in kwargs
+        obj[k] = v
+    end
+    obj
 end
 label(parent::Container, value::String) = label(parent, ItemModel(value))
 label(parent::Container, value::Number) = label(parent, string(value))
@@ -190,12 +194,16 @@ end
 ## * `clicked ()`: called when clicked
 ## * `valueChanged (value)`: called when label is changed
 ##
-function button(parent::Container, model::Model)
+function button(parent::Container, model::Model; kwargs...)
     widget, block = button(parent.toolkit, parent, model)
-    Button(widget, block, model, parent, parent.toolkit, Dict())
+    obj = Button(widget, block, model, parent, parent.toolkit, Dict())
+    for (k, v) in kwargs
+        obj[k] = v
+    end
+    obj
 end
-button(parent::Container, value::String) = button(parent, ItemModel(value))
-button(parent::Container, value::Number) = button(parent, string(value))
+button(parent::Container, value::String; kwargs...) = button(parent, ItemModel(value); kwargs...)
+button(parent::Container, value::Number; kwargs...) = button(parent, string(value); kwargs...)
 
 function setIcon(object::Button, icon::Icon;
                  theme::Union(Nothing, Symbol) = nothing,
@@ -252,14 +260,17 @@ end
 ## * validation
 ## * undo/redo stack
 ## ...
-function lineedit(parent::Container, model::Model; coerce::Union(Nothing, Function)=nothing)
+function lineedit(parent::Container, model::Model; coerce::Union(Nothing, Function)=nothing, kwargs...)
     widget, block = lineedit(parent.toolkit, parent, model)
     obj = LineEdit(widget, block, model, parent, parent.toolkit, coerce, Dict())
+    for (k, v) in kwargs
+        obj[k] = v
+    end
     obj
 end
 lineedit(parent::Container, value::String; kwargs...) = lineedit(parent, ItemModel(value); kwargs...)
 lineedit(parent::Container, value::Number; kwargs...) = lineedit(parent, string(value); kwargs...)
-lineedit(parent::Container) = lineedit(parent, "")
+lineedit(parent::Container; kwargs...) = lineedit(parent, ""; kwargs...)
 
 ## Call coerce if present. If can't be coerced, returns nothing
 function getValue(obj::LineEdit)
@@ -309,13 +320,17 @@ end
 ## * get just the selection
 ## * selection changed signal
 ## * ...
-function textedit(parent::Container, model::Model)
+function textedit(parent::Container, model::Model; kwargs...)
     widget, block = textedit(parent.toolkit, parent, model)
-    TextEdit(widget, block, model, parent, parent.toolkit, Dict())
+    obj = TextEdit(widget, block, model, parent, parent.toolkit, Dict())
+    for (k, v) in kwargs
+        obj[k] = v
+    end
+    obj
 end
-textedit(parent::Container, value::String) = textedit(parent, ItemModel(value))
-textedit(parent::Container, value::Number) = textedit(parent, string(value))
-textedit(parent::Container) = textedit(parent, "")
+textedit(parent::Container, value::String; kwargs...) = textedit(parent, ItemModel(value); kwargs...)
+textedit(parent::Container, value::Number; kwargs...) = textedit(parent, string(value); kwargs...)
+textedit(parent::Container; kwargs...) = textedit(parent, ""; kwargs...)
 
 
 ##################################################
@@ -344,20 +359,23 @@ end
 ##
 ## * `valueChanged (value)` called when widget toggles state.
 ##
-function checkbox(parent::Container, model::Model, label::Union(Nothing, String))
+function checkbox(parent::Container, model::Model, label::Union(Nothing, String); kwargs...)
     widget, block = checkbox(parent.toolkit, parent, model, label)
-    o = CheckBox(widget, block, model, parent, parent.toolkit, Dict())
-    o[:label] = label
-    o
+    obj = CheckBox(widget, block, model, parent, parent.toolkit, Dict())
+    obj[:label] = label
+    for (k, v) in kwargs
+        obj[k] = v
+    end
+    obj
 end
 
-function checkbox(parent::Container, value::Bool, label::Union(Nothing, String) )
+function checkbox(parent::Container, value::Bool, label::Union(Nothing, String); kwargs... )
     model=ItemModel(value)
-    checkbox(parent, model, label)
+    checkbox(parent, model, label; kwargs...)
 end
     
-checkbox(parent::Container, value::Bool) = checkbox(parent, value, nothing)
-checkbox(parent::Container, label::String) = checkbox(parent, true, label)
+checkbox(parent::Container, value::Bool; kwargs...) = checkbox(parent, value, nothing; kwargs...)
+checkbox(parent::Container, label::String; kwargs...) = checkbox(parent, true, label; kwargs...)
 
 getLabel(o::CheckBox) =  o.attrs[:label]
 function setLabel(o::CheckBox, value::String) 
@@ -401,16 +419,20 @@ end
 ##
 ## TODO
 ## * how to set items to be selected? (need `setItems` method)
-function radiogroup(parent::Container, model::VectorModel; orientation::Symbol=:horizontal)
+function radiogroup(parent::Container, model::VectorModel; orientation::Symbol=:horizontal, kwargs...)
     widget, block = radiogroup(parent.toolkit, parent, model, orientation=orientation)
-    RadioGroup(widget, block, model, parent, parent.toolkit, Dict())
+    obj = RadioGroup(widget, block, model, parent, parent.toolkit, Dict())
+    for (k, v) in kwargs
+        obj[k] = v
+    end
+    obj
 end
 
-function radiogroup(parent::Container, items::Vector, value; orientation::Symbol=:horizontal)
+function radiogroup(parent::Container, items::Vector, value; orientation::Symbol=:horizontal, kwargs...)
     model = VectorModel(items, value)
-    radiogroup(parent, model, orientation=orientation)
+    radiogroup(parent, model, orientation=orientation, kwargs...)
 end
-radiogroup(parent::Container, items::Vector; orientation::Symbol=:horizontal) = radiogroup(parent, items, items[1], orientation=orientation)
+radiogroup(parent::Container, items::Vector; orientation::Symbol=:horizontal, kwargs...) = radiogroup(parent, items, items[1], orientation=orientation, kwargs...)
 
 
 type ButtonGroup <: WidgetVectorModel
@@ -433,21 +455,25 @@ end
 ##
 ## TODO
 ## * `setItems` method
-function buttongroup(parent::Container, model::VectorModel; exclusive::Bool=true)
+function buttongroup(parent::Container, model::VectorModel; exclusive::Bool=true, kwargs...)
     widget, block = buttongroup(parent.toolkit, parent, model, exclusive=exclusive)
-    ButtonGroup(widget, block, model, parent, parent.toolkit, Dict())
+    obj = ButtonGroup(widget, block, model, parent, parent.toolkit, Dict())
+    for (k, v) in kwargs
+        obj[k] = v
+    end
+    obj
 end
 
-function buttongroup(parent::Container, items::Vector, value; exclusive::Bool=true)
+function buttongroup(parent::Container, items::Vector, value; exclusive::Bool=true, kwargs...)
     if !exclusive && !isa(value, Nothing)
         if !isa(value, Vector)
             value = [value]
         end
     end
     model = VectorModel(items, value)
-    buttongroup(parent, model, exclusive=exclusive)
+    buttongroup(parent, model, exclusive=exclusive, kwargs...)
 end
-buttongroup(parent::Container, items::Vector; exclusive::Bool=true) = buttongroup(parent, items, nothing, exclusive=exclusive)
+buttongroup(parent::Container, items::Vector; exclusive::Bool=true, kwargs...) = buttongroup(parent, items, nothing, exclusive=exclusive, kwargs...)
 
 
 ## combobox
@@ -476,16 +502,20 @@ end
 ##
 ## * `:editable=true` (will add `editingFinished` signal
 ##
-function combobox(parent::Container, model::VectorModel; editable::Bool=false)
+function combobox(parent::Container, model::VectorModel; editable::Bool=false, kwargs...)
     widget, block = combobox(parent.toolkit, parent, model, editable=editable)
-    ComboBox(widget, block, model, parent, parent.toolkit, Dict())
+    obj = ComboBox(widget, block, model, parent, parent.toolkit, Dict())
+    for (k, v) in kwargs
+        obj[k] = v
+    end
+    obj
 end
 
-function combobox(parent::Container, items::Vector, value; editable::Bool=false)
+function combobox(parent::Container, items::Vector, value; editable::Bool=false, kwargs...)
     model = VectorModel(items, value)
-    combobox(parent, model, editable=editable)
+    combobox(parent, model, editable=editable, kwargs...)
 end
-combobox(parent::Container, items::Vector; editable::Bool=false) = combobox(parent, items, nothing, editable=editable)
+combobox(parent::Container, items::Vector; editable::Bool=false, kwargs...) = combobox(parent, items, nothing, editable=editable, kwargs...)
 
 
 
@@ -520,24 +550,28 @@ end
 ##
 ## Notes:
 ## use cb[:value] = nothing to deselect all 
-function slider(parent::Container, model::VectorModel; orientation::Symbol=:horizontal)
+function slider(parent::Container, model::VectorModel; orientation::Symbol=:horizontal, kwargs...)
     widget, block = slider(parent.toolkit, parent, model, orientation=orientation)
-    Slider(widget, block, model, parent, parent.toolkit, Dict())
+    obj = Slider(widget, block, model, parent, parent.toolkit, Dict())
+    for (k, v) in kwargs
+        obj[k] = v
+    end
+    obj
 end
-function slider(parent::Container, items::Vector, value::Int=1; orientation::Symbol=:horizontal)
+function slider(parent::Container, items::Vector, value::Int=1; orientation::Symbol=:horizontal,kwargs...)
     model = VectorModel(sort(items), value)
-    slider(parent, model, orientation=orientation)
+    slider(parent, model, orientation=orientation, kwargs...)
 end
-function slider(parent::Container, items::Vector; orientation::Symbol=:horizontal)
+function slider(parent::Container, items::Vector; orientation::Symbol=:horizontal, kwargs...)
     items = sort(items)
     model = VectorModel(items, 1)
-    slider(parent, model, orientation=orientation)
+    slider(parent, model, orientation=orientation, kwargs...)
 end
 
-slider(parent::Container, items::Union(Range, Range1), value::Int=1; orientation::Symbol=:horizontal) =
-    slider(parent, [items], value; orientation=orientation)
-slider(parent::Container, items::Union(Range, Range1); orientation::Symbol=:horizontal) =
-    slider(parent, [items]; orientation=orientation)
+slider(parent::Container, items::Union(Range, Range1), value::Int=1; orientation::Symbol=:horizontal, kwargs...) =
+    slider(parent, [items], value; orientation=orientation, kwargs...)
+slider(parent::Container, items::Union(Range, Range1); orientation::Symbol=:horizontal, kwargs...) =
+    slider(parent, [items]; orientation=orientation, kwargs...)
 
     
 ## slider2d
@@ -562,11 +596,15 @@ end
 ##
 ## * `valueChanged (value)` is called when slider is moved. The value are [x,y] coordinates
 ##
-function slider2d(parent::Container, items1::Union(Range, Range1), items2::Union(Range, Range1)) 
+function slider2d(parent::Container, items1::Union(Range, Range1), items2::Union(Range, Range1); kwargs...) 
     model = TwoDSliderModel(items1, items2)
     widget, block = slider2d(parent.toolkit, parent, model)
 
-    Slider2D(widget, block, model, parent, parent.toolkit, Dict())
+    obj = Slider2D(widget, block, model, parent, parent.toolkit, Dict())
+    for (k, v) in kwargs
+        obj[k] = v
+    end
+    obj
 end
 ## get and set value override
 getValue(widget::Slider2D) = getValue(widget.toolkit, widget)
@@ -583,14 +621,18 @@ type SpinBox <: WidgetModel
     attrs
 end    
     
-function spinbox(parent::Container, model::Model, rng::Union(Range, Range1))
+function spinbox(parent::Container, model::Model, rng::Union(Range, Range1); kwargs...)
     widget, block = spinbox(parent.toolkit, parent, model, rng)
-    SpinBox(widget, block, model, parent, parent.toolkit, Dict())
+    obj = SpinBox(widget, block, model, parent, parent.toolkit, Dict())
+    for (k, v) in kwargs
+        obj[k] = v
+    end
+    obj
 end
-spinbox(parent::Container, rng::Union(Range, Range1)) = spinbox(parent, ItemModel(rng.start), rng)
+spinbox(parent::Container, rng::Union(Range, Range1); kwargs...) = spinbox(parent, ItemModel(rng.start), rng; kwargs...)
 
 setRange(obj::SpinBox, value) = setRange(obj.toolkit, obj, value)
-
+list_props(::@PROP("SpinBox")) = {:range => "Range to select values from"}
 
 ##################################################
 ##
@@ -625,10 +667,14 @@ end
 ## The context is [x,y] in relative pixel coordinates
 ## TODO:
 ##
-function cairographic(parent::Container; width::Int=480, height::Int=400)
+function cairographic(parent::Container; width::Int=480, height::Int=400, kwargs...)
     model = EventModel()  # for event handling
     widget, block = cairographic(parent.toolkit, parent, model, width=width, height=height)
-    CairoGraphics(widget, block, model, parent, parent.toolkit, Dict())
+    obj = CairoGraphics(widget, block, model, parent, parent.toolkit, Dict())
+    for (k, v) in kwargs
+        obj[k] = v
+    end
+    obj
 end
 
 
@@ -636,51 +682,6 @@ end
 ## 
 ## Images
 
-# type ImageView <: WidgetModel
-#     o
-#     block
-#     model
-#     parent
-#     toolkit
-#     attrs
-#     img
-#     draw
-#     function ImageView(widget, block, model, parent, toolkit, attrs, img)
-#         self = new(widget, block, model, parent, toolkit, attrs, img, nothing)
-#         self.draw = () -> image_draw(self.toolkit, self, self.img)
-#         self
-#     end
-# end
-
-
-# ## image viewer
-# ##
-# ## Display an Image image. 
-# ##
-# ## Arguments:
-# ##
-# ## * `img::Image` an `Images.Image` instance (use `imread`, say)
-# ##
-# ## Signals
-# ## * `mousePress (x,y)`
-# ## * `mouseRelease (x, y)`
-# ## * `mouseDoubleClick (x, y)`
-# ##
-# ## Status:
-# ##
-# ## Might work for you, but is flaky on the mac. (Size issues, need to have realized...)
-# ##
-# ## call the objects `.draw()` method to see the graphic, as in `obj.draw()`.
-# function imageview(parent::Container, img::Image)
-#     model = EventModel()
-#     widget, block = imageview(parent.toolkit, parent, model, img)
-#     o = ImageView(widget, block, model, parent, parent.toolkit, Dict(), img)
-#     ## Can't draw to a Cairo backend until it is realized
-#     connect(o.model, "realized") do 
-#         o.draw()
-#     end
-#     o
-# end
 
 type ImageView <: Widget
     o
@@ -690,14 +691,27 @@ type ImageView <: Widget
     attrs
 end
 
-function imageview(parent::Container, img::Union(Nothing, String))
+## Image viewer
+##
+## Widget to hold an image
+##
+## Arguments:
+##
+## * `img`: if specified, an image file name
+##
+## Signals:
+##
+## 
+function imageview(parent::Container, img::Union(Nothing, String); kwargs...)
     widget, block = imageview(parent.toolkit, parent)
-    o = ImageView(widget, block, parent, parent.toolkit, Dict())
-    if !isa(img, Nothing)
-        o[:image] = img
+    obj = ImageView(widget, block, parent, parent.toolkit, Dict())
+    if !isa(img, Nothing) obj[:image] = img end
+    for (k, v) in kwargs
+        obj[k] = v
     end
-    o
+    obj
 end
+imageview(parent::Container; kwargs...) = imageview(parent, nothing; kwargs...)
 
 function setImage(o::ImageView, img::String)
     if isfile(img)
@@ -705,6 +719,8 @@ function setImage(o::ImageView, img::String)
         setImage(o.toolkit, o, img)
     end
 end
+list_props(::@PROP("ImageView")) = {:image => "filename of image"}
+
 ##################################################
 ##
 ## Widgets with array or tree models
@@ -755,14 +771,17 @@ end
 function storeview(parent::Container, store::Store; tpl=nothing, selectmode::Symbol=:single, kwargs...)
     model = ItemModel()         # for selection
     widget, block = storeview(parent.toolkit, parent, store, model)
-    self = StoreView(widget, block, store, model, parent, parent.toolkit, Dict())
+    obj = StoreView(widget, block, store, model, parent, parent.toolkit, Dict())
+
+    ## default properties, can be overridden
+    obj[:sizepolicy] = (:expand, :expand)
+    obj[:selectmode] = selectmode
+    obj[:rownamesvisible] = false
+
     for (k, v) in kwargs
-        self[k] = v
+        obj[k] = v
     end
-    self[:sizepolicy] = (:expand, :expand)
-    self[:selectmode] = selectmode
-    self[:rownamesvisible] = false
-    self
+    obj
 end
 
 getindex(s::StoreView, i::Int) = s.store.items[i]
@@ -821,12 +840,12 @@ list_props(::@PROP("StoreView")) = {:headervisible => "Adjust if headers are dis
 }
 
 ## methods
-insert!(s::StoreView, i::Int, val) = insert!(s.store, i, val)
-push!(s::StoreView, val) = push!(s.store, val)
-unshift!(s::StoreView, val) = prepend!(s.store, val)
-append!(s::StoreView, vals::Vector) = append!(s.store, vals)
-splice!(s::StoreView, i::Int) = splice!(s.store, i)
-pop!(s::StoreView) = splice!(s.store, length(s))
+insert!(s::StoreView, i::Int, val)   = insert!(s.store, i, val)
+push!(s::StoreView, val)             = push!(s.store, val)
+unshift!(s::StoreView, val)          = prepend!(s.store, val)
+append!(s::StoreView, vals::Vector)  = append!(s.store, vals)
+splice!(s::StoreView, i::Int)        = splice!(s.store, i)
+pop!(s::StoreView)                   = splice!(s.store, length(s))
 replace!(s::StoreView, i::Int, item) = replace!(s.store, i, item)
 
 ## list view
@@ -849,13 +868,15 @@ end
 ## Properties:
 ## `:value` return value or [value] (if :multiple)
 ## `:index` return index or [index] (if :multiple)
-function listview(parent::Container, items::Vector; selectmode::Symbol=:single)
+function listview(parent::Container, items::Vector; selectmode::Symbol=:single, kwargs...)
     items =  map(x -> ListItem(x), items)
     store = Store{ListItem}(items)
 
-    self = storeview(parent, store, selectmode=selectmode)
-
-    self
+    obj = storeview(parent, store, selectmode=selectmode)
+    for (k, v) in kwargs
+        obj[k] = v
+    end
+    obj
 end
 
 ##################################################
@@ -897,10 +918,14 @@ end
 ## Notes:
 ## There are two models: one for the store where we can insert! and friends and one for the widget
 ## where the valueChanged, nodeExpand, ... are held. These are not shared between views of the same model
-function treeview(parent::Container, store::TreeStore; tpl=nothing)
+function treeview(parent::Container, store::TreeStore; tpl=nothing, kwargs...)
     model = ItemModel()
     widget, block = treeview(parent.toolkit, parent, store, model; tpl=tpl)
-    TreeView(widget, block, store, model, parent, parent.toolkit, Dict())
+    obj = TreeView(widget, block, store, model, parent, parent.toolkit, Dict())
+    for (k, v) in kwargs
+        obj[k] = v
+    end
+    obj
 end
 
 ## properties

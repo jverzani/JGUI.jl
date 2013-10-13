@@ -125,9 +125,13 @@ end
 ##
 ## * `alignment::MaybeSymbol`, one of (nothing, :left, :center, :right)
 ##
-function labelframe(parent::Container, label::String, alignment::Union(Nothing, Symbol)=nothing)
+function labelframe(parent::Container, label::String; alignment::Union(Nothing, Symbol)=nothing, kwargs...)
     (widget, block) = labelframe(parent.toolkit, parent, label, alignment=alignment)
-    LabelFrame(widget, block, parent, EventModel(), parent.toolkit, {}, Dict())
+    obj = LabelFrame(widget, block, parent, EventModel(), parent.toolkit, {}, Dict())
+    for (k, v) in kwargs
+        obj[k] = v
+    end
+    obj
 end
 
 
@@ -167,19 +171,20 @@ end
 ## respectively.
 ##
 function boxcontainer(parent::Container; direction::Symbol=:horizontal, kwargs...)
-    ## general (stuff kwargs -> attrs)
-    attrs = Dict()
-    for (k, v) in kwargs
-        attrs[k] = v
-    end
-    attrs[:direction] = direction
-    attrs[:spacing] = [2,2]
     ## Toolkit
     widget, block = boxcontainer(parent.toolkit, parent)
 
 
     ##
-    BoxContainer(widget, block, parent, parent.toolkit, {}, attrs)
+    obj = BoxContainer(widget, block, parent, parent.toolkit, {}, Dict())
+
+    obj.attrs[:direction] = direction
+    obj.attrs[:spacing] = [2,2]
+
+    for (k, v) in kwargs
+        obj[k] = v
+    end
+    obj
 end
 
 hbox(parent::Container; kwargs...) = boxcontainer(parent, direction=:horizontal, kwargs...)
@@ -315,16 +320,15 @@ end
 ## `row_minimum_height`, `column_minimum_width`, `row_stretch`, `column_stretch`.
 
 function grid(parent::Container; kwargs...)
-    ## general (stuff kwargs -> attrs)
-    attrs = {:spacing => [2,2]}
-    for (k, v) in kwargs
-        attrs[k] = v
-    end
-    ## Toolkit
-    widget, block = grid(parent.toolkit, parent)
 
-    ##
-    GridContainer(widget, block, parent, parent.toolkit, {}, attrs)
+    widget, block = grid(parent.toolkit, parent)
+    obj = GridContainer(widget, block, parent, parent.toolkit, {}, Dict())
+
+    obj.attrs[:spacing] = [2,2]
+    for (k, v) in kwargs
+        obj[k] = v
+    end
+    obj
 end
 
 function column_minimum_width(object::GridContainer, j::Int, width::Int)
@@ -434,17 +438,16 @@ end
 ## The `getValue` method will return a dictionary of control values keyed by the labels.
 ##
 function formlayout(parent::Container; kwargs...)
-    ## general (stuff kwargs -> attrs)
-    attrs = {:spacing => [5,2]}
-    for (k, v) in kwargs
-        attrs[k] = v
-    end
-    ## Toolkit
+  
     widget, block = formlayout(parent.toolkit, parent)
 
-    ##
-    obj = FormLayout(widget, block, parent, parent.toolkit, {}, {}, attrs)
+    obj = FormLayout(widget, block, parent, parent.toolkit, {}, {}, Dict())
+
+    obj.attrs[:spacing] = [5,2]
     obj[:sizepolicy] = (:expand, :expand)
+    for (k, v) in kwargs
+        obj[k] = v
+    end
     obj
 end
 
@@ -509,10 +512,16 @@ end
 ## 
 ## * `length` number of tables
 ## * `insert!` insert at `i` with label 
-function notebook(parent::Container)
+function notebook(parent::Container, kwargs...)
     model = ItemModel(0)
     widget, block = notebook(parent.toolkit, parent, model)
-    NoteBook(widget, block, parent, parent.toolkit, {}, model, Dict())
+
+    obj = NoteBook(widget, block, parent, parent.toolkit, {}, model, Dict())
+
+    for (k, v) in kwargs
+        obj[k] = v
+    end
+    obj
 end
 
 ## interface

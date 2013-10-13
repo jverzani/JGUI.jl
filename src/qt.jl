@@ -1296,7 +1296,6 @@ end
 ## Images
 
 ## place to put a png image
-## Ain't working???
 function imageview(::MIME"application/x-qt", parent::Container)
     ## use a QLabel to display an image
     widget = block = Qt.QLabel(parent[:widget])

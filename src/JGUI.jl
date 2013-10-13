@@ -69,10 +69,11 @@ include("menu.jl")
 
 
 ## To use different toolkit try ENV["Tk"] = true, or ENV["Qt"] = true
-istk() = haskey(ENV,"Tk") && ENV["Tk"] == "true"
-isqt() = !istk()
+isqt() = haskey(ENV,"Qt") && ENV["Qt"] == "true"
+istk() = !isqt()                # tk is default
 
-include("manipulate.jl")
+include("manipulate.jl")        # code depends on Tk or Qt
+
 if istk()
     default_toolkit = MIME("application/x-tcltk")
     include("tk.jl")

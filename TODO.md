@@ -1,23 +1,26 @@
 window: closeHandler (return logical, only one so not a model)
 write tests
 cairographics: (x,y) in which coordinates? pixels? Use Tim Holy's conversion to user coordinates?
+storeview: work on passing in type via parameterization {T}
 treeview, storeview -- get headers from var names. Use a_b convention to map to "a b"
 menubars: shortcuts
+svg, html...
 
 # Qt
 
-imageview -- ain't working
+storeview: update state
 icons in storeview
 dialog return value -- must look up in dlg.state
-storeview: hooke up model -> view callbacks 
-box: strectch and expand argument...
+<del>imageview -- ain't working</del>
+<del>storeview: hooke up model -> view callbacks </del>
+<del>box: strectch and expand argument...</del>
 
 # Tk
 
 warnings on loading Tk
 
 
-
+# bonepile
 <del>spinbox</del>
 <del>lineedit: typeahead (Tk) -- too lazy to implement for Tk</del>
 <del>combobox: editable -- don't want this</del>
