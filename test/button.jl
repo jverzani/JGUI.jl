@@ -1,4 +1,4 @@
-#ENV["Qt"] = true
+##ENV["toolkit"] = "Qt"
 using JGUI, Base.Test
 
 

@@ -5,7 +5,7 @@ make the user experience a bit easier.
 
 For now, we demonstrate with `Tk`:
 ```
-ENV["Tk"] = true
+ENV["toolkit"] = "Tk"
 using JGUI
 ```
 

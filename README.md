@@ -35,7 +35,7 @@ to crashes.
 
 
 ```
-ENV["Tk"] = true		# default, can be skipped
+ENV["toolkit"] = "Tk"		# default, can be skipped
 using JGUI
 ```
 
@@ -92,7 +92,7 @@ The expression can evaluate to a Winston plot object or any other object. Plot
 objects are plotted in a display.
 
 
-When using `Qt` (`ENV["Qt"] = true`) one can plot `PyPlot` calls, not
+When using `Qt` (`ENV["toolkit"] = "Qt"`) one can plot `PyPlot` calls, not
 `Winston` calls. The `modules` argument should include `PyPlot`.
 
 ## A simplified GUI interface
@@ -164,7 +164,7 @@ example.
 
 ```
 ## needs Tk
-ENV["Tk"] = true
+ENV["toolkit"] = "Tk"
 using JGUI, Winston
 
 w = window()
@@ -399,7 +399,7 @@ To use the canvas, access the `:widget` property of the
 
 ```
 ## update two graphics windows...
-ENV["Tk"] = true
+ENV["toolkit] = "Tk"
 using JGUI, Winston
 w = window()
 f = grid(w); push!(f)

@@ -1,4 +1,4 @@
-ENV["Tk"] = true 
+## ENV["toolkit"] = "Tk"
 using JGUI
 using Base.Test
 

@@ -3,7 +3,7 @@ An example showing how menus may be constructed. Menus include menubars, submenu
 Here we work with `Tk`, though this also works with `Qt`.
 
 ```
-ENV["Tk"] = true
+ENV["toolkit"] = "Tk"
 using JGUI
 w = window()
 w[:size] = [300, 300]		# Tk likes to be sized

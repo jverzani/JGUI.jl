@@ -69,8 +69,12 @@ include("menu.jl")
 
 
 ## To use different toolkit try ENV["Tk"] = true, or ENV["Qt"] = true
-isqt() = haskey(ENV,"Qt") && ENV["Qt"] == "true"
-istk() = !isqt()                # tk is default
+if !haskey(ENV, "toolkit")
+    ENV["toolkit"] = "Tk"
+end
+
+isqt() = lowercase(ENV["toolkit"]) == lowercase("Qt")
+istk() = lowercase(ENV["toolkit"]) == lowercase("Tk") || !isqt()
 
 include("manipulate.jl")        # code depends on Tk or Qt
 

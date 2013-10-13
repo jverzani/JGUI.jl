@@ -3,7 +3,7 @@ An example of using a context menu with cairo graphics.
 Cairo graphics only work with `Tk` (not `Qt`) so we specify that, then load our packages:
 
 ```
-ENV["Tk"] = true
+ENV["toolkit"] = "Tk"
 using JGUI, Winston
 ```
 

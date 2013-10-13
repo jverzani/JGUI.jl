@@ -1,7 +1,7 @@
 A storeview is used to display a grid of records.
 
 ```
-ENV["Tk"] = true
+ENV["toolkit"] = "Tk"
 using JGUI
 ```
 
