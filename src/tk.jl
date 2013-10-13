@@ -1,5 +1,3 @@
-using Tk
-using Winston
 
 ## Icons
 function get_icon(::MIME"application/x-tcltk", o::StockIcon)

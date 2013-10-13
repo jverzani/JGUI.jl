@@ -1,4 +1,4 @@
-Icons are from Open Icon Library  Licenses are included in /icons directory.
+Icons are from Open Icon Library.  Licenses are included in /icons directory.
 
 Other code is licensed under:
       

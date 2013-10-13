@@ -2,8 +2,6 @@
 
 
 ## use PySide here
-using PyCall
-using PySide
 QtGui = PyCall.pyimport("PySide.QtGui")
 QStyle = QtGui["QStyle"]
 

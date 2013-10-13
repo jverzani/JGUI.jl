@@ -1,12 +1,5 @@
 module JGUI
 
-
-## for Images
-##using Images XXX  merge in possibly...
-##using Cairo
-##using Base.Graphics
-
-
 import Base: show
 import Base: getindex, setindex!, length, 
              push!, append!, prepend!, insert!, splice!, shift!, unshift!, pop!,
@@ -69,7 +62,9 @@ istk() = lowercase(ENV["toolkit"]) == lowercase("Tk") || !isqt()
 
 if istk()
     using Tk
+    using Winston
 elseif isqt()
+    using PyCall
     using PySide
 end
 
