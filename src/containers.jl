@@ -364,7 +364,7 @@ endof(object::GridContainer) = prod(size(object))
 ndims(object::GridContainer) = 2
 function clear(object::GridContainer)
     for child in children(object)
-        remove(child.toolkit, child.parent, child)
+        remove_child(child.toolkit, child.parent, child)
     end
     object.children = {}
 end

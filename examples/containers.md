@@ -63,7 +63,7 @@ pick the editor for us. The basic editor for strings is a line edit widget:
 ```
 function editor(x::String, container; empty::Bool=false)
     widget = lineedit(container, "")
-    !empty && widget[:value] = x
+    !empty && (widget[:value] = x)
     widget
 end
 ```
@@ -73,7 +73,7 @@ For a factor, where we select a single level from potentially many a combobox is
 ```
 function editor(x::Factor, container; empty::Bool=false)
     widget = combobox(container, x.levels)
-    !empty && widget[:value] = x.x
+    !empty && (widget[:value] = x.x)
     widget
 end
 ```
@@ -83,7 +83,7 @@ Integer values can be edited in different ways. Here we use a line edit widget w
 ```
 function editor(x::Integer, container; empty::Bool=false)
     widget = lineedit(container, "", coerce=parseint)
-    !empty && widget[:value] = string(x)
+    !empty && (widget[:value] = string(x))
     widget
 end
 ```

@@ -382,6 +382,7 @@ function setLabel(o::CheckBox, value::String)
     o.attrs[:label] = value
     setLabel(o.toolkit, o, value)
 end
+setLabel(o::CheckBox, value::Nothing)  = setLabel(o, "")
 
 list_props(::@PROP("CheckBox")) = {:label => "checkbox label"}
 

@@ -242,7 +242,7 @@ end
 function grid_add_child(::MIME"application/x-qt", parent::GridContainer, child::Widget, i, j)
     lyt = parent[:widget][:layout]()
     alignment = get_alignment(child)
-    lyt[:addWidget](child.block, min(i), min(j), max(i) - min(i) + 1, max(j) - min(j) + 1, alignment)
+    lyt[:addWidget](child.block, minimum(i), minimum(j), maximum(i) - minimum(i) + 1, maximum(j) - minimum(j) + 1, alignment)
 end
 
 function grid_get_child_at(::MIME"application/x-qt", parent::GridContainer, i::Int, j::Int)
