@@ -65,12 +65,12 @@ end
 function setAlignment(o::Widget, value) #x::Union(Symbol, Nothing), y::Union(Symbol, Nothing))
     x, y = value
     if isa(x, Symbol)
-        if !contains([:left, :right, :center, :justify], x) 
+        if !(x in [:left, :right, :center, :justify])
             error("x-alignment is one of :left, :right, :center, :justify or nothing.") 
         end
     end    
     if isa(y, Symbol)
-        if !contains([:top, :bottom, :center], y) 
+        if !(y in [:top, :bottom, :center])
             error("y-alignment is one of :top, :bottom, :center or nothing.") 
         end
     end
@@ -621,19 +621,33 @@ type SpinBox <: WidgetModel
     toolkit
     attrs
 end    
-    
+  
+## Spinbox
+##
+## widget used to collect numeric information from a specifed range
+##
+## Arguments:
+##
+## * `rng` a range of type `1:10` (Range1) or `0:pi/10:pi` (Range)
+##
+## Signals:
+##
+## * `valueChanged (value)` is called when spinbox is updated
+##  
 function spinbox(parent::Container, model::Model, rng::Union(Range, Range1); kwargs...)
     widget, block = spinbox(parent.toolkit, parent, model, rng)
     obj = SpinBox(widget, block, model, parent, parent.toolkit, Dict())
     for (k, v) in kwargs
         obj[k] = v
     end
+    obj.attrs[:range] = rng
     obj
 end
 spinbox(parent::Container, rng::Union(Range, Range1); kwargs...) = spinbox(parent, ItemModel(rng.start), rng; kwargs...)
 
-setRange(obj::SpinBox, value) = setRange(obj.toolkit, obj, value)
-list_props(::@PROP("SpinBox")) = {:range => "Range to select values from"}
+## XXX deprecate (issue with integer vs. real...)
+##setRange(obj::SpinBox, value) = setRange(obj.toolkit, obj, value)
+##list_props(::@PROP("SpinBox")) = {:range => "Range to select values from"}
 
 ##################################################
 ##

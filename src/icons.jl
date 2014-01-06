@@ -14,7 +14,7 @@ type FileIcon <: Icon
 end
 
 ## constructor
-icon(nm::Symbol, theme::Symbol) = StockIcon(nm, theme)
+icon(nm::Symbol, theme::Symbol=nothing) = StockIcon(nm, theme)
 icon(nm::Symbol) = StockIcon(nm, nothing)
 function icon(nm::String)
     isfile(nm) || error("Not a file name: $nm")

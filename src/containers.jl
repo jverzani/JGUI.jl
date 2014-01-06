@@ -172,7 +172,7 @@ end
 ##
 function boxcontainer(parent::Container; direction::Symbol=:horizontal, kwargs...)
     ## Toolkit
-    widget, block = boxcontainer(parent.toolkit, parent)
+    widget, block = boxcontainer(parent.toolkit, parent, direction)
 
 
     ##
@@ -511,7 +511,7 @@ end
 ## Methods
 ## 
 ## * `length` number of tables
-## * `insert!` insert at `i` with label 
+## * `insert!` insert at `i` with label i in {1, 2, ..., length + 1}
 function notebook(parent::Container, kwargs...)
     model = ItemModel(0)
     widget, block = notebook(parent.toolkit, parent, model)

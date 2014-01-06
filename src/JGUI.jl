@@ -54,11 +54,12 @@ export manipulate
 
 ## To use different toolkit try ENV["Tk"] = true, or ENV["Qt"] = true
 if !haskey(ENV, "toolkit")
-    ENV["toolkit"] = "Tk"
+    ENV["toolkit"] = "Gtk"
 end
 
 isqt() = lowercase(ENV["toolkit"]) == lowercase("Qt")
-istk() = lowercase(ENV["toolkit"]) == lowercase("Tk") || !isqt()
+istk() = lowercase(ENV["toolkit"]) == lowercase("Tk") 
+isgtk() = lowercase(ENV["toolkit"]) == lowercase("Gtk")
 
 if istk()
     using Tk
@@ -66,6 +67,9 @@ if istk()
 elseif isqt()
     using PyCall
     using PySide
+elseif isgtk()
+    using Gtk, Cairo
+    using Winston
 end
 
 
@@ -89,6 +93,10 @@ elseif isqt()
     default_toolkit = MIME("application/x-qt")
     include("qt.jl")
     export pyplotgraphic
+elseif isgtk()
+    default_toolkit = MIME("application/x-gtk")
+    include("gtk.jl")
+    export cairographic
 end
 
 

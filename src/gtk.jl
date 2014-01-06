@@ -1,43 +1,43 @@
-## Qt implementations
+## Gtk implementation
 
-
-## use PySide here
-QtGui = PyCall.pyimport("PySide.QtGui")
-QStyle = QtGui["QStyle"]
-
+XXX() = error("not defined")
 ## Icons
-function get_icon(::MIME"application/x-qt", o::StockIcon)
+function get_icon(::MIME"application/x-gtk", o::StockIcon)
     if isa(o.nm, Nothing)
-        Qt.QIcon()
+        Gtk.GtkImage()
     else
         file = Pkg.dir("JGUI", "icons", string(o.theme), string(o.nm) * ".png")
-        Qt.QIcon(file)
+        Gtk.GtkImage(file)
     end
 end
-function get_icon(::MIME"application/x-qt", o::FileIcon)
-    Qt.QIcon(o.file)
+function get_icon(::MIME"application/x-gtk", o::FileIcon)
+    Gtk.GtkImage(o.file)
 end
 
 
 ## Widget methods
-getEnabled(::MIME"application/x-qt", o::Widget) = o[:widget][:enabled]
-setEnabled(::MIME"application/x-qt", o::Widget, value::Bool) = o[:widget][:setEnabled](true)
+getEnabled(::MIME"application/x-gtk", o::Widget) = o[:widget][:sensitive,Bool]
+setEnabled(::MIME"application/x-gtk", o::Widget, value::Bool) = o[:widget][:sensitve] = value
 
-getVisible(::MIME"application/x-qt", o::Widget) =  o[:widget][:visible]
-setVisible(::MIME"application/x-qt", o::Widget, value::Bool) = o[:widget][:setVisible](value)
+getVisible(::MIME"application/x-gtk", o::Widget) =  o[:widget][:visible, Bool]
+setVisible(::MIME"application/x-gtk", o::Widget, value::Bool) = o[:widget][:visible] = value
 
-function getSize(::MIME"application/x-qt", o::Widget)  
-    sz = o[:widget][:size]()
-    [sz[:width](), sz[:height]()]
+function getSize(::MIME"application/x-gtk", o::Widget)  
+    [size(o[:widget])...]
 end
-setSize(::MIME"application/x-qt", o::Widget, value)  =  o[:widget][:resize](value[1], value[2])
 
-getFocus(::MIME"application/x-qt", o::Widget) = o[:widget][:focus]
-setFocus(::MIME"application/x-qt", o::Widget, value::Bool) =  value && o[:widget][:setFocus]()
+setSize(::MIME"application/x-gtk", o::Widget, value)  =  Gtk.G_.size_request(o[:widget], value...)
+
+getFocus(::MIME"application/x-gtk", o::Widget) = o[:widget][:has_focus,Bool]
+
+function setFocus(::MIME"application/x-gtk", o::Widget, value::Bool) 
+    value && 
+    ccall((:gtk_widget_grab_focus, Gtk.libgtk), Void, (Ptr{Gtk.GObject},), o[:widget])
+end
 
 ## Does not preserve types! (1,"one") -> [1, "one"]
-getContext(::MIME"application/x-qt", o::Widget) = o[:widget][:attrs][:context]
-function setContext(::MIME"application/x-qt", o::Widget, ctx)
+getContext(::MIME"application/x-gtk", o::Widget) = o[:widget][:attrs][:context]
+function setContext(::MIME"application/x-gtk", o::Widget, ctx)
      o.attrs[:context] = ctx
 end
 ## this is called when a custom context menu is requested. Use pt to add informationt to
@@ -45,132 +45,117 @@ end
 update_context(::MIME"application/x-qt", o::Widget, pt) = nothing
 
 
-getWidget(::MIME"application/x-qt", o::Widget) = o.o
+getWidget(::MIME"application/x-gtk", o::Widget) = o.o
 
-function setSizepolicy(::MIME"application/x-qt", o::Widget, policies) 
+### XXX
+function setSizepolicy(::MIME"application/x-gtk", o::Widget, policies) 
     o.attrs[:sizepolicy] = policies
-    hpolicies = {:fixed => QtGui["QSizePolicy"]["Fixed"],
-                :expand => QtGui["QSizePolicy"]["Expanding"],
-                nothing => QtGui["QSizePolicy"]["Fixed"]
-                }
-    vpolicies = {:fixed => QtGui["QSizePolicy"]["Fixed"],
-                :expand => QtGui["QSizePolicy"]["Expanding"],
-                nothing => QtGui["QSizePolicy"]["Fixed"]
-                }
-    sizepolicy = [hpolicies[policies[1]], vpolicies[policies[2]]]
-    o[:widget][:setSizePolicy](sizepolicy...)
 end
 
-function get_alignment(o::Widget)
-    halign = {:left => "AlignLeft",
-              :center=> "AlignHCenter",
-              :right => "AlignRight",
-              :justify => "AlignJustify",
-              nothing =>  "AlignHCenter"
-              }
-    valign = {:top => "AlignTop",
-              :center => "AlignVCenter",
-              :bottom => "AlignBottom",
-              nothing => "AlignVCenter"
-              }
 
-    req_align = o[:alignment]
-    if req_align == (nothing, nothing)
-        return 0
-    else
-        align = [halign[req_align[1]], valign[req_align[2]]]
-        qt_enum(align)
+function align_gtk_widget(o::Widget; xscale=1, yscale=1)
+    map_align = {:left => 0.0,
+                 :top => 0.0,
+                 :center => 0.5,
+                 :right => 1.0,
+                 :bottom => 1.0,
+                 :justify => 0.5,
+                 nothing => 0.5
+                 }
+    
+
+
+    align = [map_align[k] for k in o[:alignment]]
+
+    println((align, xscale, yscale))
+
+
+    al = GtkAlignment(align[1], align[2], xscale, yscale)
+
+    if !isa(o[:spacing], Nothing)
+        al[:left_padding], al[:right_padding] = o[:spacing][1],o[:spacing][1]
     end
+    if !isa(o[:spacing], Nothing)
+        al[:top_padding], al[:bottom_padding] = o[:spacing][2],o[:spacing][2]
+    end
+
+    push!(al, o.block)
+    al
 end
 ## Containers
 
-## get Qt layout
-getLayout(::MIME"application/x-qt", widget::Container) = widget[:widget][:layout]()
+## get Gtk layout
+getLayout(::MIME"application/x-gtk", widget::Container) = widget[:widget][:layout]()
 getLayout(widget::Container) = getLayout(widget.toolkit, widget)
 
 
 
 ## Window
-function window(::MIME"application/x-qt")
-    widget = Qt.QMainWindow()
+function window(::MIME"application/x-gtk")
+    widget = GtkWindow("")
     (widget, widget)
 end
 
 
 ### window methods
-function raise(::MIME"application/x-qt", o::Window) 
-    o[:widget][:show]()
-    convert(Function, o[:widget][:raise])()
+function raise(::MIME"application/x-gtk", o::Window) 
+    o[:widget][:visible] = true
 end
-lower(::MIME"application/x-qt", o::Window) = o[:widget][:lower]()
-destroy_window(::MIME"application/x-qt", o::Window) = o[:widget][:destroy](true)
+lower(::MIME"application/x-gtk", o::Window) = o[:widget][:visible]=false
+destroy_window(::MIME"application/x-gtk", o::Window) = Gtk.destroy(o[:widget])
 
 ## window properties
-getTitle(::MIME"application/x-qt", o::Window) = o[:widget][:windowTitle]()
-setTitle(::MIME"application/x-qt", o::Window, value::String) = o[:widget][:setWindowTitle](value)
-getPosition(::MIME"application/x-qt", o::Window) = [o[:widget][:x](), o[:widget][:y]()]
-setPosition(::MIME"application/x-qt", o::Window, value::Vector{Int}) = o[:widget][:move](value[1], value[2])
+getTitle(::MIME"application/x-gtk", o::Window) = o[:widget][:title,String]
+setTitle(::MIME"application/x-gtk", o::Window, value::String) = o[:widget][:title] = value
 
-## XXX -- need to do these!
+## XXX
+getPosition(::MIME"application/x-gtk", o::Window) = [o[:widget][:x](), o[:widget][:y]()]
+setPosition(::MIME"application/x-gtk", o::Window, value::Vector{Int}) = o[:widget][:move](value[1], value[2])
+
+## XXX
 function getModal(::MIME"application/x-tcltk", o::Window) 
-    val = tcl("grab", "status", o.o)
-    val == "" ? false : true
+
 end
 function setModal(::MIME"application/x-tcltk", o::Window, value::Bool) 
-    if value
-        function callback(path)
-            tcl("grab", "release", o.o)
-            ## Insert method here ...
-            destroy(o)
-        end
-        Tk.wm(o.o, "protocol", "WM_DELETE_WINDOW", callback)
-#        tcl("tkwait", "window", o.o)
-        ## This make Tk window modal, but not console...
-        tcl("grab", "set", "-global", o.o)
-    else
-       tcl("grab", "release", o.o)
-    end
 end
 
-function set_child(::MIME"application/x-qt", parent::Window, child::Widget)
-    parent[:widget][:setCentralWidget](child.block)
+function set_child(::MIME"application/x-gtk", parent::Window, child::Widget)
+    Gtk.push!(parent[:widget], child.block)
 end
 
 ## for BinContainer, only one child we pack and expand...
-function set_child(::MIME"application/x-qt", parent::BinContainer, child::Widget)
-    lyt = Qt.QHBoxLayout(parent[:widget])
-    lyt[:addWidget](child.block)
-    lyt[:setStretch](2,2)
-    parent[:widget][:setLayout](lyt)
+function set_child(::MIME"application/x-gtk", parent::BinContainer, child::Widget)
+    Gtk.push!(parent[:widget], child.block)
 end
 
+## Container
 
 ## Label frame
-function labelframe(::MIME"application/x-qt", parent::BinContainer, label::String, alignment::Union(Nothing, Symbol)=nothing)
-    widget = Qt.QFrame(parent[:widget])
-    widget[:setFrameStyle](widget[:Sunken])
+function labelframe(::MIME"application/x-gtk", parent::BinContainer, 
+                    label::String, alignment::Union(Nothing, Symbol)=nothing)
+    widget = GtkFrame(label)
 
     if isa(alignment, Symbol)
-        ## XXX how to set label
+        widget[:label_xalign] = alignment == :left ? 0.0 :(alignment == :right ? 1.0 : 0.5)
     end
     (widget, widget)
 end
 
 
 ## Boxes
-function boxcontainer(::MIME"application/x-qt", parent::Container, direction)
-    widget = Qt.QFrame(parent[:widget])
+function boxcontainer(::MIME"application/x-gtk", parent::Container, direction)
+    widget = GtkBox(direction == :vertical)
     (widget, widget)
 end
 
 ## set padx, pady for all the children
-function setSpacing(::MIME"application/x-qt", parent::BoxContainer, px::Vector{Int})
-    parent[:widget][:layout]()[:setSpacing](px[1]) # first one only
+function setSpacing(::MIME"application/x-gtk", parent::BoxContainer, px::Vector{Int})
+    parent[:widget][:spacing] = px[1] # first one only
 end
 
 ##
-function setMargin(::MIME"application/x-qt", parent::BoxContainer, px::Vector{Int})
-    parent[:widget][:setContentsMargin](px[1], px[2], px[1], px[2])
+function setMargin(::MIME"application/x-gtk", parent::BoxContainer, px::Vector{Int})
+    parent[:widget][:border_width] = px[1] # first only
 end
 
 
@@ -180,75 +165,99 @@ addsstrut(::MIME"application/x-qt", parent::BoxContainer, val::Int) = parent[:wi
 addstretch(::MIME"application/x-qt", parent::BoxContainer, val::Int) = parent[:widget][:layout]()[:addStretch](val)
 
 
-function insert_child(::MIME"application/x-qt", parent::BoxContainer, index, child::Widget)
+function insert_child(::MIME"application/x-gtk", parent::BoxContainer, index, child::Widget)
     
-    direction = getProp(parent, :direction)
-    lyt = parent[:layout]
-    if isa(lyt, Nothing)
-        lyt = (direction == :horizontal) ? Qt.QHBoxLayout(parent[:widget]) : Qt.QVBoxLayout(parent[:widget])
-        parent[:widget][:setLayout](lyt)
-    end
+    ## we use Gtk.Alignment until deprecated
+    expand, fill, padding = false, false, 0
     
-    stretch = child[:stretch]
-    
-    if direction == :horizontal
-        if child[:sizepolicy][2] == nothing
-            child[:sizepolicy] = (child[:sizepolicy][1], :expand)
+    xscale, yscale = (parent[:direction] == :horizontal) ? (0.0, 1.0) : (1.0, 0.0)
+    println("yscale=$yscale, xscale=$xscale")
+    if parent[:direction] == :horizontal
+        if child[:sizepolicy][1] == :expand
+            expand=true
+            xscale= 1.0
         end
     else
-        if child[:sizepolicy][1] == nothing
-            child[:sizepolicy] = (:expand, child[:sizepolicy][1])
+        if child[:sizepolicy][2] == :expand
+            expand = true
+            yscale = 1.0
         end
     end
+    fill = expand
+
+
+    child_widget = align_gtk_widget(child, xscale=xscale, yscale=yscale)
+                                    
+    ccall((:gtk_box_pack_start, Gtk.libgtk),
+              Void,
+              (Ptr{Gtk.GObject},Ptr{Gtk.GObject},Bool, Bool,Int64), 
+              parent[:widget], child_widget, expand, fill, padding)
         
-    alignment = get_alignment(child)
-
-    lyt[:insertWidget](index - 1, child.block, stretch,  alignment) 
-
+    ccall((:gtk_box_reorder_child, Gtk.libgtk), Void,  
+          (Ptr{Gtk.GObject},Ptr{Gtk.GObject},Int64), 
+          parent[:widget], child_widget, index - 1)
+    
+    show(child_widget)
+    child[:widget][:visible] = parent[:widget][:visible, Bool]
 
 end
 
-function remove_child(::MIME"application/x-qt", parent::Container, child::Widget)
-    child[:widget][:setVisible](false)
-    parent[:widget][:layout]()[:removeWidget](child.block)
+function remove_child(::MIME"application/x-gtk", parent::Container, child::Widget)
+    delete!(parent[:widget], child[:widget])
 end
+
 
 ####
-## make a grid
-function grid(::MIME"application/x-qt", parent::Container)
-    widget = Qt.QFrame(parent[:widget])
-    lyt = Qt.QGridLayout(widget)
-    widget[:setLayout](lyt)
+## make a gridq
+function grid(::MIME"application/x-gtk", parent::Container)
+    ## should dispatch on gtk version type!
+    if Gtk.gtk_version >= 3
+        ## use ...
+
+    else
+        widget = Gtk.GtkTable()
+    end
     (widget, widget)
 end
 
 ## size of grid
-function grid_size(::MIME"application/x-qt", widget::GridContainer)
-    lty = widget[:widget][:layout]()
-    [lty[:rowCount](), lty[:columnCount]()]
+function grid_size(::MIME"application/x-gtk", widget::GridContainer)
+    ## should dispatch on gtk version type!
+    if Gtk.gtk_version >= 3
+        ## use ...
+
+    else
+        tbl = widget[:widget]
+        [tbl[:n_rows,Int], tbl[:n_columns, Int]]
+    end
 end
 
 ## grid spacing
-function setSpacing(::MIME"application/x-qt", parent::GridContainer, px::Vector{Int})
-    lyt = parent[:widget][:layout]()
-    lyt[:setHorizontalSpacing][px[1]]
-    lyt[:setVerticalSpacing][px[2]]
+function setSpacing(::MIME"application/x-gtk", parent::GridContainer, px::Vector{Int})
+    if Gtk.gtk_version >= 3
+        ## use ...
+        
+    else
+        tbl = widget[:widget]
+        tbl[:row_spacing] = px[2]
+        tbl[:column_spacing] = px[1]
+    end
 end
 
 
 
 ## Need to do something to configure rows and columns
 ## grid add child
-function grid_add_child(::MIME"application/x-qt", parent::GridContainer, child::Widget, i, j)
-    lyt = parent[:widget][:layout]()
-    alignment = get_alignment(child)
-    lyt[:addWidget](child.block, minimum(i), minimum(j), maximum(i) - minimum(i) + 1, maximum(j) - minimum(j) + 1, alignment)
+function grid_add_child(::MIME"application/x-gtk", parent::GridContainer, child::Widget, i, j)
+
+    ## alignment???
+    parent[:widget][j, i] = align_gtk_widget(child) # reversed!!!
+    ## need to show XXX will be fixed
+    for i in parent[:widget] show(i) end
 end
 
-function grid_get_child_at(::MIME"application/x-qt", parent::GridContainer, i::Int, j::Int)
-    pyo = parent[:widget][:itemAtPosition](i, j)
-    child = filter(kid -> kid.o == pyo, children(parent))
-    length(child) == 1 ? child[1] : nothing
+function grid_get_child_at(::MIME"application/x-gtk", parent::GridContainer, i::Int, j::Int)
+    error("No method itemAtPosition in Gtk")
 end
 
 ##XXza
@@ -261,31 +270,60 @@ column_stretch(::MIME"application/x-qt", object::GridContainer, j::Int, weight::
 row_stretch(::MIME"application/x-qt", object::GridContainer, i::Int, weight::Int) = object[:layout]()[:setRowStretch](i-1, weight)
 ##################################################
 
-function formlayout(::MIME"application/x-qt", parent::Container)
-    widget = Qt.QWidget(parent[:widget])
-    lyt = Qt.QFormLayout(widget)
-    widget[:setLayout](lyt)
-                      
+function formlayout(::MIME"application/x-gtk", parent::Container)
+ ## should dispatch on gtk version type!
+    if Gtk.gtk_version >= 3
+        ## use ...
+
+    else
+        widget = Gtk.GtkTable(false)
+    end
     (widget, widget)
 end
 
 ## XX labels..
-function formlayout_add_child(::MIME"application/x-qt", parent::FormLayout, child::Widget, label::Union(Nothing, String))
-    parent[:layout][:addRow](label, child.block)
+function formlayout_add_child(::MIME"application/x-gtk", parent::FormLayout, child::Widget, label::Union(Nothing, String))
+    
+    if length(parent[:widget]) == 0
+        nrows = 0
+    else
+        nrows = parent[:widget][:n_rows,Int]
+    end
+
+    if !isa(label, Nothing)
+        label = Gtk.GtkLabel(label)
+        al = Gtk.GtkAlignment(1.0, 0.0, 1.0, 1.0)
+        al[:right_padding] = 2
+        push!(al, label)
+        parent[:widget][1, nrows+1] = al
+    end
+    parent[:widget][2, nrows+1] = align_gtk_widget(child, xscale=1.0, yscale=0.0)  ## reversed
+
+    map(show,  parent[:widget])
+
 end
 
-function setSpacing(::MIME"application/x-qt", object::FormLayout, px::Vector{Int})
-    parent[:layout][:setHorizontalSpacing](px[1])
-    parent[:layout][:setVerticalSpacing](px[2])
+function setSpacing(::MIME"application/x-gtk", object::FormLayout, px::Vector{Int})
+ if Gtk.gtk_version >= 3
+        ## use ...
+        
+    else
+        tbl = widget[:widget]
+        tbl[:row_spacing] = px[2]
+        tbl[:column_spacing] = px[1]
+    end
 end
 
 ## Notebook
-function notebook(::MIME"application/x-qt", parent::Container, model::Model)
-    widget = Qt.QTabWidget(parent[:widget])
+function notebook(::MIME"application/x-gtk", parent::Container, model::Model)
+    widget = Gtk.GtkNotebook()
 
-    connect(model, "valueChanged", value -> widget[:setCurrentIndex](value-1))
-    qconnect(widget, :currentChanged) do value # XXX check value is index 0-based
-        setValue(model, value + 1)
+
+    connect(model, "valueChanged", value -> Gtk.G_.current_page(widget, value-1))
+    signal_connect(widget, :switch_page) do obj, newpage, oldpage, args...
+        ## XXX nepage is ptr, not integer. Don't know how to convert...
+        ## setValue(model, newpage + 1)
+        ## setValue(model, 1)
         false
     end
 
@@ -293,130 +331,150 @@ function notebook(::MIME"application/x-qt", parent::Container, model::Model)
 end
 
 ## XXX icon, order?
-function notebook_insert_child(::MIME"application/x-qt", parent::NoteBook, child::Widget, i::Int, label::String)
-    i = i > length(parent) ? length(parent) : i-1
-    parent[:widget][:insertTab](i, child.block,  label)
+function notebook_insert_child(::MIME"application/x-gtk", parent::NoteBook, child::Widget, i::Int, label::String)
+    i = i > length(parent)  ? length(parent) : i-1
+    insert!(parent[:widget], i + 1, child.block, label)
+    
+    map(show, parent[:widget])
 end
 
-function notebook_remove_child(::MIME"application/x-qt", parent::NoteBook, child::Widget)
+function notebook_remove_child(::MIME"application/x-gtk", parent::NoteBook, child::Widget)
     ## no findfirst
     n = length(parent.children)
     index = filter(i -> parent.children[i] == child, 1:n)
-    parent[:widget][:removeTab](index[1] - 1)
+    splice!(parent[:widget], index[1])
 end
+
 
 ##################################################
 ## Widgets
-function label(::MIME"application/x-qt", parent::Container, model::Model)
-    widget = Qt.QLabel(string(getValue(model)), parent[:widget])
-    connect(model, "valueChanged", widget, (widget, value) -> widget[:setText](string(value)))
+function label(::MIME"application/x-gtk", parent::Container, model::Model)
+    widget = GtkLabel(string(getValue(model)))
+    connect(model, "valueChanged", widget, (widget, value) -> widget[:text] = string(value))
 
     (widget, widget)
 end
 
 
 ## separator
-function separator(::MIME"application/x-qt", parent::Container; orientation::Symbol=:horizontal)
-    widget = Qt.QFrame(parent[:widget])
-    shape = widget[orientation == :horizontal ? :HLine : :VLine]
-    widget[:setFrameShape](shape)
-    widget[:setFrameShadow](widget[:Sunken])
+function separator(::MIME"application/x-gtk", parent::Container; orientation::Symbol=:horizontal)
+    ## XXX not yet in Gtk.jl
+    if orientation == :horizontal
+        widget = Gtk.GtkHSeparator()
+    else
+        widget = Gtk.GtkVSeparator()
+    end
 
     (widget, widget)
 end
+
 
 ## Controls
-function button(::MIME"application/x-qt", parent::Container, model::Model)
-    widget = Qt.QPushButton(getValue(model), parent[:widget])
-    connect(model, "valueChanged", value -> widget[:setText](value))
-    qconnect(widget, :clicked, () -> notify(model, "clicked"))
+function button(::MIME"application/x-gtk", parent::Container, model::Model)
+    widget = GtkButton(getValue(model))
+    connect(model, "valueChanged", value -> widget[:label] = value)
+    signal_connect(widget, :clicked) do obj, args...
+        notify(model, "clicked")
+        nothing
+    end
 
     (widget, widget)
 end
 
-function setIcon(::MIME"application/x-qt", widget::Button, icon::Union(Nothing, Icon); kwargs...)
+## XXX
+function setIcon(::MIME"application/x-gtk", widget::Button, icon::Union(Nothing, Icon); kwargs...)
     if isa(icon, Nothing)
-        widget[:widget][:setIcon](Qt.QIcon())
+        icon = Gtk.GtkImage()
     else
         if isa(icon.theme, Nothing) 
             icon.theme = widget[:icontheme]
         end
-        widget[:widget][:setIcon](get_icon(widget.toolkit, icon))
+        icon = get_icon(widget.toolkit, icon)
     end
+    Gtk.G_.image(widget[:widget], icon)
 end
     
-## Need to subclass to get desired signals
-
-qnew_class("OLineEdit", "QtGui.QLineEdit") ## QtGui -- not just Qt.    
-function lineedit(::MIME"application/x-qt", parent::Container, model::Model)
-    widget = qnew_class_instance("OLineEdit")
-    widget[:setParent](parent[:widget])
-    widget[:setText](string(getValue(model)))
-    connect(model, "valueChanged", value -> widget[:setText](string(value)))
+## Linedit
+function lineedit(::MIME"application/x-gtk", parent::Container, model::Model)
+    widget = GtkEntry()
+    widget[:text] = string(getValue(model))
+    connect(model, "valueChanged", value -> widget[:text] = string(value))
 
     ## SIgnals: keyrelease (keycode), activated (value), focusIn, focusOut, textChanged
-    qconnect(widget, :returnPressed, () -> notify(model, "editingFinished", getValue(model)))
-    qconnect(widget, :textChanged) do txt
-        setValue(model, txt)
-        true
-    end
+    signal_connect(widget, :key_release_event) do obj, e, args...
+        if e.keyval == Gtk.GdkKeySyms.Return
+            notify(model, "editingFinished", getValue(model))
+        else
+            txt = widget[:text, String]
+            setValue(model, txt) # textChanged
+            notify(model, "textChanged", txt)
+            notify(model, "valueChanged", txt)
+        end
 
-    qset_method(widget, :focusOutEvent) do e
+        false
+    end
+    
+    signal_connect(widget, :focus_out_event) do widget, e, args...
         notify(model, "focusOut", getValue(model))
         notify(model, "editingFinished", getValue(model))
         return(false)
     end
-    qset_method(widget, :focusInEvent) do e
+    signal_connect(widget, :focus_in_event) do widget, e, args...
         notify(model, "focusIn")
         return(false)
     end
-    # qset_method(widget, :keyPressEvent) do e
-    #     notify(model, "textChanged", e[:text]())
-    #     true
-    # end
-    qset_method(widget, :mousePressEvent) do e
+
+    signal_connect(widget, :button_press_event) do widget, e, args...
         notify(model, "clicked")
         return(false)
     end
 
     connect(model, "placeholderTextChanged") do txt
-        widget[:setPlaceholderText](txt)
+        if Gtk.gtk_version >= 3
+            widget[:placeholder_text] = txt
+        end
     end
 
 
     (widget, widget)
 end
 
-function setTypeahead(::MIME"application/x-qt", obj::LineEdit, items)
-    completer = Qt.QCompleter(items, obj[:widget])
-    obj[:widget][:setCompleter](completer)
-    qconnect(completer, :activated, (value) -> setValue(obj, value))
+## XXX needs GtkEntryCompletion
+function setTypeahead(::MIME"application/x-gtk", obj::LineEdit, items)
+    XXX()
 end    
 
 
-qnew_class("OTextEdit", "QtGui.QTextEdit") ## QtGui -- not just Qt.
-function textedit(::MIME"application/x-qt", parent::Container, model::Model)
-    widget = qnew_class_instance("OTextEdit")    
-    widget[:setParent](parent[:widget])
+## Text edit
+function textedit(::MIME"application/x-gtk", parent::Container, model::Model)
+    widget = GtkTextView()
+    buffer = widget[:buffer, Gtk.GtkTextBuffer]
 
-    connect(model, "valueChanged", value -> widget[:setPlainText](value))
-    qconnect(widget, :textChanged, () -> model.value = widget[:toPlainText]()) # XXX Where to put cursor (and how)
+    connect(model, "valueChanged", value -> buffer[:text] = value)
+    signal_connect(buffer, :changed) do obj, args...
+        model.value = buffer[:text,String]
 
-    qset_method(widget, :focusOutEvent) do e
+        return(nothing)
+    end
+
+    signal_connect(widget, :focus_out_event) do obj, e, args...
         notify(model, "focusOut", getValue(model))
         notify(model, "editingFinished", getValue(model))
         return(false)
     end
-    qset_method(widget, :focusInEvent) do e
+    signal_connect(widget, :focus_in_event) do obj, e, args...
         notify(model, "focusIn")
         return(false)
     end
-    # qset_method(widget, :keyPressEvent) do e
-    #     notify(model, "textChanged", e[:text]())
-    #     true
-    # end
 
-    qset_method(widget, :mousePressEvent) do e
+    signal_connect(widget, :key_release_event) do obj, e, args...
+        txt = widget[:text, String]
+        setValue(model, txt) # textChanged
+        notify(model, "textChanged", txt)
+        return(false)
+    end
+    
+    signal_connect(widget, :button_press_event) do obj, e, args...
         notify(model, "clicked")
         return(false)
     end
@@ -426,43 +484,43 @@ function textedit(::MIME"application/x-qt", parent::Container, model::Model)
 end
 
 
-## checkbox
-function checkbox(::MIME"application/x-qt", parent::Container, model::Model, label::Union(Nothing, String))
-    widget = Qt.QCheckBox(parent[:widget])
-    if !isa(label, Nothing)
-        widget[:setText](string(label))
-    end
-    widget[:setChecked](model.value)
 
-    connect(model, "valueChanged", value -> widget[:setChecked](value))
-    qconnect(widget, :stateChanged) do state 
-        setValue(model, state == int(qt_enum("Checked")))
+## checkbox
+function checkbox(::MIME"application/x-gtk", parent::Container, model::Model, label::Union(Nothing, String))
+    widget = GtkCheckButton()
+    widget[:label] = (isa(label, Nothing) ? "" : label)
+    widget[:active] = model.value
+
+    connect(model, "valueChanged", value -> widget[:active] = value)
+    signal_connect(widget, :toggled) do obj, args...
+        setValue(model, widget[:active,Bool])
     end
     (widget, widget)
 end
-getLabel(::MIME"application/x-qt", o::CheckBox) = o[:widget][:text]
-setLabel(::MIME"application/x-qt", o::CheckBox, value::String) = o[:widget][:setText](string(value))
+getLabel(::MIME"application/x-gtk", o::CheckBox) = o[:widget][:label,String]
+setLabel(::MIME"application/x-gtk", o::CheckBox, value::String) = o[:widget][:label] = string(value)
+
+
 
 
 ## radiogroup
-function radiogroup(::MIME"application/x-qt", parent::Container, model::VectorModel; orientation::Symbol=:horizontal)
-    block = Qt.QGroupBox(parent[:widget])
-    widget = Qt.QButtonGroup(parent[:widget])
+## XXX We don't use radiogroup. This would be useful if we allowed user to
+## change items for selection
+function radiogroup(::MIME"application/x-gtk", parent::Container, model::VectorModel; orientation::Symbol=:horizontal)
 
-    lyt = orientation == :horizontal ? Qt.QHBoxLayout(block) : Qt.QVBoxLayout(block)
-    block[:setLayout](lyt)
+    choices = map(string, copy(model.items))
 
-    
-    btns = map(model.items) do label
-        btn = Qt.QRadioButton(parent[:widget])
-        btn[:setText](label)
-        widget[:addButton](btn)
-        lyt[:addWidget](btn)
-        btn
+    g = Gtk.GtkBox(orientation == :vertical)
+
+    btns = [Gtk.GtkRadioButton(shift!(choices))]
+    while length(choices) > 0
+        push!(btns, Gtk.GtkRadioButton(btns[1], shift!(choices)))
     end
+    map(u->push!(g, u), btns)
+
 
     selected = findfirst(model.items, model.value)
-    btns[selected][:setChecked](true)
+    btns[selected][:active] = true
 
     connect(model, "valueChanged") do value 
         ## need to look up which button to set
@@ -470,14 +528,21 @@ function radiogroup(::MIME"application/x-qt", parent::Container, model::VectorMo
         if selected == 0
             error("$value is not one of the labels")
         else
-            btns[selected][:setChecked](true)
+            btns[selected][:active] = true
         end
     end
-    qconnect(widget, :buttonClicked) do btn
-        setValue(model, btn[:text]())
+    for btn in btns
+        signal_connect(btn, :toggled) do obj, args...
+            if obj[:active, Bool]
+                label = obj[:label, String] 
+                ## label is string, item may be numeric...
+                selected = findfirst(map(string, model.items), label)
+                setValue(model, model.items[selected])
+            end
+        end
     end
     
-    (widget, block)
+    (g, g)
 end
 
 ## buttongroup
@@ -528,12 +593,13 @@ end
 
 
 ## 
-function combobox(::MIME"application/x-qt", parent::Container, model::VectorModel; editable::Bool=false)
-    widget = Qt.QComboBox(parent[:widget])
-    qmodel = Qt.QStandardItemModel(widget)
-    widget[:setModel](qmodel)
+function combobox(::MIME"application/x-gtk", parent::Container, model::VectorModel; editable::Bool=false)
 
-    set_index(index) = widget[:setCurrentIndex](index-1)
+    ## No way to get editable!
+    widget = Gtk.GtkComboBoxText(editable)
+
+    set_index(index) = ccall((:gtk_combo_box_set_active, Gtk.libgtk), Void,
+                             (Ptr{Gtk.GObject}, Int), widget, index-1)
     set_value(value) =  if isa(value, Nothing)
         set_index(0)
     else
@@ -541,9 +607,14 @@ function combobox(::MIME"application/x-qt", parent::Container, model::VectorMode
         set_index(i)
     end
 
+    ## queue like manipulation
+    ## push! already defined. Need a length -- but that would need GtkTreeModel
+    Base.shift!(widget::Gtk.GtkComboBoxText) = ccall((:gtk_combo_box_text_remove, Gtk.libgtk), Void, (Ptr{Gtk.GObject},Int), widget, 0)
+    
     function set_items(items)
-        for i in 1:length(items)
-            qmodel[:setItem](i-1, Qt.QStandardItem(items[i]))
+##        while(length(cb) > 0) shift!(cb) end
+        for i in items
+            push!(widget, string(i))
         end
         set_index(0)            # clear selection?
     end
@@ -553,12 +624,20 @@ function combobox(::MIME"application/x-qt", parent::Container, model::VectorMode
     
     connect(model, "valueChanged", value -> set_value(value))
     connect(model, "itemsChanged", set_items)
-
-    qconnect(widget, :currentIndexChanged) do index
-        if index == -1
-            setValue(model, nothing)
+    
+    signal_connect(widget, :changed) do obj, args...
+        ## are we editable?
+        if widget[:has_entry, Bool]
+            ## get active text
+            txt = Gtk.G_.active_text(widget)
+            error("Don't know how to convert active_text ptr to string")
         else
-            setValue(model, model.items[index + 1])
+            index = widget[:active, Int]
+            if index == -1
+                setValue(model, nothing)
+            else
+                setValue(model, model.items[index + 1])
+            end
         end
         false
     end
@@ -572,186 +651,104 @@ end
 
 ## slider
 ## model stores value, slider is in 1:n
-function slider(::MIME"application/x-qt", parent::Container, model::VectorModel; orientation::Symbol=:horizontal)
+function slider(::MIME"application/x-gtk", parent::Container, model::VectorModel; orientation::Symbol=:horizontal)
     items = model.items
     initial = model.value
     n = length(items)
-    orient = orientation == :horizontal ? qt_enum("Horizontal") : qt_enum("Vertical")
+    orient = orientation == :horizontal ? false : true
 
+    widget = Gtk.GtkScale(orient, 1, n, 1)
+    Gtk.G_.draw_value(widget, false)
 
-    widget = Qt.QSlider(parent[:widget])
-    widget[:setOrientation](orient)
+    get_value() = Gtk.G_.value(widget)
+    set_value(value) = Gtk.G_.value(widget, value)
 
-    widget[:setRange](1, n)
-    widget[:setPageStep](1)
-    
     connect(model, "valueChanged") do value ## value is in model.items
         ## have to find index from items
         i = indmin(abs(model.items - value))
-        widget[:setValue](i)
+        set_value(i)
     end
+
+    tooltip_format(x) = string(round(x, 2))
+    tooltip_format(x::Int) = string(x)
+    tooltip_format(x::String) = x
+
 
     ## value is index
-    qconnect(widget, :valueChanged, value -> setValue(model, model.items[value]))
-
+    signal_connect(widget, :value_changed) do obj, args...
+        value = iround(get_value())
+        model_value = model.items[value]
+        Gtk.G_.tooltip_text(widget, tooltip_format(model_value))
+        setValue(model, model_value)
+        return(false)
+    end
     (widget, widget)
 end
 
+## XXX
 ## out model stores index
-function slider2d(::MIME"application/x-qt", parent::Container, model::TwoDSliderModel)
-    rectF(x,y,w,h) = PySide.QtCore[:QRectF](x,y,w,h)
-    lineF(x1, y1, x2, y2) = PySide.QtCore[:QLineF](x1,y1,x2,y2)
-
-    scene = Qt.QGraphicsScene()
-    scene[:setSceneRect](0.0, 0.0, 100.0, 100.0)
-
-    ## styles
-    dash = Qt.QPen()
-    dash[:setStyle](qt_enum("DashDotLine"))
-    dash[:setWidth](2)
-    dash[:setBrush](qt_enum("gray"))
-    
-    solid = Qt.QPen()
-    solid[:setWidth](3)
-    solid[:setBrush](Qt.QBrush(qt_enum("black"), qt_enum("SolidPattern")))
-    
-    hor = scene[:addLine](lineF(0, 50, 100, 50), dash)
-    ver = scene[:addLine](lineF(50, 0, 50, 100), dash)
-    
-    pt = Qt.QGraphicsEllipseItem()
-    r = 3
-    pt[:setRect](rectF(50-r, 50-r, 2r, 2r))
-    pt[:setPen](solid)
-    pt[:setFlags](pt[:ItemIsMovable])
-    
-    scene[:addItem](pt)
-    
-
-
-    qconnect(scene, :changed) do l     
-        x = pt[:x](); y = pt[:y]()
-        ## move lines
-        hor[:setY](y)
-        ver[:setX](x)
-
-        ## constrain
-        x > 50 && pt[:setX](50)
-        x <= -50 && pt[:setX](-49)
-        y > 50 && pt[:setY](50)
-        y <= -50 && pt[:setY](-49)
-
-        ## put into coordinates
-        i = min(100, max(1, x + 50))
-        j = min(100, max(1, -y + 50))
-
-        ## update model, but use index..
-        if model.value != [i,j]
-            model.value = [i,j]
-            notify(model, "valueChanged", getValue(model))
-        end
-    end
-    
-    connect(model, "valueChanged") do value
-        x, y = model.value
-
-        x = x - 50
-        y = 50 - y
-
-        pt[:setX](x)
-        pt[:setY](y)
-    end
-
-    view = Qt.QGraphicsView(scene)
-    view[:setHorizontalScrollBarPolicy](qt_enum("ScrollBarAlwaysOff"))
-    view[:setVerticalScrollBarPolicy](qt_enum("ScrollBarAlwaysOff"))
-    view[:setSceneRect](1.0, 1.0, 100.0, 100.0)
-    ## adjust to remove scrollbar
-    view[:setMaximumWidth](100)
-    view[:setMinimumWidth](100)
-    view[:setMaximumHeight](100)
-    view[:setMinimumHeight](100)
-
-    (scene, view)
+function slider2d(::MIME"application/x-gtk", parent::Container, model::TwoDSliderModel)
+    XXX("No slider2d in gtk")
 end
-getValue(::MIME"application/x-qt", widget::Slider2D) = getValue(widget.model)
-setValue(::MIME"application/x-qt", widget::Slider2D, value) = setValue(widget.model, value)
+getValue(::MIME"application/x-gtk", widget::Slider2D) = getValue(widget.model)
+setValue(::MIME"application/x-gtk", widget::Slider2D, value) = setValue(widget.model, value)
 
 ## spinbox
-function spinbox(::MIME"application/x-qt", parent::Container, model::ItemModel, rng::Union(Range,Range1))
-    widget = isa(rng, Range) ? Qt.QDoubleSpinBox(parent[:widget]) : Qt.QSpinBox(parent[:widget])
-    step = isa(rng, Range1) ? 1 : rng.step
+function spinbox(::MIME"application/x-gtk", parent::Container, model::ItemModel, rng::Union(Range,Range1))
 
-    widget[:setMinimum](rng.start)
-    widget[:setMaximum](rng.start + (rng.len-1)* step)
-    widget[:setSingleStep]( step)
+    widget = Gtk.GtkSpinButton(rng)
 
-    qconnect(widget, :valueChanged, (value) -> setValue(model, value))
-    connect(model, "valueChanged", value -> widget[:setValue](value))
+    signal_connect(widget, :value_changed) do obj, args...
+        value = widget[:value, eltype(rng)]
+        println(value)
+        setValue(model, value)
+    end
+    connect(model, "valueChanged", value -> widget[:value] = value)
 
     (widget, widget)
 end
- 
+
+## XXX don't want to suppor this 
 # function setRange(::MIME"application/x-qt", obj::SpinBox, rng)
 #     step = isa(rng, Range1) ? 1 : rng.step
-#     widget[:setMinimum](rng.start)
-#     widget[:setMaximum](rng.start + (rng.len-1) * step)
-#     widget[:setSingleStep](step)
+#     widget = obj[:widget]
 # end   
 
-## PyPlot graphics Figure
-## https://github.com/matplotlib/matplotlib/blob/master/examples/user_interfaces/embedding_in_qt4.py
-import PyPlot: Gcf, pltm
+## cairographic
+function cairographic(::MIME"application/x-gtk", parent::Container, 
+                      model::EventModel; width::Int=480, height::Int=400)
 
-type PyPlotGraphic <: Widget
-    o
-    block
-    id::String
-    parent
-    toolkit
-    attrs
+    widget = GtkCanvas(width, height)
+    (widget, widget)
 end
 
+## Need to do something to display objects along lines of the following but integrated into multimedia display system
 
-## For use with PyPlot graphics. 
-##
-## Very hacky
-##
-## Arguments:
-## * `parent::Container` parent container
-##
-## Properties
-## * `:active` call `obj[:active] = true` to make current figure
-##
-function pyplotgraphic(parent::Container)
-    ## width height in inches, or pixels?
-    widget = Qt.QWidget(parent[:widget])
-    id = randstring(10)
-    pltm[:figure](id) # super hacky
-    manager = Gcf[:get_active]()
-    
-
-    canvas = manager["canvas"]
-
-    canvas[:parent]()[:setVisible](false)
-    canvas[:setParent](nothing)
-    canvas[:setParent](widget)
-    #canvas[:setSizePolicy]( QtGui["QSizePolicy"]["Expanding"], QtGui["QSizePolicy"]["Expanding"])
-
-    lyt = Qt.QHBoxLayout()
-    widget[:setLayout](lyt)
-    lyt[:addWidget](canvas)
-
-    PyPlotGraphic(canvas, widget, id, parent, parent.toolkit, Dict())
+function Display(cg::CairoGraphics, pc::PlotContainer)
+    c = cg[:widget]
+    c.draw = function(_)
+        ctx = Base.Graphics.getgc(c)
+        Base.Graphics.set_source_rgb(ctx, 1, 1, 1)
+        Cairo.paint(ctx)
+        Winston.page_compose(pc, Gtk.cairo_surface(c))
+    end
+    Gtk.draw(c)
 end
 
-## set this as active
-setActive(o::PyPlotGraphic, value) = pltm[:figure](o.id)
+function Base.display(c::Gtk.GtkCanvas, pc::PlotContainer)
+    c.draw = function(_)
+        ctx = Base.Graphics.getgc(c)
+        Base.Graphics.set_source_rgb(ctx, 1, 1, 1)
+        Cairo.paint(ctx)
+        Winston.page_compose(pc, Gtk.cairo_surface(c))
+    end
+    Gtk.draw(c)
+end
 
 
 
 ## Views
 ## StoreProxyModel
-qnew_class("StoreProxyModel", "QtCore.QAbstractTableModel")
 function store_proxy_model(parent, store::Store; tpl=nothing)
     if tpl == nothing
         record = store.items[1]
@@ -1612,6 +1609,22 @@ end
 
 
 ## manipulate
-function Display(::MIME"application/x-qt", self::ManipulateObject, x; kwargs...) 
-    "XXX nothing here, though should do text output..."
+
+
+function Display(::MIME"application/x-gtk", self::ManipulateObject, x::FramedPlot; kwargs...) 
+    if isa(x, Nothing) return end
+    oa = self.output_area
+    
+    if length(children(oa)) > 0 && isa(oa.children[1], CairoGraphics)
+        cnv = oa.children[1]
+        Winston.display(cnv.o, x)
+        return
+    elseif length(children(oa)) > 0
+        pop!(oa)
+    end
+    ## add one
+    cnv = cairographic(oa, width=480, height=480)
+    cnv[:sizepolicy] = (:expand, :expand)
+    push!(oa, cnv)
+    Display(cnv, x)
 end

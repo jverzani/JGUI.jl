@@ -29,7 +29,9 @@ function make_control(parent::Container, x::Vector)
     if length(x) <= 3
         radiogroup(parent, x, orientation=:vertical)
     else
-        combobox(parent, x)
+        cb = combobox(parent, x)
+        cb[:value] = cb.model.items[1] # initialize
+        cb
     end
 end
 
@@ -192,6 +194,7 @@ function manipulate(expr, args...;
     push!(f, rb)
     
     fl = formlayout(lb)
+    fl[:sizepolicy] = (:expand, :fixed)
     for ctrl in args
         if isa(ctrl, Tuple)
             nm = ctrl[1]

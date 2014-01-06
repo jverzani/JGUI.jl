@@ -102,7 +102,7 @@ function labelframe(::MIME"application/x-tcltk", parent::BinContainer, label::St
     end
     (widget, widget)
 end
-function boxcontainer(::MIME"application/x-tcltk", parent::Container)
+function boxcontainer(::MIME"application/x-tcltk", parent::Container, direction)
     widget = Tk.Frame(getWidget(parent))
     (widget, widget)
 end
@@ -671,10 +671,10 @@ function spinbox(::MIME"application/x-tcltk", parent::Container, model::ItemMode
     (widget, widget)
 end
 
-function setRange(::MIME"application/x-tcltk", obj::SpinBox, rng)
-    step = isa(rng, Range1) ? 1 : rng.step
-    Tk.configure(obj[:widget], from=rng.start, to=rng.start + (rng.len-1)* step, increment= step)
-end
+# function setRange(::MIME"application/x-tcltk", obj::SpinBox, rng)
+#     step = isa(rng, Range1) ? 1 : rng.step
+#     Tk.configure(obj[:widget], from=rng.start, to=rng.start + (rng.len-1)* step, increment= step)
+# end
 
 ## cairographic
 function cairographic(::MIME"application/x-tcltk", parent::Container, model::EventModel; width::Int=480, height::Int=400)
