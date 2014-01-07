@@ -1,8 +1,10 @@
 ## Gtk implementation
 
 ## TODO
-## label alignment
-## 
+## * storeview
+## * treeview
+## * dialogs
+## * others
 
 
 XXX() = error("not defined")
@@ -369,9 +371,21 @@ end
 ## Widgets
 function label(::MIME"application/x-gtk", parent::Container, model::Model)
     widget = GtkLabel(string(getValue(model)))
-    connect(model, "valueChanged", widget, (widget, value) -> Gtk.G_.text(widget,string(value)))
+
+    connect(model, "valueChanged") do value
+        Gtk.G_.text(widget, string(value))
+    end
 
     (widget, widget)
+end
+
+function setAlignment(::MIME"application/x-gtk", o::Label, value)
+    als = [:left=>0.0, :right=>1.0, :center=>0.5, :justify=>0.5,
+           :top=>0.0, :bottom=>1.0, nothing=>0.5
+           ]
+
+ 
+    o[:widget][:xalign], o[:widget][:yalign] = als[value[1]], als[value[2]]
 end
 
 

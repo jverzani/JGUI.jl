@@ -63,20 +63,26 @@ function getAlignment(o::Widget)
 end
 
 function setAlignment(o::Widget, value) #x::Union(Symbol, Nothing), y::Union(Symbol, Nothing))
+    
     x, y = value
     if isa(x, Symbol)
         if !(x in [:left, :right, :center, :justify])
             error("x-alignment is one of :left, :right, :center, :justify or nothing.") 
         end
     end    
-    if isa(y, Symbol)
-        if !(y in [:top, :bottom, :center])
-            error("y-alignment is one of :top, :bottom, :center or nothing.") 
+        if isa(y, Symbol)
+            if !(y in [:top, :bottom, :center])
+                error("y-alignment is one of :top, :bottom, :center or nothing.") 
+            end
         end
-    end
     o.attrs[:alignment] = value
-end
 
+    ## not enough to use which, as it shows -- not returns.
+    if length(methods(setAlignment, map(typeof, (o.toolkit, o, value)))) > 0
+        setAlignment(o.toolkit, o, value)
+    end
+       
+end
 ## for box containers, (not tcltk, but Qt)
 getStretch(o::Widget) = haskey(o.attrs, :stretch) ? o.attrs[:stretch] : 0
 setStretch(o::Widget, stretch::Int) = o.attrs[:stretch] = stretch
