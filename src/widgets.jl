@@ -398,14 +398,15 @@ list_props(::@PROP("CheckBox")) = {:label => "checkbox label"}
 ##
 
 
-function setValue(o::WidgetVectorModel, value)
+abstract StrictWidgetVectorModel <: WidgetVectorModel
+function setValue(o::StrictWidgetVectorModel, value)
     ## is value in vector?
     if isa(value, Nothing) || any(value .== o[:items])
         setValue(o.model, value)
     end
 end
 
-type RadioGroup <: WidgetVectorModel
+type RadioGroup <: StrictWidgetVectorModel
     o
     block
     model
@@ -442,7 +443,8 @@ end
 radiogroup(parent::Container, items::Vector; orientation::Symbol=:horizontal, kwargs...) = radiogroup(parent, items, items[1], orientation=orientation, kwargs...)
 
 
-type ButtonGroup <: WidgetVectorModel
+
+type ButtonGroup <: StrictWidgetVectorModel
     o
     block
     model

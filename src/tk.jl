@@ -506,7 +506,13 @@ function combobox(::MIME"application/x-tcltk", parent::Container, model::VectorM
         Tk.set_value(widget, getValue(model))
     end
 
+    function new_items(items, old_items)
+        Tk.set_items(widget, items)
+    end
+
     connect(model, "valueChanged", widget, Tk.set_value)
+    connect(model, "itemsChanged", new_items)
+
     bind(widget, "<<ComboboxSelected>>") do path
         value = Tk.get_value(widget)
         setValue(model, value)  # valueChanged

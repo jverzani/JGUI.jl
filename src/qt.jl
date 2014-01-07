@@ -541,14 +541,14 @@ function combobox(::MIME"application/x-qt", parent::Container, model::VectorMode
         set_index(i)
     end
 
-    function set_items(items)
+    function set_items(items, old_items)
         for i in 1:length(items)
             qmodel[:setItem](i-1, Qt.QStandardItem(items[i]))
         end
         set_index(0)            # clear selection?
     end
 
-    set_items(model.items)
+    set_items(model.items, nothing)
     set_value(model.value)
     
     connect(model, "valueChanged", value -> set_value(value))

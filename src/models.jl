@@ -148,8 +148,9 @@ end
 ## o[:items] ...
 getItems(model::AbstractArrayModel) = model.items
 function setItems(model::AbstractArrayModel, items)
+    old_items = model.items
     model.items = items
-    notify(model, "itemsChanged", items)
+    notify(model, "itemsChanged", items, old_items)
 end
 
 

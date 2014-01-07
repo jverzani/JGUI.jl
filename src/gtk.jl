@@ -634,27 +634,39 @@ function combobox(::MIME"application/x-gtk", parent::Container, model::VectorMod
     widget = Gtk.GtkComboBoxText(editable)
 
     set_index(index) = ccall((:gtk_combo_box_set_active, Gtk.libgtk), Void,
-                             (Ptr{Gtk.GObject}, Int), widget, index-1)
-    set_value(value) =  if isa(value, Nothing)
-        set_index(0)
-    else
-        i = findfirst(model.items, value) # need index
-        set_index(i)
+                             (Ptr{Gtk.GObject}, Cint), widget, index-1)
+    function set_value(value)
+        if isa(value, Nothing)
+            set_index(0)
+            return
+        end
+        if widget[:has_entry, Bool]
+            ## not easy way to access text area
+            entry = ccall((:gtk_bin_get_child, Gtk.libgtk), Gtk.GtkEntry, (Ptr{Gtk.GObject}, ), widget)
+             Gtk.G_.text(entry, value)
+        else
+            i = findfirst(model.items, value) # need index
+            set_index(i)
+        end
     end
 
     ## queue like manipulation
     ## push! already defined. Need a length -- but that would need GtkTreeModel
     Base.shift!(widget::Gtk.GtkComboBoxText) = ccall((:gtk_combo_box_text_remove, Gtk.libgtk), Void, (Ptr{Gtk.GObject},Int), widget, 0)
     
-    function set_items(items)
-##        while(length(cb) > 0) shift!(cb) end
+    function set_items(items, old_items)
+        while length(old_items) > 0
+            shift!(old_items)
+            shift!(widget)
+        end
+
         for i in items
             push!(widget, string(i))
         end
         set_index(0)            # clear selection?
     end
 
-    set_items(model.items)
+    set_items(model.items, [])
     set_value(model.value)
     
     connect(model, "valueChanged", value -> set_value(value))
@@ -664,8 +676,8 @@ function combobox(::MIME"application/x-gtk", parent::Container, model::VectorMod
         ## are we editable?
         if widget[:has_entry, Bool]
             ## get active text
-            txt = Gtk.G_.active_text(widget)
-            error("Don't know how to convert active_text ptr to string")
+            txt = bytestring(Gtk.G_.active_text(widget))
+            setValue(model, txt)
         else
             index = widget[:active, Int]
             if index == -1
