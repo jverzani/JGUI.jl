@@ -63,13 +63,11 @@ isgtk() = lowercase(ENV["toolkit"]) == lowercase("Gtk")
 
 if istk()
     using Tk
-    using Winston
 elseif isqt()
     using PyCall
     using PySide
 elseif isgtk()
     using Gtk, Cairo
-    using Winston
 end
 
 
@@ -81,9 +79,8 @@ include("containers.jl")
 include("widgets.jl")
 include("dialogs.jl")
 include("menu.jl")
-
-
 include("manipulate.jl")        # code depends on Tk or Qt
+
 
 if istk()
     default_toolkit = MIME("application/x-tcltk")
@@ -98,6 +95,8 @@ elseif isgtk()
     include("gtk.jl")
     export cairographic
 end
+
+include("winston.jl")
 
 
 

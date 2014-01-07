@@ -19,7 +19,11 @@
 make_control(parent::Container, x::Bool) = checkbox(parent, x)
 
 ## (:nm, Range) -> slider
-make_control(parent::Container, x::Union(Range, Range1)) = slider(parent, x)
+function make_control(parent::Container, x::Union(Range, Range1)) 
+    obj = slider(parent, x)
+    obj[:size] = [100, 20]
+    obj
+end
 
 ## (:nm, Range, Range) -> 2dslider
 make_control(parent::Container, x::Union(Range, Range1), y::Union(Range, Range1)) = slider2d(parent, x, y)

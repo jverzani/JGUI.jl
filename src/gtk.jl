@@ -74,9 +74,6 @@ function align_gtk_widget(o::Widget; xscale=1, yscale=1)
 
     align = [map_align[k] for k in o[:alignment]]
 
-    println((align, xscale, yscale))
-
-
     al = GtkAlignment(align[1], align[2], xscale, yscale)
 
     if !isa(o[:spacing], Nothing)
@@ -194,7 +191,6 @@ function insert_child(::MIME"application/x-gtk", parent::BoxContainer, index, ch
     expand, fill, padding = false, false, 0
     
     xscale, yscale = (parent[:direction] == :horizontal) ? (0.0, 1.0) : (1.0, 0.0)
-    println("yscale=$yscale, xscale=$xscale")
     if parent[:direction] == :horizontal
         if child[:sizepolicy][1] == :expand
             expand=true
@@ -768,30 +764,6 @@ function cairographic(::MIME"application/x-gtk", parent::Container,
     widget = GtkCanvas(width, height)
     (widget, widget)
 end
-
-## Need to do something to display objects along lines of the following but integrated into multimedia display system
-
-function Display(cg::CairoGraphics, pc::PlotContainer)
-    c = cg[:widget]
-    c.draw = function(_)
-        ctx = Base.Graphics.getgc(c)
-        Base.Graphics.set_source_rgb(ctx, 1, 1, 1)
-        Cairo.paint(ctx)
-        Winston.page_compose(pc, Gtk.cairo_surface(c))
-    end
-    Gtk.draw(c)
-end
-
-function Base.display(c::Gtk.GtkCanvas, pc::PlotContainer)
-    c.draw = function(_)
-        ctx = Base.Graphics.getgc(c)
-        Base.Graphics.set_source_rgb(ctx, 1, 1, 1)
-        Cairo.paint(ctx)
-        Winston.page_compose(pc, Gtk.cairo_surface(c))
-    end
-    Gtk.draw(c)
-end
-
 
 
 ## Views
@@ -1678,22 +1650,4 @@ function Display(::MIME"application/x-gtk", self::ManipulateObject, x::Any; kwar
     te[:sizepolicy] = (:expand, :expand)
     push!(oa, te)
     te[:value] = string(x)
-end
-
-function Display(::MIME"application/x-gtk", self::ManipulateObject, x::FramedPlot; kwargs...) 
-    if isa(x, Nothing) return end
-    oa = self.output_area
-    
-    if length(children(oa)) > 0 && isa(oa.children[1], CairoGraphics)
-        cnv = oa.children[1]
-        Winston.display(cnv.o, x)
-        return
-    elseif length(children(oa)) > 0
-        pop!(oa)
-    end
-    ## add one
-    cnv = cairographic(oa, width=480, height=480)
-    cnv[:sizepolicy] = (:expand, :expand)
-    push!(oa, cnv)
-    Display(cnv, x)
 end

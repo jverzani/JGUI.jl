@@ -187,7 +187,7 @@ append!(f, [sl, cnv])
 
 connect(sl, "valueChanged") do u
   p = plot(x -> sin(u * x), 0, 2pi)
-  Winston.display(cnv[:widget], p)
+  display(cnv, p)
 end
 
 notify(sl, "valueChanged", 1) # draw initial graphic
@@ -215,6 +215,13 @@ For a slider, the `valueChanged` signal passes the new value to the
 callback. This value is then used within the callback that produces
 the graphic. One could also access this value within the callback with
 `sl[:value]`.
+
+The `cairographic` widget is not integrated into the multimedia
+display system (out of ignorance). Following `Winston`, the `display`
+method above takes as a first argument the `cairographic` widget and
+the second object a `Winston` object to plot. If doing this at the
+command line, use a semicolon after the plot call to avoid displaying
+automatically.
 
 The last line is one hacky way to get the initial graphic drawn. The
 `notify` method of the underlying model notifies any observers of a
@@ -412,17 +419,17 @@ object:
 
 ```
 ## update two graphics windows...
-ENV["toolkit] = "Gtk"
+ENV["toolkit"] = "Gtk"
 using JGUI, Winston
 w = window()
 f = grid(w); push!(f)
-g1 = cairographic(f, width=480, height=400)
-g2 = cairographic(f, width=480, height=400)
+cnv1 = cairographic(f, width=480, height=400)
+cnv2 = cairographic(f, width=480, height=400)
 b = button(f, "update"); b[:alignment] = (:right, :center)
-f[:,:] = [g1 g2; nothing b]
+f[:,:] = [cnv1 cnv2; nothing b]
 connect(b, "clicked") do
-   p = FramedPlot(); add(p, Curve(rand(10), rand(10))); Winston.display(g1[:widget], p)
-   p = FramedPlot(); add(p, Curve(rand(10), rand(10))); Winston.display(g2[:widget], p)
+   p = FramedPlot(); add(p, Curve(rand(10), rand(10))); display(cnv1, p)
+   p = FramedPlot(); add(p, Curve(rand(10), rand(10))); display(cnv2, p)
 end
 notify(b, "clicked")	# roundabout way to draw initial graphic, ...
 ```
@@ -498,7 +505,7 @@ In addition to `rowClicked`, there are `rowDoubleClicked`, `headerClicked`, and 
 A treeview uses a treestore to hold the data, again specified using a composite type. Here is a simple example:
 
 ```
-ENV["Toolkit"] = "Tk"		# not Gtk!!!
+ENV["toolkit"] = "Tk"		# not Gtk!!!
 type Test2 
     x::Int
     y::Real

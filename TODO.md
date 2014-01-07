@@ -1,5 +1,5 @@
+**write tests**
 window: closeHandler (return logical, only one so not a model)
-write tests
 cairographics: (x,y) in which coordinates? pixels? Use Tim Holy's conversion to user coordinates?
 storeview: work on passing in type via parameterization {T}
 treeview, storeview -- get headers from var names. Use a_b convention to map to "a b"
@@ -19,6 +19,13 @@ dialog return value -- must look up in dlg.state
 
 warnings on loading Tk
 
+# Gtk
+
+* modal window()
+* need the "views"
+* dialogs
+* menubars: radio and checkbuttons
+* spacing, sizing, ..
 
 # bonepile
 <del>spinbox</del>
