@@ -1,5 +1,10 @@
 ## Gtk implementation
 
+## TODO
+## label alignment
+## 
+
+
 XXX() = error("not defined")
 ## Icons
 function get_icon(::MIME"application/x-gtk", o::StockIcon)
@@ -17,7 +22,7 @@ end
 
 ## Widget methods
 getEnabled(::MIME"application/x-gtk", o::Widget) = o[:widget][:sensitive,Bool]
-setEnabled(::MIME"application/x-gtk", o::Widget, value::Bool) = o[:widget][:sensitve] = value
+setEnabled(::MIME"application/x-gtk", o::Widget, value::Bool) = o[:widget][:sensitive] = value
 
 getVisible(::MIME"application/x-gtk", o::Widget) =  o[:widget][:visible, Bool]
 setVisible(::MIME"application/x-gtk", o::Widget, value::Bool) = o[:widget][:visible] = value
@@ -93,7 +98,23 @@ getLayout(widget::Container) = getLayout(widget.toolkit, widget)
 ## Window
 function window(::MIME"application/x-gtk")
     widget = GtkWindow("")
-    (widget, widget)
+    block = GtkBox(true)
+    push!(widget, block)
+
+    menu_block = GtkBox(false)
+    ccall((:gtk_box_pack_start, Gtk.libgtk), Void, 
+          (Ptr{Gtk.GObject}, Ptr{Gtk.GObject}, Bool, Bool, Int),
+          block, menu_block, false, false, 0)
+
+    main_block = GtkBox(false)
+    push!(block, main_block)
+
+    status_block = GtkBox(false)
+    ccall((:gtk_box_pack_start, Gtk.libgtk), Void, 
+          (Ptr{Gtk.GObject}, Ptr{Gtk.GObject}, Bool, Bool, Int),
+          block, status_block, false, false, 0)
+
+    (widget, block)
 end
 
 
@@ -120,7 +141,7 @@ function setModal(::MIME"application/x-tcltk", o::Window, value::Bool)
 end
 
 function set_child(::MIME"application/x-gtk", parent::Window, child::Widget)
-    Gtk.push!(parent[:widget], child.block)
+    Gtk.push!(parent.block[2], child.block)
 end
 
 ## for BinContainer, only one child we pack and expand...
@@ -320,10 +341,8 @@ function notebook(::MIME"application/x-gtk", parent::Container, model::Model)
 
 
     connect(model, "valueChanged", value -> Gtk.G_.current_page(widget, value-1))
-    signal_connect(widget, :switch_page) do obj, newpage, oldpage, args...
-        ## XXX nepage is ptr, not integer. Don't know how to convert...
-        ## setValue(model, newpage + 1)
-        ## setValue(model, 1)
+    signal_connect(widget, :switch_page) do obj, ptr, page, args...
+        setValue(model, int(page) + 1)
         false
     end
 
@@ -350,7 +369,7 @@ end
 ## Widgets
 function label(::MIME"application/x-gtk", parent::Container, model::Model)
     widget = GtkLabel(string(getValue(model)))
-    connect(model, "valueChanged", widget, (widget, value) -> widget[:text] = string(value))
+    connect(model, "valueChanged", widget, (widget, value) -> Gtk.G_.text(widget,string(value)))
 
     (widget, widget)
 end
@@ -358,6 +377,8 @@ end
 
 ## separator
 function separator(::MIME"application/x-gtk", parent::Container; orientation::Symbol=:horizontal)
+    widget = Gtk.GtkLabel("----")
+    return(widget, widget)
     ## XXX not yet in Gtk.jl
     if orientation == :horizontal
         widget = Gtk.GtkHSeparator()
@@ -1291,15 +1312,13 @@ end
 ## Images
 
 ## place to put a png image
-function imageview(::MIME"application/x-qt", parent::Container)
-    ## use a QLabel to display an image
-    widget = block = Qt.QLabel(parent[:widget])
-    (widget, block)
+function imageview(::MIME"application/x-gtk", parent::Container)
+    widget = Gtk.GtkImage()
+    (widget, widget)
 end
 
-function setImage(::MIME"application/x-qt", o::ImageView, img::String)
-    pixmap = Qt.QPixmap(img)
-    o[:widget][:setPixmap](pixmap)
+function setImage(::MIME"application/x-gtk", o::ImageView, img::String)
+    Gtk.G_.from_file(o[:widget], img)
 end
 
 
@@ -1512,56 +1531,52 @@ end
 ##################################################
 ## Menus
 
-function action(::MIME"application/x-qt", parent)
-    Qt.QAction(parent[:widget])
+## XXX there is not GtkAction, or GAction in Gtk (yet), until
+## then we follow tk
+function action(::MIME"application/x-gtk", parent)
+    nothing
 end
 
-getEnabled(::MIME"application/x-qt", action::Action) = action[:widget][:isEnabled]()
-setEnabled(::MIME"application/x-qt", action::Action, value::Bool) = action[:widget][:setEnabled](value)
+## XXX Need to do work here, as at present action no knows about its proxies XXX
+getEnabled(::MIME"application/x-gtk", action::Action) = nothing
+setEnabled(::MIME"application/x-gtk", action::Action, value::Bool) = nothing
 
-setLabel(::MIME"application/x-qt", action::Action, value::String) = action[:widget][:setText](value)
-
-
-function setIcon(::MIME"application/x-qt", action::Action, value::Icon)
-    if !isa(icon, Nothing)
-        action[:widget][:setIcon](get_icon(widget.toolkit, icon))
-    end
-end
-
-
-function setShortcut(::MIME"application/x-qt", action::Action, value::String)
-    action[:widget][:setShortcut](value)
-end
-
-
-setTooltip(::MIME"application/x-qt", action::Action, value::String) = action[:widget][:setToolTip](value)
-
-
-function setCommand(::MIME"application/x-qt", action::Action, value::Function)
-    qconnect(action[:widget], :triggered, value)
-end
+## not tk specific bits to add to actions
+setLabel(::MIME"application/x-gtk", action::Action, value::String) = nothing
+setIcon(::MIME"application/x-gtk", action::Action, value::Icon) = nothing
+setShortcut(::MIME"application/x-gtk", action::Action, value::String) = nothing
+setTooltip(::MIME"application/x-gtk", action::Action, value::String) = nothing
+setCommand(::MIME"application/x-gtk", action::Action, value::Function) = nothing
 
 
 ## menus
-function menubar(::MIME"application/x-qt", parent::Window)
-    mainwindow = parent[:widget]
-    mainwindow[:menuBar]()
+function menubar(::MIME"application/x-gtk", parent::Window)
+    widget = Gtk.GtkMenuBar()
+    push!(parent.block[1], widget)
+    show(parent.block[1])
+    widget
 end
 
 ## toplevel menu item
-function menu(::MIME"application/x-qt", parent::MenuBar, label)
-    parent[:widget][:addMenu](label)
+function menu(::MIME"application/x-gtk", parent::MenuBar, label)
+    item = Gtk.GtkMenuItem(label)
+    mitem = Gtk.GtkMenu(item)
+    push!(parent[:widget], item)
+    mitem
 end
 
 ## submenu
-function menu(::MIME"application/x-qt", parent::Menu, label)
-    parent[:widget][:addMenu](label)
+function menu(::MIME"application/x-gtk", parent::Menu, label)
+    item = Gtk.GtkMenuItem(label)
+    mitem = Gtk.GtkMenu(item)
+    push!(parent[:widget], item)
+    mitem
 end
 
 ## popup
-## this is flaky! separator/checkbox overplot
-
-function menu(::MIME"application/x-qt", parent::Widget)
+function menu(::MIME"application/x-gtk", parent::Widget)
+    XXX("add me")
+    ## needs to bind to thrid mouse event, ...
     parent[:widget][:setContextMenuPolicy](PySide.QtCore["Qt"][:CustomContextMenu])
     m = PySide.Qt.QMenu(parent[:widget])
 
@@ -1574,15 +1589,24 @@ function menu(::MIME"application/x-qt", parent::Widget)
 end
 
 ## add actions
-function addAction(::MIME"application/x-qt", parent::Menu, action::Action)
-    parent[:widget][:addAction](action[:widget])
+function addAction(::MIME"application/x-gtk", parent::Menu, action::Action)
+    item = Gtk.GtkMenuItem(action.label)
+    if !isa(action.tooltip, Nothing) 
+        Gtk.G_.tooltip_text(item, action.tooltip) 
+    end
+    signal_connect(item, :activate) do widget
+        action.command()
+    end
+    
+    push!(parent[:widget], item)
 end
 
-function addAction(::MIME"application/x-qt", parent::Menu, value::Separator)
-    parent[:widget][:addSeparator]()
+function addAction(::MIME"application/x-gtk", parent::Menu, value::Separator)
+    push!(parent[:widget], Gtk.SeparatorMenuItem())
 end
 
-function addAction(::MIME"application/x-qt", parent::Menu, value::RadioGroup)
+function addAction(::MIME"application/x-gtk", parent::Menu, value::RadioGroup)
+    XXX("Not implemented in Gtk.jl")
     widget = Qt.QActionGroup(parent[:widget])
     widget[:setExclusive](true)
     for item in value.model.items
@@ -1596,7 +1620,8 @@ function addAction(::MIME"application/x-qt", parent::Menu, value::RadioGroup)
     end
 end
 
-function addAction(::MIME"application/x-qt", parent::Menu, value::CheckBox)
+function addAction(::MIME"application/x-gtk", parent::Menu, value::CheckBox)
+    XXX("Not implemented in Gtk.jl")
     widget = Qt.QAction(value[:label], parent[:widget])
     widget[:setCheckable](true)
     ## widget[:setIcon](...)
@@ -1610,6 +1635,24 @@ end
 
 ## manipulate
 
+
+function Display(::MIME"application/x-gtk", self::ManipulateObject, x::Any; kwargs...) 
+    if isa(x, Nothing) return end
+    oa = self.output_area
+    
+    if length(children(oa)) > 0 && isa(oa.children[1], TextEdit)
+        te = oa.children[1]
+        te[:value] = string(x)
+        return
+    elseif length(children(oa)) > 0
+        pop!(oa)
+    end
+    ## add one
+    te = textedit(oa)
+    te[:sizepolicy] = (:expand, :expand)
+    push!(oa, te)
+    te[:value] = string(x)
+end
 
 function Display(::MIME"application/x-gtk", self::ManipulateObject, x::FramedPlot; kwargs...) 
     if isa(x, Nothing) return end

@@ -5,6 +5,7 @@ three interconnected.
 
 
 ```
+ENV["toolkit"] = "Tk"		# not Gtk!
 using JGUI
 ```
 

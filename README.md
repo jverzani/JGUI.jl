@@ -1,19 +1,20 @@
 # JGUI
 
-An package to simplify the creation of GUIs within Julia
+A package to simplify the creation of GUIs within Julia
 
 
 The `JGUI` package provides a few different means to ease the
 creation of GUIs within `Julia`. These include a simplified
 implementation of Mathematica's `Manipulate` function, and a simplified
-interface for using the `tcl/tk` or `Qt` toolkits within `Julia`.
+interface for using the `tcl/tk`, `Gtk`, or `Qt` toolkits within `Julia`.
 
 # Installation
 
 The `JGUI` package installs with `Pkg.add("JGUI")`. For it to work one
-needs to have installed the `Tk` package or the `PySide` package. The
-latter requires an installation of the `Qt` libraries
-(http://qt-project.org/downloads), `Python` (http://www.python.org/download/), the `PySide`
+needs to have installed the `Tk` package, the `Gtk` package, or the
+`PySide` package. The latter requires an installation of the `Qt`
+libraries (http://qt-project.org/downloads), `Python`
+(http://www.python.org/download/), the `PySide`
 (http://qt-project.org/wiki/Get-PySide) interface between `Python` and
 `Qt`, and the `PyCall` package to connect `Python` with `Julia`
 (installed with the `PySide` package). The Anaconda
@@ -28,10 +29,10 @@ The easiest way to create a GUI with this package is to use the
 parameterized by values coming from easily specified controls within a
 GUI.
 
-As one can use either the Tk libraries or Qt (via the `PySide` module
-and `PyCall`), the first line is used to specify the underlying
-toolkit. Mixing and matching within a `Julia` session will likely lead
-to crashes.
+The first line below allows one to specify the toolkit, currently
+`Tk`, `Gtk` (default) or `Qt`.  Mixing and matching within a `Julia`
+session will likely lead to crashes. The toolkit is specified before
+`JGUI` is loaded, so that toolkit-specific code can be loaded.
 
 
 ```
@@ -39,11 +40,13 @@ ENV["toolkit"] = "Tk"		# default, can be skipped
 using JGUI
 ```
 
-Now, consider the following expression  which when evaluated produces a Winston plot object:
+Now, consider the following expression which when evaluated produces a
+Winston plot object:
 
 
 ```
 expr = quote
+     Using Winston
      plot(x -> sin(u*x), 0, 2pi)
 end
 ```
@@ -55,17 +58,19 @@ a control to specify values for `u`, we simply need to specify a
 range, as follows:
 
 ```
-a = manipulate(expr, (:u, 1:10), modules=[:Winston])
+a = manipulate(expr, (:u, 1:10))
 ```
 
 This call will pop up a simple GUI with a slider that allows one to
 adjust the value of `u` from 1 to 10, updating the graphic as this is
 done.
 
-Here is a how one can add a title to the plot. First we modify the `plot` call to include a title:
+Here is a how one can add a title to the plot. First we modify the
+`plot` call to include a title:
 
 ```
 expr = quote
+     using Winston
      plot(x -> sin(u*x), 0, 2pi, title=title)
 end
 ```
@@ -73,7 +78,7 @@ end
 Now `title` is also unbound. To specify a control to set a title, we use a string:
 
 ```
-a = manipulate(expr, (:u, 1:10), (:title, "A sine plot"), modules=[:Winston])
+a = manipulate(expr, (:u, 1:10), (:title, "A sine plot"))
 ```
 
 Now when the plot is updated, the title is also taken from a text box.
@@ -88,8 +93,9 @@ Manipulate has other simple-to-specify controls:
 * `(:symbol, Real)` - text edit with conversion to float via `parsefloat`
 * `(:symbol, Int)` - text edit with conversion to integer via `parseint`
 
-The expression can evaluate to a Winston plot object or any other object. Plot
-objects are plotted in a display.
+The expression can evaluate to a Winston plot object or any other
+object. Plot objects are rendered in a graphics device, text objects
+in a text box.
 
 
 When using `Qt` (`ENV["toolkit"] = "Qt"`) one can plot `PyPlot` calls, not
@@ -97,15 +103,17 @@ When using `Qt` (`ENV["toolkit"] = "Qt"`) one can plot `PyPlot` calls, not
 
 ## A simplified GUI interface
 
-Though the `Tk` package provides a relatively easy-to-learn means to
-produce GUIs with `tcltk` and `PySide` does the same for `Qt`, this
-package makes provides a small API for creating GUIs that makes it
-even easier, though sacrificing a fair amount of flexibility. (The
-`JGUI` interface is primarily concerned with simpler things like
-controls, and not more involved interfaces like those with a canvas
-widget.)
+The `Gtk`, `Tk`, and `PySide` packages for `Julia` provide relatively
+easy means to produce GUIs with the `Gtk`, `Tcl/Tk` and `Qt` toolkits,
+respectively. In addition to the `manipulate` function, this package
+provides a small API for creating GUIs that makes it even easier than
+the other packages, though sacrificing a huge amount of their power
+and flexibility. (The `JGUI` interface is primarily concerned with
+simpler things like controls, and not more involved interfaces like
+those with a canvas widget.)
 
-Here is a simple example where a window has a button which when clicked will destroy the window. 
+Here is a simple example where a window has a button which when
+clicked will destroy the window.
 
 ```
 w = window(size=[200, 200])
@@ -134,11 +142,12 @@ similar to `Tk` and so the widget hierarchy is determined, but not the
 actual layout). The `button` constructor has label value for the
 second positional argument.
 
-The fourth line is specific to `JGUI`.  Rather than use separate
-layout managers, as is done with `Qt` or `Tk`, each container object
-is conceptualized as a queue of some sort.  For the window object, the
-`push!` method adds the button to the window queue, laying it out as
-it does so.
+The fourth line is specific to `JGUI` and not the underlying
+toolkit. (Though, the same idea is present in `Gtk`.)  Rather than use
+separate layout managers, as is done with `Qt` or `Tk`, each container
+object is conceptualized as a queue of some sort.  For the window
+object, the `push!` method adds the button to the window queue, laying
+it out as it does so.
 
 The fifth line is how one connects a callback to an event. In this
 case the receiver of a click event, `b`, will emit a signal
@@ -163,14 +172,15 @@ Let's look at another example, this one mimics, the first manipulate
 example.
 
 ```
-## needs Tk
-ENV["toolkit"] = "Tk"
+## needs Gtk or Tk
+ENV["toolkit"] = "Gtk"
 using JGUI, Winston
 
 w = window()
 f = hbox(w); push!(f)
 
 sl = slider(f, 1:10)
+sl[:size] = [100, 20]
 cnv = cairographic(f)
 
 append!(f, [sl, cnv])
@@ -203,7 +213,8 @@ and is more in line with how `julia` produces sequences of values.
 
 For a slider, the `valueChanged` signal passes the new value to the
 callback. This value is then used within the callback that produces
-the graphic. One could also access this value within the callback with `sl[:value]`.
+the graphic. One could also access this value within the callback with
+`sl[:value]`.
 
 The last line is one hacky way to get the initial graphic drawn. The
 `notify` method of the underlying model notifies any observers of a
@@ -321,6 +332,7 @@ one connects a slider value to a label:
 w = window(title="label and slider")
 f = hbox(w); push!(f)
 sl = slider(f, 1:20)
+sl[:size] = [100, 20]
 l = label(f, sl[:value])
 append!(f, [sl, l])
 
@@ -333,12 +345,14 @@ Some alternatives would be `connect(rb, "valueChanged", l, (l, value)
 l[:value] = value)`.
 
 
-As an aside, this can also be done just by sharing the underlying model, as with:
+As an aside, this can also be done just by sharing the underlying
+model, as with:
 
 ```
 w = window(title="label and slider")
 f = hbox(w); push!(f)
 sl = slider(f, 1:20)
+sl[:size] = [100, 20]
 l = label(f, sl.model)
 append!(f, [sl, l])
 ```
@@ -370,15 +384,15 @@ The basic widgets are:
 
 * `slider` select from numeric range
 
-* `slider2d` select two variables from numeric range
+* `slider2d` select two variables from numeric range. (Not `Gtk`.)
 
-* `listview` Show a vector of values allowing selection of one or more.
+* `listview` Show a vector of values allowing selection of one or more. (Not `Gtk`.)
 
-* `storeview`  used to display store of records
+* `storeview`  used to display store of records.  (Not `Gtk`.)
 
-* `treeview` used to display tree structured records
+* `treeview` used to display tree structured records.  (Not `Gtk`.)
 
-* `cairographic`  used with `Winston` graphics (`Tk` only)
+* `cairographic`  used with `Winston` graphics (`Gtk` and `Tk` only)
 
 * `pyplotgraphic` used with `PyPlot` graphics (`Qt` only)
 
@@ -391,15 +405,14 @@ The basic widgets are:
 
 #### Cairo graphic example
 
-The `cairographic` widget is a light wrapper around
-`Tk.Canvas`. Currently, it can only be used within a `Tk` GUI.
+The `cairographic` widget is a light wrapper around a Cairo canvas provided by the `Tk` and `Gtk` packages.
 
-To use the canvas, access the `:widget` property of the
-`cairographic` object:
+To use the canvas, access the `:widget` property of the `cairographic`
+object:
 
 ```
 ## update two graphics windows...
-ENV["toolkit] = "Tk"
+ENV["toolkit] = "Gtk"
 using JGUI, Winston
 w = window()
 f = grid(w); push!(f)
@@ -430,6 +443,7 @@ Here is an example. First we define a type for our items and some
 instances:
 
 ```
+ENV["toolkit"] = "Tk"		# not Gtk!!
 type Test 
     x::Int
     y::Real
@@ -452,7 +466,7 @@ Here is how we lay it out:
 ```
 w = window(size=[300, 300])
 sv = storeview(w, store)
-push!(sv)
+push!(sv)			
 
 sv[:widths] = [100, 100, 100]	# column widths
 sv[:selectmode] = :multiple	# :single or :multiple
@@ -484,6 +498,7 @@ In addition to `rowClicked`, there are `rowDoubleClicked`, `headerClicked`, and 
 A treeview uses a treestore to hold the data, again specified using a composite type. Here is a simple example:
 
 ```
+ENV["Toolkit"] = "Tk"		# not Gtk!!!
 type Test2 
     x::Int
     y::Real
@@ -498,7 +513,7 @@ t2  = Test2(2, 2.0, "two")
 ```
 tstore = treestore()
 w = window(size=[300, 300])
-tv = JGUI.treeview(w, tstore, tpl=t1) ## pass in something to determine columns, headers
+tv = JGUI.treeview(w, tstore, tpl=t1) # pass in something to determine columns, headers
 push!(tv)	      
 ```
 
@@ -539,8 +554,9 @@ There are some standard modal dialogs
 In addition, the `dialog` constructor can be used to generate dialogs, somewhat similar to Qt's base Dialog class:
 
 ```
+ENV["toolkit"] = "Tk"		# not Gtk!!!
 using JGUI
-w = window()			        # Some parent to position the dialog near
+w = window()			# Some parent to position the dialog near
 
 dlg = dialog(w, buttons=[:cancel, :ok]) # default is just `:ok`
 f = vbox(dlg); push!(f)

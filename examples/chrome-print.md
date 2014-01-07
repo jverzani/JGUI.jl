@@ -24,10 +24,12 @@ g[:,:] = [all_cb all_label; pages_cb pages_edit]
 
 The subtle part above is getting the labeling to align. Rather than use the built-in label for `all_cb`, we push a label into the grid. We need to specify its alignment though, as left alignment is not the default. Otherwise, this is a fairly straightforward usage of `grid`.
 
-Now we wire up the pieces. The checkboxes are not exclusive. We need to manage that. In the `valueChanged` handlers for the checkboxes we do so as follows:
+Now we wire up the pieces. The checkboxes are not exclusive. We need
+to manage that. In the `valueChanged` handlers for the checkboxes we
+do so as follows:
 
 ```
-notSetValue(object, value::Bool) = setValue(object, !value)
+notSetValue(object, value::Bool) = object[:value] = !value
 connect(all_cb, "valueChanged", pages_cb, notSetValue)
 connect(pages_cb, "valueChanged", all_cb, notSetValue)
 ```
@@ -39,7 +41,8 @@ connect(pages_cb, "valueChanged", pages_edit, JGUI.setEnabled)
 connect(pages_cb, "valueChanged", pages_edit, JGUI.setFocus)
 ```
 
-This has the added bonus of also disabling when the `all_cb` is selected, as those buttons are already linked.
+This has the added bonus of also disabling when the `all_cb` is
+selected, as those buttons are already linked.
 
 If the user click into the  `pages_edit` area it should select the checkbox:
 
@@ -47,7 +50,9 @@ If the user click into the  `pages_edit` area it should select the checkbox:
 connect(pages_edit, "clicked", ()->pages_cb[:value] = true)
 ```
 
-(In `Tk`, tabbing will not enter that box while it is disabled. For mouseless navigation, one can tab to the accompanying checkbox and select that with the space bar.)
+(In `Gtk` and `Tk`, tabbing will not enter that box while it is
+disabled. For mouseless navigation, one can tab to the accompanying
+checkbox and select that with the space bar.)
 
 Finally, we set the value of `all_cb` to the initial state:
 
