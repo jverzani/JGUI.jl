@@ -338,6 +338,8 @@ textedit(parent::Container, value::String; kwargs...) = textedit(parent, ItemMod
 textedit(parent::Container, value::Number; kwargs...) = textedit(parent, string(value); kwargs...)
 textedit(parent::Container; kwargs...) = textedit(parent, ""; kwargs...)
 
+## add to textedit via push!
+push!(o::TextEdit, value) = push_textedit(o.toolkit, o, value)
 
 ##################################################
 ##

@@ -23,11 +23,11 @@ end
 
 
 ## Widget methods
-getEnabled(::MIME"application/x-gtk", o::Widget) = o[:widget][:sensitive,Bool]
-setEnabled(::MIME"application/x-gtk", o::Widget, value::Bool) = o[:widget][:sensitive] = value
+getEnabled(::MIME"application/x-gtk", o::Widget) = getproperty(o[:widget], :sensitive,Bool)
+setEnabled(::MIME"application/x-gtk", o::Widget, value::Bool) = setproperty!(o[:widget], :sensitive, value)
 
-getVisible(::MIME"application/x-gtk", o::Widget) =  o[:widget][:visible, Bool]
-setVisible(::MIME"application/x-gtk", o::Widget, value::Bool) = o[:widget][:visible] = value
+getVisible(::MIME"application/x-gtk", o::Widget) =  getproperty(o[:widget], :visible, Bool)
+setVisible(::MIME"application/x-gtk", o::Widget, value::Bool) = setproperty!(o[:widget], :visible,  value)
 
 function getSize(::MIME"application/x-gtk", o::Widget)  
     [size(o[:widget])...]
@@ -35,7 +35,7 @@ end
 
 setSize(::MIME"application/x-gtk", o::Widget, value)  =  Gtk.G_.size_request(o[:widget], value...)
 
-getFocus(::MIME"application/x-gtk", o::Widget) = o[:widget][:has_focus,Bool]
+getFocus(::MIME"application/x-gtk", o::Widget) = getproperty(o[:widget],:has_focus,Bool)
 
 function setFocus(::MIME"application/x-gtk", o::Widget, value::Bool) 
     value && 
@@ -43,7 +43,7 @@ function setFocus(::MIME"application/x-gtk", o::Widget, value::Bool)
 end
 
 ## Does not preserve types! (1,"one") -> [1, "one"]
-getContext(::MIME"application/x-gtk", o::Widget) = o[:widget][:attrs][:context]
+getContext(::MIME"application/x-gtk", o::Widget) = o.attrs[:context]
 function setContext(::MIME"application/x-gtk", o::Widget, ctx)
      o.attrs[:context] = ctx
 end
@@ -77,10 +77,12 @@ function align_gtk_widget(o::Widget; xscale=1, yscale=1)
     al = GtkAlignment(align[1], align[2], xscale, yscale)
 
     if !isa(o[:spacing], Nothing)
-        al[:left_padding], al[:right_padding] = o[:spacing][1],o[:spacing][1]
+        setproperty!(al, :left_padding, o[:spacing][1])
+        setproperty!(al, :right_padding, o[:spacing][2])
     end
     if !isa(o[:spacing], Nothing)
-        al[:top_padding], al[:bottom_padding] = o[:spacing][2],o[:spacing][2]
+        setproperty!(al, :top_padding, o[:spacing][2]) # is 2 right? XXX
+        setproperty!(al, :bottom_padding, o[:spacing][2])
     end
 
     push!(al, o.block)
@@ -119,14 +121,17 @@ end
 
 ### window methods
 function raise(::MIME"application/x-gtk", o::Window) 
-    o[:widget][:visible] = true
+    setproperty!(o[:widget], :visible, true)
 end
-lower(::MIME"application/x-gtk", o::Window) = o[:widget][:visible]=false
+lower(::MIME"application/x-gtk", o::Window) = setproperty!(o[:widget], :visible, false)
 destroy_window(::MIME"application/x-gtk", o::Window) = Gtk.destroy(o[:widget])
 
 ## window properties
-getTitle(::MIME"application/x-gtk", o::Window) = o[:widget][:title,String]
-setTitle(::MIME"application/x-gtk", o::Window, value::String) = o[:widget][:title] = value
+getTitle(::MIME"application/x-gtk", o::Window) = getproperty(o[:widget], :title, String)
+function setTitle(::MIME"application/x-gtk", o::Window, value::String) 
+    setproperty!(o[:widget], :title, value)
+end
+
 
 ## XXX
 getPosition(::MIME"application/x-gtk", o::Window) = [o[:widget][:x](), o[:widget][:y]()]
@@ -136,6 +141,8 @@ setPosition(::MIME"application/x-gtk", o::Window, value::Vector{Int}) = o[:widge
 function getModal(::MIME"application/x-tcltk", o::Window) 
 
 end
+
+## XXX
 function setModal(::MIME"application/x-tcltk", o::Window, value::Bool) 
 end
 
@@ -170,16 +177,16 @@ end
 
 ## set padx, pady for all the children
 function setSpacing(::MIME"application/x-gtk", parent::BoxContainer, px::Vector{Int})
-    parent[:widget][:spacing] = px[1] # first one only
+    setproperty!(parent[:widget], :spacing, px[1]) # first one only
 end
 
 ##
 function setMargin(::MIME"application/x-gtk", parent::BoxContainer, px::Vector{Int})
-    parent[:widget][:border_width] = px[1] # first only
+    setproperty!(parent[:widget], :border_width, px[1]) # first only
 end
 
 
-## stretch, strut, spacing
+## stretch, strut, spacingXXX
 addspacing(::MIME"application/x-qt", parent::BoxContainer, val::Int) = parent[:widget][:layout]()[:addSpacing](val)
 addsstrut(::MIME"application/x-qt", parent::BoxContainer, val::Int) = parent[:widget][:layout]()[:addStrut](val)
 addstretch(::MIME"application/x-qt", parent::BoxContainer, val::Int) = parent[:widget][:layout]()[:addStretch](val)
@@ -217,7 +224,7 @@ function insert_child(::MIME"application/x-gtk", parent::BoxContainer, index, ch
           parent[:widget], child_widget, index - 1)
     
     show(child_widget)
-    child[:widget][:visible] = parent[:widget][:visible, Bool]
+    setproperty!(child[:widget], :visible, getproperty(parent[:widget], :visible, Bool))
 
 end
 
@@ -247,7 +254,7 @@ function grid_size(::MIME"application/x-gtk", widget::GridContainer)
 
     else
         tbl = widget[:widget]
-        [tbl[:n_rows,Int], tbl[:n_columns, Int]]
+        [getproperty(tbl, :n_rows, Int), getproperty(tbl, :n_columns, Int)]
     end
 end
 
@@ -258,8 +265,8 @@ function setSpacing(::MIME"application/x-gtk", parent::GridContainer, px::Vector
         
     else
         tbl = widget[:widget]
-        tbl[:row_spacing] = px[2]
-        tbl[:column_spacing] = px[1]
+        setproperty(tbl, :column_spacing, px[1])
+        setproperty(tbl, :row_spacing, px[2])
     end
 end
 
@@ -306,13 +313,13 @@ function formlayout_add_child(::MIME"application/x-gtk", parent::FormLayout, chi
     if length(parent[:widget]) == 0
         nrows = 0
     else
-        nrows = parent[:widget][:n_rows,Int]
+        nrows = getproperty(parent[:widget], :n_rows, Int)
     end
 
     if !isa(label, Nothing)
         label = Gtk.GtkLabel(label)
         al = Gtk.GtkAlignment(1.0, 0.0, 1.0, 1.0)
-        al[:right_padding] = 2
+        setproperty!(al, :right_padding, 2)
         push!(al, label)
         parent[:widget][1, nrows+1] = al
     end
@@ -323,20 +330,19 @@ function formlayout_add_child(::MIME"application/x-gtk", parent::FormLayout, chi
 end
 
 function setSpacing(::MIME"application/x-gtk", object::FormLayout, px::Vector{Int})
- if Gtk.gtk_version >= 3
+    if Gtk.gtk_version >= 3
         ## use ...
         
     else
         tbl = widget[:widget]
-        tbl[:row_spacing] = px[2]
-        tbl[:column_spacing] = px[1]
+        setproperty(tbl, :column_spacing, px[1])
+        setproperty(tbl, :row_spacing, px[2])
     end
 end
 
 ## Notebook
 function notebook(::MIME"application/x-gtk", parent::Container, model::Model)
     widget = Gtk.GtkNotebook()
-
 
     connect(model, "valueChanged", value -> Gtk.G_.current_page(widget, value-1))
     signal_connect(widget, :switch_page) do obj, ptr, page, args...
@@ -380,8 +386,8 @@ function setAlignment(::MIME"application/x-gtk", o::Label, value)
            :top=>0.0, :bottom=>1.0, nothing=>0.5
            ]
 
- 
-    o[:widget][:xalign], o[:widget][:yalign] = als[value[1]], als[value[2]]
+    setproperty!(o[:widget], :xalign, als[value[1]])
+    setproperty!(o[:widget], :yalign, als[value[2]])
 end
 
 
@@ -428,15 +434,15 @@ end
 ## Linedit
 function lineedit(::MIME"application/x-gtk", parent::Container, model::Model)
     widget = GtkEntry()
-    widget[:text] = string(getValue(model))
-    connect(model, "valueChanged", value -> widget[:text] = string(value))
+    setproperty!(widget, :text, string(getValue(model)))
+    connect(model, "valueChanged", value -> setproperty!(widget, :text, string(value)))
 
     ## SIgnals: keyrelease (keycode), activated (value), focusIn, focusOut, textChanged
     signal_connect(widget, :key_release_event) do obj, e, args...
         if e.keyval == Gtk.GdkKeySyms.Return
             notify(model, "editingFinished", getValue(model))
         else
-            txt = widget[:text, String]
+            txt = getproperty(widget, :text, String)
             setValue(model, txt) # textChanged
             notify(model, "textChanged", txt)
             notify(model, "valueChanged", txt)
@@ -462,7 +468,7 @@ function lineedit(::MIME"application/x-gtk", parent::Container, model::Model)
 
     connect(model, "placeholderTextChanged") do txt
         if Gtk.gtk_version >= 3
-            widget[:placeholder_text] = txt
+            setproperty!(widget, :placeholder_text, txt)
         end
     end
 
@@ -479,11 +485,13 @@ end
 ## Text edit
 function textedit(::MIME"application/x-gtk", parent::Container, model::Model)
     widget = GtkTextView()
-    buffer = widget[:buffer, Gtk.GtkTextBuffer]
+    buffer = getproperty(widget, :buffer, Gtk.GtkTextBuffer)
+
+    get_value() = join([i for i in buffer], "")
 
     connect(model, "valueChanged", value -> buffer[:text] = value)
     signal_connect(buffer, :changed) do obj, args...
-        model.value = buffer[:text,String]
+        model.value = get_value()
 
         return(nothing)
     end
@@ -499,7 +507,7 @@ function textedit(::MIME"application/x-gtk", parent::Container, model::Model)
     end
 
     signal_connect(widget, :key_release_event) do obj, e, args...
-        txt = widget[:text, String]
+        txt = get_value()
         setValue(model, txt) # textChanged
         notify(model, "textChanged", txt)
         return(false)
@@ -514,22 +522,30 @@ function textedit(::MIME"application/x-gtk", parent::Container, model::Model)
     (widget, widget)
 end
 
+## used to add to non-editable text eidt
+function push_textedit(::MIME"application/x-gtk", o::TextEdit, value::String)
+    widget = o[:widget]
+    buffer = getproperty(widget, :buffer, Gtk.GtkTextBuffer)
+    setproperty!(widget, :editable, false)
 
+    insert!(buffer, value)
+end
+    
 
 ## checkbox
 function checkbox(::MIME"application/x-gtk", parent::Container, model::Model, label::Union(Nothing, String))
     widget = GtkCheckButton()
-    widget[:label] = (isa(label, Nothing) ? "" : label)
-    widget[:active] = model.value
+    setproperty!(widget, :label, (isa(label, Nothing) ? "" : label))
+    setproperty!(widget, :active, model.value)
 
-    connect(model, "valueChanged", value -> widget[:active] = value)
+    connect(model, "valueChanged", value -> setproperty!(widget, :active, value))
     signal_connect(widget, :toggled) do obj, args...
-        setValue(model, widget[:active,Bool])
+        setValue(model, getproperty(widget, :active,Bool))
     end
     (widget, widget)
 end
-getLabel(::MIME"application/x-gtk", o::CheckBox) = o[:widget][:label,String]
-setLabel(::MIME"application/x-gtk", o::CheckBox, value::String) = o[:widget][:label] = string(value)
+getLabel(::MIME"application/x-gtk", o::CheckBox) = getproperty(o[:widget],:label,String)
+setLabel(::MIME"application/x-gtk", o::CheckBox, value::String) = setproperty!(o[:widget],:label, string(value))
 
 
 
@@ -551,7 +567,7 @@ function radiogroup(::MIME"application/x-gtk", parent::Container, model::VectorM
 
 
     selected = findfirst(model.items, model.value)
-    btns[selected][:active] = true
+    setproperty!(btns[selected], :active, true)
 
     connect(model, "valueChanged") do value 
         ## need to look up which button to set
@@ -559,13 +575,13 @@ function radiogroup(::MIME"application/x-gtk", parent::Container, model::VectorM
         if selected == 0
             error("$value is not one of the labels")
         else
-            btns[selected][:active] = true
+            setproperty!(btns[selected], :active, true)
         end
     end
     for btn in btns
         signal_connect(btn, :toggled) do obj, args...
-            if obj[:active, Bool]
-                label = obj[:label, String] 
+            if getproperty(obj, :active, Bool)
+                label = getproperty(obj, :label, String)
                 ## label is string, item may be numeric...
                 selected = findfirst(map(string, model.items), label)
                 setValue(model, model.items[selected])
@@ -576,7 +592,7 @@ function radiogroup(::MIME"application/x-gtk", parent::Container, model::VectorM
     (g, g)
 end
 
-## buttongroup
+## buttongroup XXX
 function buttongroup(::MIME"application/x-qt", parent::Container, model::VectorModel; exclusive::Bool=false)
     block = Qt.QGroupBox(parent[:widget])
     lyt = Qt.QHBoxLayout(block)
@@ -636,7 +652,7 @@ function combobox(::MIME"application/x-gtk", parent::Container, model::VectorMod
             set_index(0)
             return
         end
-        if widget[:has_entry, Bool]
+        if getproperty(widget, :has_entry, Bool)
             ## not easy way to access text area
             entry = ccall((:gtk_bin_get_child, Gtk.libgtk), Gtk.GtkEntry, (Ptr{Gtk.GObject}, ), widget)
              Gtk.G_.text(entry, value)
@@ -670,12 +686,12 @@ function combobox(::MIME"application/x-gtk", parent::Container, model::VectorMod
     
     signal_connect(widget, :changed) do obj, args...
         ## are we editable?
-        if widget[:has_entry, Bool]
+        if getproperty(widget, :has_entry, Bool)
             ## get active text
             txt = bytestring(Gtk.G_.active_text(widget))
             setValue(model, txt)
         else
-            index = widget[:active, Int]
+            index = getproperty(widget, :active, Int)
             if index == -1
                 setValue(model, nothing)
             else
@@ -742,11 +758,11 @@ function spinbox(::MIME"application/x-gtk", parent::Container, model::ItemModel,
     widget = Gtk.GtkSpinButton(rng)
 
     signal_connect(widget, :value_changed) do obj, args...
-        value = widget[:value, eltype(rng)]
+        value = getproperty(widget, :value, eltype(rng))
         println(value)
         setValue(model, value)
     end
-    connect(model, "valueChanged", value -> widget[:value] = value)
+    connect(model, "valueChanged", value -> setproperty!(widget, :value, value))
 
     (widget, widget)
 end
@@ -766,7 +782,7 @@ function cairographic(::MIME"application/x-gtk", parent::Container,
 end
 
 
-## Views
+## Views XXX
 ## StoreProxyModel
 function store_proxy_model(parent, store::Store; tpl=nothing)
     if tpl == nothing
@@ -849,7 +865,7 @@ function store_proxy_model(parent, store::Store; tpl=nothing)
    m
 end
 
-## storeview
+## storeview XXX
 function storeview(::MIME"application/x-qt", parent::Container, store::Store, model::ItemModel; tpl=nothing)
     ## Widget
     widget = Qt.QTableView(parent[:widget])
