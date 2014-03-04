@@ -85,6 +85,7 @@ include("manipulate.jl")        # code depends on Tk or Qt
 if istk()
     default_toolkit = MIME("application/x-tcltk")
     include("tk.jl")
+    ENV["WINSTON_OUTPUT"] = :tk
     export cairographic
 elseif isqt()
     default_toolkit = MIME("application/x-qt")
@@ -93,6 +94,7 @@ elseif isqt()
 elseif isgtk()
     default_toolkit = MIME("application/x-gtk")
     include("gtk.jl")
+    ENV["WINSTON_OUTPUT"] = :gtk
     export cairographic
 end
 

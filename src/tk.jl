@@ -423,6 +423,19 @@ function textedit(::MIME"application/x-tcltk", parent::Container, model::Model)
     (widget, block)
 end
 
+## push! text onto widget -- without updating model
+function push!(::MIME"application/x-tcltk", text_widget::TextEdit, value::String)
+    widget = text_widget[:widget]
+    tcl(widget, "insert", "end", join(value, "\n"))
+end
+
+## push! graphic onto widget
+function push!(::MIME"application/x-tcltk",text_widget::TextEdit, value::CairoGraphics)
+    widget = text_widget[:widget]
+    tcl(widget, "window", "create", "end", window=value[:widget], align="top")
+    tcl(widget, "insert", "end", "\n")
+end
+    
 
 ## checkbox
 function checkbox(::MIME"application/x-tcltk", parent::Container, model::Model, label::Union(Nothing, String))

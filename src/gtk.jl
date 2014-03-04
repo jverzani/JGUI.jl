@@ -239,7 +239,7 @@ function grid(::MIME"application/x-gtk", parent::Container)
     ## should dispatch on gtk version type!
     if Gtk.gtk_version >= 3
         ## use ...
-
+        widget = Gtk.Grid()
     else
         widget = Gtk.GtkTable()
     end
@@ -300,7 +300,7 @@ function formlayout(::MIME"application/x-gtk", parent::Container)
  ## should dispatch on gtk version type!
     if Gtk.gtk_version >= 3
         ## use ...
-
+        widget = Gtk.Grid()
     else
         widget = Gtk.GtkTable(false)
     end
@@ -309,22 +309,38 @@ end
 
 ## XX labels..
 function formlayout_add_child(::MIME"application/x-gtk", parent::FormLayout, child::Widget, label::Union(Nothing, String))
-    
-    if length(parent[:widget]) == 0
-        nrows = 0
+    if Gtk.gtk_version >= 3   
+        ## where = Gtk.GtkPositionType.(:LEFT)
+        function add_child(grid, child; sibling=C_NULL, where::Int=0) 
+            ccall((:gtk_grid_attach_next_to, Gtk.libgtk), Void, (Ptr{Gtk.GObject},Ptr{Gtk.GObject},Ptr{Gtk.GObject},Cint, Cint, Cint),
+                  grid, child, sibling, where,  1, 1)
+        end 
+
+        if isa(label, Nothing)
+            label == ""
+        end
+        l = Gtk.GtkLabel(label)
+        add_child(parent[:widget], l, where=Gtk.GtkPositionType.(:BOTTOM))
+        add_child(parent[:widget], child.block, sibling=l, where=Gtk.GtkPositionType.(:RIGHT))
+
     else
-        nrows = getproperty(parent[:widget], :n_rows, Int)
+        ## gtk2
+        if length(parent[:widget]) == 0
+            nrows = 0
+        else
+            nrows = getproperty(parent[:widget], :n_rows, Int)
+        end
+        
+        if !isa(label, Nothing)
+            label = Gtk.GtkLabel(label)
+            al = Gtk.GtkAlignment(1.0, 0.0, 1.0, 1.0)
+            setproperty!(al, :right_padding, 2)
+            push!(al, label)
+            parent[:widget][1, nrows+1] = al
+        end
+        parent[:widget][2, nrows+1] = align_gtk_widget(child, xscale=1.0, yscale=0.0)  ## reversed
+        
     end
-
-    if !isa(label, Nothing)
-        label = Gtk.GtkLabel(label)
-        al = Gtk.GtkAlignment(1.0, 0.0, 1.0, 1.0)
-        setproperty!(al, :right_padding, 2)
-        push!(al, label)
-        parent[:widget][1, nrows+1] = al
-    end
-    parent[:widget][2, nrows+1] = align_gtk_widget(child, xscale=1.0, yscale=0.0)  ## reversed
-
     map(show,  parent[:widget])
 
 end
@@ -409,7 +425,8 @@ end
 ## Controls
 function button(::MIME"application/x-gtk", parent::Container, model::Model)
     widget = GtkButton(getValue(model))
-    connect(model, "valueChanged", value -> widget[:label] = value)
+    connect(model, "valueChanged", 
+            value -> setproperty!(widget,:label, value))
     signal_connect(widget, :clicked) do obj, args...
         notify(model, "clicked")
         nothing
@@ -489,7 +506,7 @@ function textedit(::MIME"application/x-gtk", parent::Container, model::Model)
 
     get_value() = join([i for i in buffer], "")
 
-    connect(model, "valueChanged", value -> buffer[:text] = value)
+    connect(model, "valueChanged", value -> setproperty!(buffer, :text, join(value, "\n")))
     signal_connect(buffer, :changed) do obj, args...
         model.value = get_value()
 
@@ -523,7 +540,7 @@ function textedit(::MIME"application/x-gtk", parent::Container, model::Model)
 end
 
 ## used to add to non-editable text eidt
-function push_textedit(::MIME"application/x-gtk", o::TextEdit, value::String)
+function push!(::MIME"application/x-gtk", o::TextEdit, value::String)
     widget = o[:widget]
     buffer = getproperty(widget, :buffer, Gtk.GtkTextBuffer)
     setproperty!(widget, :editable, false)
@@ -531,7 +548,24 @@ function push_textedit(::MIME"application/x-gtk", o::TextEdit, value::String)
     insert!(buffer, value)
 end
     
+function push!(::MIME"application/x-gtk", o::TextEdit, value::CairoGraphics)
+    widget = o[:widget]
+    child = value[:widget]
 
+    buffer = getproperty(widget, :buffer, Gtk.GtkTextBuffer)
+    
+    ## make an end iter
+    enditer = Gtk.GtkTextIter(buffer, -1)
+    
+    anchor = ccall((:gtk_text_buffer_create_child_anchor, Gtk.libgtk),Ptr{Void},
+                   (Ptr{Gtk.GObject},Ptr{Void}),buffer, enditer)
+    
+    ccall((:gtk_text_view_add_child_at_anchor, Gtk.libgtk),Void,
+          (Ptr{Gtk.GObject},Ptr{Gtk.GObject},Ptr{Void}), tview, child, anchor)
+    
+    setproperty!(child, :visible, true)
+end
+    
 ## checkbox
 function checkbox(::MIME"application/x-gtk", parent::Container, model::Model, label::Union(Nothing, String))
     widget = GtkCheckButton()
