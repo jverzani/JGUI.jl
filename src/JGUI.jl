@@ -45,8 +45,8 @@ export action, menubar, menu,
 
 
 
-
-__init__() = println("hi")
+## adjust this to pick a gtoolkit
+#__init__() = println("hi")
 
 export manipulate
 
