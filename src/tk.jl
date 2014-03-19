@@ -37,7 +37,7 @@ setSizepolicy(::MIME"application/x-tcltk", o::Widget, policies) =  o.attrs[:size
 ## Containers
 
 ## Window
-function window(::MIME"application/x-tcltk")
+function window(::MIME"application/x-tcltk"; kwargs...)
     widget = Tk.Toplevel()
     block = Frame(widget)
     pack(block, expand=true, fill="both")
@@ -670,18 +670,18 @@ end
 function spinbox(::MIME"application/x-tcltk", parent::Container, model::ItemModel, rng::Union(Range, Range1))
     widget = Tk.Spinbox(parent[:widget])
     ## work around integer values in Tk.Spinbox
-    step = isa(rng, Range1) ? 1 : rng.step
-    Tk.configure(widget, from=rng.start, to=rng.start + (rng.len-1)*step, increment=step)
-    Tk.tcl(widget, "set", rng.start)
+    step = isa(rng, Range1) ? 1 : step(rng)
+    Tk.configure(widget, from=first(rng), to=first(rng) + (length(rng)-1)*step, increment=step)
+    Tk.tcl(widget, "set", first(rng))
 
     connect(model, "valueChanged") do value
-        value = isa(rng.start, Integer) ? int(value) : value
+        value = isa(first(rng), Integer) ? int(value) : value
         Tk.tcl(widget, "set", value)
     end
 
     function handler(path) 
         value = parsefloat(tcl(widget, "get"))
-        value = isa(rng.start, Integer) ? int(value) : value
+        value = isa(first(rng), Integer) ? int(value) : value
         setValue(model, value)
     end
     bind(widget, "command", handler)
@@ -691,8 +691,8 @@ function spinbox(::MIME"application/x-tcltk", parent::Container, model::ItemMode
 end
 
 # function setRange(::MIME"application/x-tcltk", obj::SpinBox, rng)
-#     step = isa(rng, Range1) ? 1 : rng.step
-#     Tk.configure(obj[:widget], from=rng.start, to=rng.start + (rng.len-1)* step, increment= step)
+#     step = isa(rng, Range1) ? 1 : step(rng)
+#     Tk.configure(obj[:widget], from=first(rng), to=first(rng) + (length(rng)-1)* step, increment= step)
 # end
 
 ## cairographic

@@ -51,8 +51,8 @@ end
 ## Main Window
 ## XXX deal with toolkit, menubar, statusbar
 ## kwargs are used to pass along properties to the constructor (size)
-function window(;toolkit::MIME=default_toolkit, title::String="",  kwargs...)
-    widget, block = window(toolkit)
+function window(;toolkit::MIME=default_toolkit, title::String="",  visible::Bool=true, kwargs...)
+    widget, block = window(toolkit, visible=visible)
     obj = Window(widget, block, nothing, EventModel(), toolkit, {}, Dict())
     obj[:title] = title
     obj[:icontheme] = :default

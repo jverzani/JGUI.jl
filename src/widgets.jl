@@ -95,6 +95,7 @@ setIcontheme(o::Window, value::Symbol) = o.attrs[:icontheme] = value
 
 ## get widget. Mostly just obj.o, but there may be exceptions
 getWidget(o::Widget) = getWidget(o.toolkit, o)
+getBlockt(o::Widget) = getBlock(o.toolkit, o)
 
 ## list Widget properties
 list_props(::@PROP("Widget")) = {:value => "Value of object",
@@ -692,7 +693,7 @@ end
 ## The context is [x,y] in relative pixel coordinates
 ## TODO:
 ##
-function cairographic(parent::Container; width::Int=480, height::Int=400, kwargs...)
+function cairographic(parent::Widget; width::Int=480, height::Int=400, kwargs...)
     model = EventModel()  # for event handling
     widget, block = cairographic(parent.toolkit, parent, model, width=width, height=height)
     obj = CairoGraphics(widget, block, model, parent, parent.toolkit, Dict())

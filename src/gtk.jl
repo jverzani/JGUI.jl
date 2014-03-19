@@ -30,7 +30,7 @@ getVisible(::MIME"application/x-gtk", o::Widget) =  getproperty(o[:widget], :vis
 setVisible(::MIME"application/x-gtk", o::Widget, value::Bool) = setproperty!(o[:widget], :visible,  value)
 
 function getSize(::MIME"application/x-gtk", o::Widget)  
-    [size(o[:widget])...]
+    [size(o[:block])...]
 end
 
 setSize(::MIME"application/x-gtk", o::Widget, value)  =  Gtk.G_.size_request(o[:widget], value...)
@@ -53,6 +53,7 @@ update_context(::MIME"application/x-qt", o::Widget, pt) = nothing
 
 
 getWidget(::MIME"application/x-gtk", o::Widget) = o.o
+getBlock(::MIME"application/x-gtk", o::Widget) = o.block
 
 ### XXX
 function setSizepolicy(::MIME"application/x-gtk", o::Widget, policies) 
@@ -74,22 +75,30 @@ function align_gtk_widget(o::Widget; xscale=1, yscale=1)
 
     align = [map_align[k] for k in o[:alignment]]
 
-    al = GtkAlignment(align[1], align[2], xscale, yscale)
 
-    if !isa(o[:spacing], Nothing)
-        setproperty!(al, :left_padding, o[:spacing][1])
-        setproperty!(al, :right_padding, o[:spacing][2])
-    end
-    if !isa(o[:spacing], Nothing)
-        setproperty!(al, :top_padding, o[:spacing][2]) # is 2 right? XXX
-        setproperty!(al, :bottom_padding, o[:spacing][2])
-    end
+    if Gtk.gtk_version >= 3
+        ## align with out GtkAlignment
+        
+        
 
-    push!(al, o.block)
-    al
+    else
+        al = GtkAlignment(align[1], align[2], xscale, yscale)
+
+        if !isa(o[:spacing], Nothing)
+            setproperty!(al, :left_padding, o[:spacing][1])
+            setproperty!(al, :right_padding, o[:spacing][2])
+        end
+        if !isa(o[:spacing], Nothing)
+            setproperty!(al, :top_padding, o[:spacing][2]) # is 2 right? XXX
+            setproperty!(al, :bottom_padding, o[:spacing][2])
+        end
+        
+        push!(al, o.block)
+        al
+    end
 end
-## Containers
-
+    ## Containers
+    
 ## get Gtk layout
 getLayout(::MIME"application/x-gtk", widget::Container) = widget[:widget][:layout]()
 getLayout(widget::Container) = getLayout(widget.toolkit, widget)
@@ -97,8 +106,10 @@ getLayout(widget::Container) = getLayout(widget.toolkit, widget)
 
 
 ## Window
-function window(::MIME"application/x-gtk")
+function window(::MIME"application/x-gtk"; visible::Bool=true, kwargs...)
     widget = GtkWindow("")
+    if !visible setproperty!(widget, :visible, false) end
+
     block = GtkBox(true)
     push!(widget, block)
 
@@ -195,7 +206,7 @@ addstretch(::MIME"application/x-qt", parent::BoxContainer, val::Int) = parent[:w
 function insert_child(::MIME"application/x-gtk", parent::BoxContainer, index, child::Widget)
     
     ## we use Gtk.Alignment until deprecated
-    expand, fill, padding = false, false, 0
+    expand, fill, padding = true, true, 0
     
     xscale, yscale = (parent[:direction] == :horizontal) ? (0.0, 1.0) : (1.0, 0.0)
     if parent[:direction] == :horizontal
@@ -213,7 +224,9 @@ function insert_child(::MIME"application/x-gtk", parent::BoxContainer, index, ch
 
 
     child_widget = align_gtk_widget(child, xscale=xscale, yscale=yscale)
-                                    
+           
+    println("Insert child expand=$expand, fill=$fill, padding=$padding")
+                         
     ccall((:gtk_box_pack_start, Gtk.libgtk),
               Void,
               (Ptr{Gtk.GObject},Ptr{Gtk.GObject},Bool, Bool,Int64), 
@@ -502,6 +515,10 @@ end
 ## Text edit
 function textedit(::MIME"application/x-gtk", parent::Container, model::Model)
     widget = GtkTextView()
+    block = Gtk.GtkScrolledWindow()
+    push!(block, widget)
+
+
     buffer = getproperty(widget, :buffer, Gtk.GtkTextBuffer)
 
     get_value() = join([i for i in buffer], "")
@@ -536,11 +553,11 @@ function textedit(::MIME"application/x-gtk", parent::Container, model::Model)
     end
 
 
-    (widget, widget)
+    (widget, block)
 end
 
 ## used to add to non-editable text eidt
-function push!(::MIME"application/x-gtk", o::TextEdit, value::String)
+function push_textedit(::MIME"application/x-gtk", o::TextEdit, value::String)
     widget = o[:widget]
     buffer = getproperty(widget, :buffer, Gtk.GtkTextBuffer)
     setproperty!(widget, :editable, false)
@@ -548,20 +565,22 @@ function push!(::MIME"application/x-gtk", o::TextEdit, value::String)
     insert!(buffer, value)
 end
     
-function push!(::MIME"application/x-gtk", o::TextEdit, value::CairoGraphics)
+function push_textedit(::MIME"application/x-gtk", o::TextEdit, value::CairoGraphics)
     widget = o[:widget]
     child = value[:widget]
 
     buffer = getproperty(widget, :buffer, Gtk.GtkTextBuffer)
     
     ## make an end iter
-    enditer = Gtk.GtkTextIter(buffer, -1)
-    
+    enditer = Gtk.mutable(Gtk.GtkTextIter)
+    ccall((:gtk_text_buffer_get_iter_at_offset, Gtk.libgtk),Void,
+          (Ptr{Gtk.GObject},Ptr{Gtk.GtkTextIter},Cint),buffer,enditer,-1)
+
     anchor = ccall((:gtk_text_buffer_create_child_anchor, Gtk.libgtk),Ptr{Void},
-                   (Ptr{Gtk.GObject},Ptr{Void}),buffer, enditer)
+                   (Ptr{Gtk.GObject},Ptr{Gtk.GtkTextIter}),buffer, enditer)
     
     ccall((:gtk_text_view_add_child_at_anchor, Gtk.libgtk),Void,
-          (Ptr{Gtk.GObject},Ptr{Gtk.GObject},Ptr{Void}), tview, child, anchor)
+          (Ptr{Gtk.GObject},Ptr{Gtk.GObject},Ptr{Void}), widget, child, anchor)
     
     setproperty!(child, :visible, true)
 end
@@ -803,7 +822,7 @@ end
 
 ## XXX don't want to suppor this 
 # function setRange(::MIME"application/x-qt", obj::SpinBox, rng)
-#     step = isa(rng, Range1) ? 1 : rng.step
+#     step = isa(rng, Range1) ? 1 : step(rng)
 #     widget = obj[:widget]
 # end   
 
@@ -1700,4 +1719,42 @@ function Display(::MIME"application/x-gtk", self::ManipulateObject, x::Any; kwar
     te[:sizepolicy] = (:expand, :expand)
     push!(oa, te)
     te[:value] = string(x)
+end
+
+
+function Display(::MIME"application/x-gtk", self::ManipulateObject, x::Mustache.MustacheTokens; context=nothing, kwargs...) 
+    if isa(x, Nothing) return end
+    oa = self.output_area
+    
+    if length(children(oa)) > 0 && isa(oa.children[1], TextEdit)
+        te = oa.children[1]
+    elseif length(children(oa)) > 0
+        te = pop!(oa)
+    else
+        te = textedit(oa)
+        te[:sizepolicy] = (:expand, :expand)
+        push!(oa, te)
+    end
+    te[:value] = ""
+
+    function add_tpl(tpl)
+        ## how to show a mustache template
+        for (t, l, b, e) in tpl.tokens
+            if t == "text"
+                push!(te, l)
+            else ## if type == "name"
+                ## look up and render accordingly
+                obj = context.(symbol(l))
+                if isa(obj, Winston.FramedPlot)
+                    c = cairographic(oa)
+                    display(c, obj)
+                    push!(te, c)
+                else
+                    push!(te, string(obj))
+                end
+            end
+        end
+    end
+    
+    add_tpl(x)
 end

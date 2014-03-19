@@ -46,7 +46,7 @@ export action, menubar, menu,
 
 
 
-
+__init__() = println("hi")
 
 export manipulate
 

@@ -1,5 +1,5 @@
 ## manipulate to go here
-
+using Mustache
 
 
 ## make_control
@@ -171,7 +171,7 @@ function manipulate(expr, args...;
         dict_to_module(d, context)
         p = eval(context, expr)
         if !isa(p, Nothing)
-            Display(toolkit, self, p) 
+            Display(toolkit, self, p, context=context) 
         end
     end
 
@@ -180,7 +180,7 @@ function manipulate(expr, args...;
     controls = Dict()
     
     ## layout
-    self.window = w = window(toolkit=toolkit, title=title, size=[width, height])
+    self.window = w = window(toolkit=toolkit, title=title, size=[width, height], visible=false)
     istk() && Tk.pack_stop_propagate(w[:widget])
 
     f = hbox(w)
@@ -194,7 +194,9 @@ function manipulate(expr, args...;
     rb[:sizepolicy] = (:expand, :expand)
     isqt() && push!(rb, pyplotgraphic(rb))
 
+    println("push lb")
     push!(f, lb)
+    println("push rb")
     push!(f, rb)
     
     fl = formlayout(lb)
@@ -242,6 +244,7 @@ function manipulate(expr, args...;
     raise(w)
     update_gui(nothing)
 
+    self.window[:visible] = true
     self
 end
 

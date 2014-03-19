@@ -91,7 +91,7 @@ getLayout(widget::Container) = getLayout(widget.toolkit, widget)
 
 
 ## Window
-function window(::MIME"application/x-qt")
+function window(::MIME"application/x-qt"; kwargs...)
     widget = Qt.QMainWindow()
     (widget, widget)
 end
@@ -679,10 +679,10 @@ setValue(::MIME"application/x-qt", widget::Slider2D, value) = setValue(widget.mo
 ## spinbox
 function spinbox(::MIME"application/x-qt", parent::Container, model::ItemModel, rng::Union(Range,Range1))
     widget = isa(rng, Range) ? Qt.QDoubleSpinBox(parent[:widget]) : Qt.QSpinBox(parent[:widget])
-    step = isa(rng, Range1) ? 1 : rng.step
+    step = isa(rng, Range1) ? 1 : step(rng)
 
-    widget[:setMinimum](rng.start)
-    widget[:setMaximum](rng.start + (rng.len-1)* step)
+    widget[:setMinimum](first(rng))
+    widget[:setMaximum](first(rng) + (length(rng)*n-1)* step)
     widget[:setSingleStep]( step)
 
     qconnect(widget, :valueChanged, (value) -> setValue(model, value))
