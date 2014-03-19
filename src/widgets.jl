@@ -645,7 +645,7 @@ end
 ##
 ## * `valueChanged (value)` is called when spinbox is updated
 ##  
-function spinbox(parent::Container, model::Model, rng::Union(Range, Range1); kwargs...)
+function spinbox(parent::Container, model::Model, rng::Union(Range, Range1,Ranges); kwargs...)
     widget, block = spinbox(parent.toolkit, parent, model, rng)
     obj = SpinBox(widget, block, model, parent, parent.toolkit, Dict())
     for (k, v) in kwargs
