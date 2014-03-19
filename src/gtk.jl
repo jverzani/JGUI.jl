@@ -78,7 +78,8 @@ function align_gtk_widget(o::Widget; xscale=1, yscale=1)
 
     if Gtk.gtk_version >= 3
         ## align with out GtkAlignment
-        
+        ## XXX TODO
+        o.block
         
 
     else
@@ -224,12 +225,10 @@ function insert_child(::MIME"application/x-gtk", parent::BoxContainer, index, ch
 
 
     child_widget = align_gtk_widget(child, xscale=xscale, yscale=yscale)
-           
-    println("Insert child expand=$expand, fill=$fill, padding=$padding")
-                         
+
     ccall((:gtk_box_pack_start, Gtk.libgtk),
               Void,
-              (Ptr{Gtk.GObject},Ptr{Gtk.GObject},Bool, Bool,Int64), 
+              (Ptr{Gtk.GObject},Ptr{Gtk.GObject}, Bool, Bool,Int64), 
               parent[:widget], child_widget, expand, fill, padding)
         
     ccall((:gtk_box_reorder_child, Gtk.libgtk), Void,  
@@ -812,7 +811,6 @@ function spinbox(::MIME"application/x-gtk", parent::Container, model::ItemModel,
 
     signal_connect(widget, :value_changed) do obj, args...
         value = getproperty(widget, :value, eltype(rng))
-        println(value)
         setValue(model, value)
     end
     connect(model, "valueChanged", value -> setproperty!(widget, :value, value))

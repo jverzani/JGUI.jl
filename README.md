@@ -46,7 +46,7 @@ Winston plot object:
 
 ```
 expr = quote
-     Using Winston
+     using Winston
      plot(x -> sin(u*x), 0, 2pi)
 end
 ```
