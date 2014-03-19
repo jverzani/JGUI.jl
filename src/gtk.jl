@@ -805,7 +805,7 @@ getValue(::MIME"application/x-gtk", widget::Slider2D) = getValue(widget.model)
 setValue(::MIME"application/x-gtk", widget::Slider2D, value) = setValue(widget.model, value)
 
 ## spinbox
-function spinbox(::MIME"application/x-gtk", parent::Container, model::ItemModel, rng::Union(Range,Range1))
+function spinbox(::MIME"application/x-gtk", parent::Container, model::ItemModel, rng::Union(Range,Range1,Ranges))
 
     widget = Gtk.GtkSpinButton(rng)
 

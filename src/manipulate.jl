@@ -26,7 +26,7 @@ function make_control(parent::Container, x::Union(Range, Range1, Ranges))
 end
 
 ## (:nm, Range, Range) -> 2dslider
-make_control(parent::Container, x::Union(Range, Range1), y::Union(Range, Range1)) = slider2d(parent, x, y)
+make_control(parent::Container, x::Union(Range, Range1,Ranges), y::Union(Range, Range1,Ranges)) = slider2d(parent, x, y)
 
 ## (:nm, Vector) -> length <= 3 -> radio else combo. (Can be buttongroup, slider, listbox, ...
 function make_control(parent::Container, x::Vector)

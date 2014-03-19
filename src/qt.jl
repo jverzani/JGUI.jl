@@ -677,7 +677,7 @@ getValue(::MIME"application/x-qt", widget::Slider2D) = getValue(widget.model)
 setValue(::MIME"application/x-qt", widget::Slider2D, value) = setValue(widget.model, value)
 
 ## spinbox
-function spinbox(::MIME"application/x-qt", parent::Container, model::ItemModel, rng::Union(Range,Range1))
+function spinbox(::MIME"application/x-qt", parent::Container, model::ItemModel, rng::Union(Range,Range1,Ranges))
     widget = isa(rng, Range) ? Qt.QDoubleSpinBox(parent[:widget]) : Qt.QSpinBox(parent[:widget])
     step = isa(rng, Range1) ? 1 : step(rng)
 
