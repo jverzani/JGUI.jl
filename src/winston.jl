@@ -6,7 +6,7 @@ if "Winston" in readdir(Pkg.dir())
     
     ## add display method with graphics device as first argument
     ## not in multimedia spec, but is in winston
-    function Base.display(cg::CairoGraphics, pc::PlotContainer)
+    function Base.display(cg::CairoGraphics, pc::Winston.PlotContainer)
         c = cg[:widget]
         c.draw = function(_)
             ctx = Base.Graphics.getgc(c)
@@ -17,7 +17,7 @@ if "Winston" in readdir(Pkg.dir())
             Gtk.draw(c)
         end
         
-        function DisplayPlot(self::ManipulateObject, x::FramedPlot; kwargs...) 
+        function DisplayPlot(self::ManipulateObject, x::Winston.FramedPlot; kwargs...) 
             if isa(x, Nothing) return end
             oa = self.output_area
             
@@ -38,8 +38,8 @@ if "Winston" in readdir(Pkg.dir())
         end
         
         ## union has some ambiguity warnings
-        Display(::MIME"application/x-tcltk", self::ManipulateObject, x::FramedPlot; kwargs...) = DisplayPlot(self, x; kwargs...)
-        Display(::MIME"application/x-gtk", self::ManipulateObject, x::FramedPlot; kwargs...) = DisplayPlot(self, x; kwargs...)
+        Display(::MIME"application/x-tcltk", self::ManipulateObject, x::Winston.FramedPlot; kwargs...) = DisplayPlot(self, x; kwargs...)
+        Display(::MIME"application/x-gtk", self::ManipulateObject, x::Winston.FramedPlot; kwargs...) = DisplayPlot(self, x; kwargs...)
                          
 
 end
