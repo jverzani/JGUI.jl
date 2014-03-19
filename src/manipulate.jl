@@ -19,7 +19,7 @@ using Mustache
 make_control(parent::Container, x::Bool) = checkbox(parent, x)
 
 ## (:nm, Range) -> slider
-function make_control(parent::Container, x::Union(Range, Range1)) 
+function make_control(parent::Container, x::Union(Range, Range1, Ranges)) 
     obj = slider(parent, x)
     obj[:size] = [100, 20]
     obj
@@ -194,9 +194,7 @@ function manipulate(expr, args...;
     rb[:sizepolicy] = (:expand, :expand)
     isqt() && push!(rb, pyplotgraphic(rb))
 
-    println("push lb")
     push!(f, lb)
-    println("push rb")
     push!(f, rb)
     
     fl = formlayout(lb)
@@ -232,7 +230,7 @@ function manipulate(expr, args...;
                 push!(fl, label(fl, ctrl), nothing)
             end
         else
-            println(ctrl)
+
             error("What is this doing here?")
         end
     end

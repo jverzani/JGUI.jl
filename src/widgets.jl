@@ -580,9 +580,9 @@ function slider(parent::Container, items::Vector; orientation::Symbol=:horizonta
     slider(parent, model, orientation=orientation, kwargs...)
 end
 
-slider(parent::Container, items::Union(Range, Range1), value::Int=1; orientation::Symbol=:horizontal, kwargs...) =
+slider(parent::Container, items::Union(Range, Range1,Ranges), value::Int=1; orientation::Symbol=:horizontal, kwargs...) =
     slider(parent, [items], value; orientation=orientation, kwargs...)
-slider(parent::Container, items::Union(Range, Range1); orientation::Symbol=:horizontal, kwargs...) =
+slider(parent::Container, items::Union(Range, Range1,Ranges); orientation::Symbol=:horizontal, kwargs...) =
     slider(parent, [items]; orientation=orientation, kwargs...)
 
     
@@ -608,7 +608,7 @@ end
 ##
 ## * `valueChanged (value)` is called when slider is moved. The value are [x,y] coordinates
 ##
-function slider2d(parent::Container, items1::Union(Range, Range1), items2::Union(Range, Range1); kwargs...) 
+function slider2d(parent::Container, items1::Union(Range, Range1,Ranges), items2::Union(Range, Range1,Ranges); kwargs...) 
     model = TwoDSliderModel(items1, items2)
     widget, block = slider2d(parent.toolkit, parent, model)
 
