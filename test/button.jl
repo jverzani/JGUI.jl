@@ -3,10 +3,10 @@ using JGUI, Base.Test
 
 
 w = window()
-f = vbox(w); push!(f)
+f = vbox(w); push!(w, f)
 
 b = button(f, "click me")
-push!(b); raise(w)
+push!(f, b); raise(w)
 
 
 b[:icon] = :ok                  # set icon

@@ -14,11 +14,11 @@ function get_icon(::MIME"application/x-gtk", o::StockIcon)
         Gtk.GtkImage()
     else
         file = Pkg.dir("JGUI", "icons", string(o.theme), string(o.nm) * ".png")
-        Gtk.GtkImage(file)
+        @GtkImage(file)
     end
 end
 function get_icon(::MIME"application/x-gtk", o::FileIcon)
-    Gtk.GtkImage(o.file)
+    @GtkImage(o.file)
 end
 
 
@@ -27,7 +27,10 @@ getEnabled(::MIME"application/x-gtk", o::Widget) = getproperty(o[:widget], :sens
 setEnabled(::MIME"application/x-gtk", o::Widget, value::Bool) = setproperty!(o[:widget], :sensitive, value)
 
 getVisible(::MIME"application/x-gtk", o::Widget) =  getproperty(o[:widget], :visible, Bool)
-setVisible(::MIME"application/x-gtk", o::Widget, value::Bool) = setproperty!(o[:widget], :visible,  value)
+function setVisible(::MIME"application/x-gtk", o::Widget, value::Bool) 
+    setproperty!(o[:widget], :visible,  value)
+    showall(o[:widget])
+end
 
 function getSize(::MIME"application/x-gtk", o::Widget)  
     [size(o[:block])...]
@@ -108,21 +111,21 @@ getLayout(widget::Container) = getLayout(widget.toolkit, widget)
 
 ## Window
 function window(::MIME"application/x-gtk"; visible::Bool=true, kwargs...)
-    widget = GtkWindow("")
+    widget = @GtkWindow("")
     if !visible setproperty!(widget, :visible, false) end
 
-    block = GtkBox(true)
+    block = @GtkBox(true)
     push!(widget, block)
 
-    menu_block = GtkBox(false)
+    menu_block = @GtkBox(false)
     ccall((:gtk_box_pack_start, Gtk.libgtk), Void, 
           (Ptr{Gtk.GObject}, Ptr{Gtk.GObject}, Bool, Bool, Int),
           block, menu_block, false, false, 0)
 
-    main_block = GtkBox(false)
+    main_block = @GtkBox(false)
     push!(block, main_block)
 
-    status_block = GtkBox(false)
+    status_block = @GtkBox(false)
     ccall((:gtk_box_pack_start, Gtk.libgtk), Void, 
           (Ptr{Gtk.GObject}, Ptr{Gtk.GObject}, Bool, Bool, Int),
           block, status_block, false, false, 0)
@@ -160,11 +163,13 @@ end
 
 function set_child(::MIME"application/x-gtk", parent::Window, child::Widget)
     Gtk.push!(parent.block[2], child.block)
+    showall(parent.o)
 end
 
 ## for BinContainer, only one child we pack and expand...
 function set_child(::MIME"application/x-gtk", parent::BinContainer, child::Widget)
     Gtk.push!(parent[:widget], child.block)
+    parent[:visible] && showall(parent[:widget])
 end
 
 ## Container
@@ -172,7 +177,7 @@ end
 ## Label frame
 function labelframe(::MIME"application/x-gtk", parent::BinContainer, 
                     label::String, alignment::Union(Nothing, Symbol)=nothing)
-    widget = GtkFrame(label)
+    widget = @GtkFrame(label)
 
     if isa(alignment, Symbol)
         widget[:label_xalign] = alignment == :left ? 0.0 :(alignment == :right ? 1.0 : 0.5)
@@ -183,7 +188,7 @@ end
 
 ## Boxes
 function boxcontainer(::MIME"application/x-gtk", parent::Container, direction)
-    widget = GtkBox(direction == :vertical)
+    widget = @GtkBox(direction == :vertical)
     (widget, widget)
 end
 
@@ -251,9 +256,9 @@ function grid(::MIME"application/x-gtk", parent::Container)
     ## should dispatch on gtk version type!
     if Gtk.gtk_version >= 3
         ## use ...
-        widget = Gtk.Grid()
+        widget = @GtkGrid()
     else
-        widget = Gtk.GtkTable()
+        widget = @GtkTable()
     end
     (widget, widget)
 end
@@ -262,8 +267,7 @@ end
 function grid_size(::MIME"application/x-gtk", widget::GridContainer)
     ## should dispatch on gtk version type!
     if Gtk.gtk_version >= 3
-        ## use ...
-
+       widget.attrs[:size]
     else
         tbl = widget[:widget]
         [getproperty(tbl, :n_rows, Int), getproperty(tbl, :n_columns, Int)]
@@ -290,15 +294,22 @@ function grid_add_child(::MIME"application/x-gtk", parent::GridContainer, child:
 
     ## alignment???
     parent[:widget][j, i] = align_gtk_widget(child) # reversed!!!
+
+    ## manage size
+    sz = parent.attrs[:size]
+    sz[1] = max(sz[1], i...)
+    sz[2] = max(sz[2], j...)
+    parent.attrs[:size] = sz
+
     ## need to show XXX will be fixed
     for i in parent[:widget] show(i) end
 end
 
 function grid_get_child_at(::MIME"application/x-gtk", parent::GridContainer, i::Int, j::Int)
-    error("No method itemAtPosition in Gtk")
+    error("No method itemAtPosition in Gtk.")
 end
 
-##XXza
+##XXXXXXX
 column_minimum_width(::MIME"application/x-qt", object::GridContainer, j::Int, width::Int) = object[:layout]()[:setColumnMinimumWidth](j-1, width)
 
 row_minimum_height(::MIME"application/x-qt", object::GridContainer, j::Int, height::Int) = object[:layout]()[:setRowMinimumdHeight](i-1, height)
@@ -309,31 +320,22 @@ row_stretch(::MIME"application/x-qt", object::GridContainer, i::Int, weight::Int
 ##################################################
 
 function formlayout(::MIME"application/x-gtk", parent::Container)
- ## should dispatch on gtk version type!
-    if Gtk.gtk_version >= 3
-        ## use ...
-        widget = Gtk.Grid()
-    else
-        widget = Gtk.GtkTable(false)
-    end
+    widget = @GtkGrid()
     (widget, widget)
 end
 
 ## XX labels..
 function formlayout_add_child(::MIME"application/x-gtk", parent::FormLayout, child::Widget, label::Union(Nothing, String))
-    if Gtk.gtk_version >= 3   
-        ## where = Gtk.GtkPositionType.(:LEFT)
-        function add_child(grid, child; sibling=C_NULL, where::Int=0) 
-            ccall((:gtk_grid_attach_next_to, Gtk.libgtk), Void, (Ptr{Gtk.GObject},Ptr{Gtk.GObject},Ptr{Gtk.GObject},Cint, Cint, Cint),
-                  grid, child, sibling, where,  1, 1)
-        end 
-
+    if Gtk.gtk_version >= 3
+        nrows = parent.attrs[:nrows]
         if isa(label, Nothing)
             label == ""
         end
-        l = Gtk.GtkLabel(label)
-        add_child(parent[:widget], l, where=Gtk.GtkPositionType.(:BOTTOM))
-        add_child(parent[:widget], child.block, sibling=l, where=Gtk.GtkPositionType.(:RIGHT))
+        ## XXX spacing...
+        parent[:widget][1, nrows+1] = @GtkLabel(label)
+        parent[:widget][2, nrows+1] = child.block
+
+        parent.attrs[:nrows] = nrows + 1
 
     else
         ## gtk2
@@ -344,8 +346,8 @@ function formlayout_add_child(::MIME"application/x-gtk", parent::FormLayout, chi
         end
         
         if !isa(label, Nothing)
-            label = Gtk.GtkLabel(label)
-            al = Gtk.GtkAlignment(1.0, 0.0, 1.0, 1.0)
+            label = @GtkLabel(label)
+            al = @GtkAlignment(1.0, 0.0, 1.0, 1.0)
             setproperty!(al, :right_padding, 2)
             push!(al, label)
             parent[:widget][1, nrows+1] = al
@@ -370,7 +372,7 @@ end
 
 ## Notebook
 function notebook(::MIME"application/x-gtk", parent::Container, model::Model)
-    widget = Gtk.GtkNotebook()
+    widget = @GtkNotebook()
 
     connect(model, "valueChanged", value -> Gtk.G_.current_page(widget, value-1))
     signal_connect(widget, :switch_page) do obj, ptr, page, args...
@@ -400,7 +402,7 @@ end
 ##################################################
 ## Widgets
 function label(::MIME"application/x-gtk", parent::Container, model::Model)
-    widget = GtkLabel(string(getValue(model)))
+    widget = @GtkLabel(string(getValue(model)))
 
     connect(model, "valueChanged") do value
         Gtk.G_.text(widget, string(value))
@@ -421,14 +423,14 @@ end
 
 ## separator
 function separator(::MIME"application/x-gtk", parent::Container; orientation::Symbol=:horizontal)
-    widget = Gtk.GtkLabel("----")
+    widget = @GtkLabel("----")
     return(widget, widget)
     ## XXX not yet in Gtk.jl
-    if orientation == :horizontal
-        widget = Gtk.GtkHSeparator()
-    else
-        widget = Gtk.GtkVSeparator()
-    end
+#    if orientation == :horizontal
+#        widget = @GtkHSeparator()
+#    else
+#        widget = @GtkVSeparator()
+#    end
 
     (widget, widget)
 end
@@ -436,7 +438,7 @@ end
 
 ## Controls
 function button(::MIME"application/x-gtk", parent::Container, model::Model)
-    widget = GtkButton(getValue(model))
+    widget = @GtkButton(getValue(model))
     connect(model, "valueChanged", 
             value -> setproperty!(widget,:label, value))
     signal_connect(widget, :clicked) do obj, args...
@@ -450,7 +452,7 @@ end
 ## XXX
 function setIcon(::MIME"application/x-gtk", widget::Button, icon::Union(Nothing, Icon); kwargs...)
     if isa(icon, Nothing)
-        icon = Gtk.GtkImage()
+        icon = @GtkImage()
     else
         if isa(icon.theme, Nothing) 
             icon.theme = widget[:icontheme]
@@ -458,11 +460,12 @@ function setIcon(::MIME"application/x-gtk", widget::Button, icon::Union(Nothing,
         icon = get_icon(widget.toolkit, icon)
     end
     Gtk.G_.image(widget[:widget], icon)
+    show(icon)
 end
     
 ## Linedit
 function lineedit(::MIME"application/x-gtk", parent::Container, model::Model)
-    widget = GtkEntry()
+    widget = @GtkEntry()
     setproperty!(widget, :text, string(getValue(model)))
     connect(model, "valueChanged", value -> setproperty!(widget, :text, string(value)))
 
@@ -513,12 +516,12 @@ end
 
 ## Text edit
 function textedit(::MIME"application/x-gtk", parent::Container, model::Model)
-    widget = GtkTextView()
-    block = Gtk.GtkScrolledWindow()
+    widget = @GtkTextView()
+    block = @GtkScrolledWindow()
     push!(block, widget)
 
 
-    buffer = getproperty(widget, :buffer, Gtk.GtkTextBuffer)
+    buffer = getproperty(widget, :buffer, @GtkTextBuffer)
 
     get_value() = join([i for i in buffer], "")
 
@@ -586,7 +589,7 @@ end
     
 ## checkbox
 function checkbox(::MIME"application/x-gtk", parent::Container, model::Model, label::Union(Nothing, String))
-    widget = GtkCheckButton()
+    widget = @GtkCheckButton()
     setproperty!(widget, :label, (isa(label, Nothing) ? "" : label))
     setproperty!(widget, :active, model.value)
 
@@ -609,11 +612,11 @@ function radiogroup(::MIME"application/x-gtk", parent::Container, model::VectorM
 
     choices = map(string, copy(model.items))
 
-    g = Gtk.GtkBox(orientation == :vertical)
+    g = @GtkBox(orientation == :vertical)
 
-    btns = [Gtk.GtkRadioButton(shift!(choices))]
+    btns = [@GtkRadioButton(shift!(choices))]
     while length(choices) > 0
-        push!(btns, Gtk.GtkRadioButton(btns[1], shift!(choices)))
+        push!(btns, @GtkRadioButton(btns[1], shift!(choices)))
     end
     map(u->push!(g, u), btns)
 
@@ -695,7 +698,7 @@ end
 function combobox(::MIME"application/x-gtk", parent::Container, model::VectorModel; editable::Bool=false)
 
     ## No way to get editable!
-    widget = Gtk.GtkComboBoxText(editable)
+    widget = @GtkComboBoxText(editable)
 
     set_index(index) = ccall((:gtk_combo_box_set_active, Gtk.libgtk), Void,
                              (Ptr{Gtk.GObject}, Cint), widget, index-1)
@@ -768,7 +771,7 @@ function slider(::MIME"application/x-gtk", parent::Container, model::VectorModel
     n = length(items)
     orient = orientation == :horizontal ? false : true
 
-    widget = Gtk.GtkScale(orient, 1, n, 1)
+    widget = @GtkScale(orient, 1, n, 1)
     Gtk.G_.draw_value(widget, false)
 
     get_value() = Gtk.G_.value(widget)
@@ -776,7 +779,7 @@ function slider(::MIME"application/x-gtk", parent::Container, model::VectorModel
 
     connect(model, "valueChanged") do value ## value is in model.items
         ## have to find index from items
-        i = indmin(abs(model.items - value))
+        i = indmin(abs(model.items .- value))
         set_value(i)
     end
 
@@ -805,9 +808,9 @@ getValue(::MIME"application/x-gtk", widget::Slider2D) = getValue(widget.model)
 setValue(::MIME"application/x-gtk", widget::Slider2D, value) = setValue(widget.model, value)
 
 ## spinbox
-function spinbox(::MIME"application/x-gtk", parent::Container, model::ItemModel, rng::Union(Range,Range1,Ranges))
+function spinbox(::MIME"application/x-gtk", parent::Container, model::ItemModel, rng::Range)
 
-    widget = Gtk.GtkSpinButton(rng)
+    widget = @GtkSpinButton(rng)
 
     signal_connect(widget, :value_changed) do obj, args...
         value = getproperty(widget, :value, eltype(rng))
@@ -828,7 +831,7 @@ end
 function cairographic(::MIME"application/x-gtk", parent::Container, 
                       model::EventModel; width::Int=480, height::Int=400)
 
-    widget = GtkCanvas(width, height)
+    widget = @GtkCanvas(width, height)
     (widget, widget)
 end
 
@@ -1378,7 +1381,7 @@ end
 
 ## place to put a png image
 function imageview(::MIME"application/x-gtk", parent::Container)
-    widget = Gtk.GtkImage()
+    widget = @GtkImage()
     (widget, widget)
 end
 
@@ -1391,7 +1394,7 @@ end
 ##################################################
 ##
 ## Dialogs
-
+## XXX Need to do these ... XXX
 function dialog(::MIME"application/x-qt", parent::Widget, model;
                 buttons::Vector{Symbol}=[:ok],
                 default::Union(Symbol, Nothing)=:ok,
@@ -1616,7 +1619,7 @@ setCommand(::MIME"application/x-gtk", action::Action, value::Function) = nothing
 
 ## menus
 function menubar(::MIME"application/x-gtk", parent::Window)
-    widget = Gtk.GtkMenuBar()
+    widget = @GtkMenuBar()
     push!(parent.block[1], widget)
     show(parent.block[1])
     widget
@@ -1624,16 +1627,16 @@ end
 
 ## toplevel menu item
 function menu(::MIME"application/x-gtk", parent::MenuBar, label)
-    item = Gtk.GtkMenuItem(label)
-    mitem = Gtk.GtkMenu(item)
+    item = @GtkMenuItem(label)
+    mitem = @GtkMenu(item)
     push!(parent[:widget], item)
     mitem
 end
 
 ## submenu
 function menu(::MIME"application/x-gtk", parent::Menu, label)
-    item = Gtk.GtkMenuItem(label)
-    mitem = Gtk.GtkMenu(item)
+    item = @GtkMenuItem(label)
+    mitem = @GtkMenu(item)
     push!(parent[:widget], item)
     mitem
 end
@@ -1655,7 +1658,7 @@ end
 
 ## add actions
 function addAction(::MIME"application/x-gtk", parent::Menu, action::Action)
-    item = Gtk.GtkMenuItem(action.label)
+    item = @GtkMenuItem(action.label)
     if !isa(action.tooltip, Nothing) 
         Gtk.G_.tooltip_text(item, action.tooltip) 
     end

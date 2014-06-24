@@ -32,6 +32,7 @@ getSize(o::Widget) = getSize(o.toolkit, o)
 setSize{T <: Int}(o::Widget, sz::Vector{T}) = setSize(o.toolkit, o, sz)
 
 
+
 ## `:sizepolicy` determines how a widget expands to fill its allocated
 ## space.  The value is specified as a tuple (x,y) with each being be
 ## one of `:fixed`, `:expand`, or `nothing`.
@@ -137,6 +138,7 @@ type Label <: WidgetModel
     o
     block
     model
+    react
     parent
     toolkit
     attrs
@@ -152,15 +154,18 @@ end
 ## * `valueChanged (value)` called when label text is updated.
 function label(parent::Container, model::Model; kwargs...)
     widget, block = label(parent.toolkit, parent, model)
-    obj = Label(widget, block, model, parent, parent.toolkit, Dict())
+    react = Input(getValue(model))
+    obj = Label(widget, block, model, react, parent, parent.toolkit, Dict())
     for (k, v) in kwargs
         obj[k] = v
     end
+    connect_react(obj, react)
     obj
 end
 label(parent::Container, value::String) = label(parent, ItemModel(value))
 label(parent::Container, value::Number) = label(parent, string(value))
 setValue(o::Label, value::Number) = setValue(o, string(value))
+
 ## Separator
 type Separator <: Style
     o
@@ -186,6 +191,7 @@ type Button <: WidgetModel
     o
     block
     model
+    react
     parent
     toolkit
     attrs
@@ -203,10 +209,12 @@ end
 ##
 function button(parent::Container, model::Model; kwargs...)
     widget, block = button(parent.toolkit, parent, model)
-    obj = Button(widget, block, model, parent, parent.toolkit, Dict())
+    react = Input(getValue(model))
+    obj = Button(widget, block, model, react, parent, parent.toolkit, Dict())
     for (k, v) in kwargs
         obj[k] = v
     end
+    connect_react(obj, react)
     obj
 end
 button(parent::Container, value::String; kwargs...) = button(parent, ItemModel(value); kwargs...)
@@ -241,6 +249,7 @@ type LineEdit <: WidgetModel
     o
     block
     model
+    react
     parent
     toolkit
     coerce
@@ -269,21 +278,29 @@ end
 ## ...
 function lineedit(parent::Container, model::Model; coerce::Union(Nothing, Function)=nothing, kwargs...)
     widget, block = lineedit(parent.toolkit, parent, model)
-    obj = LineEdit(widget, block, model, parent, parent.toolkit, coerce, Dict())
+
+    react = Input(getValue(model))
+
+    obj = LineEdit(widget, block, model, react, parent, parent.toolkit, coerce, Dict())
     for (k, v) in kwargs
         obj[k] = v
     end
+
+    connect_react(obj, react)
+
     obj
 end
-lineedit(parent::Container, value::String; kwargs...) = lineedit(parent, ItemModel(value); kwargs...)
+lineedit(parent::Container, value::String=""; kwargs...) = lineedit(parent, ItemModel(value); kwargs...)
 lineedit(parent::Container, value::Number; kwargs...) = lineedit(parent, string(value); kwargs...)
-lineedit(parent::Container; kwargs...) = lineedit(parent, ""; kwargs...)
+
+setValue(obj::LineEdit, value::Number) = setValue(obj, string(value))
 
 ## Call coerce if present. If can't be coerced, returns nothing
 function getValue(obj::LineEdit)
     val = getValue(obj.model)
     isa(obj.coerce, Nothing) ? val : try obj.coerce(string(val)) catch e nothing end
 end
+
 
 ## placeholder text
 getPlaceholdertext(obj::LineEdit) = obj.attrs[:placeholdertext]
@@ -304,6 +321,7 @@ type TextEdit <: WidgetModel
     o
     block
     model
+    react
     parent
     toolkit
     attrs
@@ -329,15 +347,21 @@ end
 ## * ...
 function textedit(parent::Container, model::Model; kwargs...)
     widget, block = textedit(parent.toolkit, parent, model)
-    obj = TextEdit(widget, block, model, parent, parent.toolkit, Dict())
+    react = Input(getValue(model))
+
+    obj = TextEdit(widget, block, model, react, parent, parent.toolkit, Dict())
     for (k, v) in kwargs
         obj[k] = v
     end
+
+    connect_react(obj, react)
+
     obj
 end
-textedit(parent::Container, value::String; kwargs...) = textedit(parent, ItemModel(value); kwargs...)
+textedit(parent::Container, value::String=""; kwargs...) = textedit(parent, ItemModel(value); kwargs...)
 textedit(parent::Container, value::Number; kwargs...) = textedit(parent, string(value); kwargs...)
-textedit(parent::Container; kwargs...) = textedit(parent, ""; kwargs...)
+
+
 
 ## add to textedit via push!
 push!(o::TextEdit, value) = push_textedit(o.toolkit, o, value)
@@ -351,6 +375,7 @@ type CheckBox <: WidgetModel
     o
     block
     model
+    react
     parent
     toolkit
     attrs
@@ -370,21 +395,20 @@ end
 ##
 function checkbox(parent::Container, model::Model, label::Union(Nothing, String); kwargs...)
     widget, block = checkbox(parent.toolkit, parent, model, label)
-    obj = CheckBox(widget, block, model, parent, parent.toolkit, Dict())
+    react = Input(getValue(model))
+    obj = CheckBox(widget, block, model, react, parent, parent.toolkit, Dict())
     obj[:label] = label
     for (k, v) in kwargs
         obj[k] = v
     end
+    connect_react(obj, react)
     obj
 end
 
-function checkbox(parent::Container, value::Bool, label::Union(Nothing, String); kwargs... )
+function checkbox(parent::Container, value::Bool=true, label::Union(Nothing, String)=nothing; kwargs... )
     model=ItemModel(value)
     checkbox(parent, model, label; kwargs...)
 end
-    
-checkbox(parent::Container, value::Bool; kwargs...) = checkbox(parent, value, nothing; kwargs...)
-checkbox(parent::Container, label::String; kwargs...) = checkbox(parent, true, label; kwargs...)
 
 getLabel(o::CheckBox) =  o.attrs[:label]
 function setLabel(o::CheckBox, value::String) 
@@ -413,6 +437,7 @@ type RadioGroup <: StrictWidgetVectorModel
     o
     block
     model
+    react
     parent
     toolkit
     attrs
@@ -432,18 +457,19 @@ end
 ## * how to set items to be selected? (need `setItems` method)
 function radiogroup(parent::Container, model::VectorModel; orientation::Symbol=:horizontal, kwargs...)
     widget, block = radiogroup(parent.toolkit, parent, model, orientation=orientation)
-    obj = RadioGroup(widget, block, model, parent, parent.toolkit, Dict())
+    react = Input(getValue(model))
+    obj = RadioGroup(widget, block, model, react, parent, parent.toolkit, Dict())
     for (k, v) in kwargs
         obj[k] = v
     end
+    connect_react(obj, react)
     obj
 end
 
-function radiogroup(parent::Container, items::Vector, value; orientation::Symbol=:horizontal, kwargs...)
+function radiogroup(parent::Container, items::Union(Range,Vector), value=items[1]; orientation::Symbol=:horizontal, kwargs...)
     model = VectorModel(items, value)
     radiogroup(parent, model, orientation=orientation, kwargs...)
 end
-radiogroup(parent::Container, items::Vector; orientation::Symbol=:horizontal, kwargs...) = radiogroup(parent, items, items[1], orientation=orientation, kwargs...)
 
 
 
@@ -476,7 +502,7 @@ function buttongroup(parent::Container, model::VectorModel; exclusive::Bool=true
     obj
 end
 
-function buttongroup(parent::Container, items::Vector, value; exclusive::Bool=true, kwargs...)
+function buttongroup(parent::Container, items::Vector, value=nothing; exclusive::Bool=true, kwargs...)
     if !exclusive && !isa(value, Nothing)
         if !isa(value, Vector)
             value = [value]
@@ -485,7 +511,6 @@ function buttongroup(parent::Container, items::Vector, value; exclusive::Bool=tr
     model = VectorModel(items, value)
     buttongroup(parent, model, exclusive=exclusive, kwargs...)
 end
-buttongroup(parent::Container, items::Vector; exclusive::Bool=true, kwargs...) = buttongroup(parent, items, nothing, exclusive=exclusive, kwargs...)
 
 
 ## combobox
@@ -493,6 +518,7 @@ type ComboBox <:  WidgetVectorModel
     o
     block
     model
+    react
     parent
     toolkit
     attrs
@@ -502,9 +528,11 @@ end
 ##
 ## Arguments:
 ##
-## * `parent::Container` parent container
-## * `model::VectorModel` model (more conveniently items and value can be specifed)
+## * `parent::Container` parent container `model::VectorModel` model
+## * (more conveniently items and value can be specifed). The `value`
+##   defaults to `items[1]`.  
 ## * `editable::Bool` if true, create editable combobox.
+## 
 ##
 ## Signals:
 ##
@@ -516,18 +544,20 @@ end
 ##
 function combobox(parent::Container, model::VectorModel; editable::Bool=false, kwargs...)
     widget, block = combobox(parent.toolkit, parent, model, editable=editable)
-    obj = ComboBox(widget, block, model, parent, parent.toolkit, Dict())
+   
+    react = Input(getValue(model))
+    obj = ComboBox(widget, block, model, react, parent, parent.toolkit, Dict())
     for (k, v) in kwargs
         obj[k] = v
     end
+    connect_react(obj, react)
     obj
 end
 
-function combobox(parent::Container, items::Vector, value; editable::Bool=false, kwargs...)
+function combobox(parent::Container, items::Vector, value=items[1]; editable::Bool=false, kwargs...)
     model = VectorModel(items, value)
     combobox(parent, model, editable=editable, kwargs...)
 end
-combobox(parent::Container, items::Vector; editable::Bool=false, kwargs...) = combobox(parent, items, nothing, editable=editable, kwargs...)
 
 
 
@@ -539,6 +569,7 @@ type Slider <: WidgetModel
     o
     block
     model
+    react
     parent
     toolkit
     attrs
@@ -564,10 +595,14 @@ end
 ## use cb[:value] = nothing to deselect all 
 function slider(parent::Container, model::VectorModel; orientation::Symbol=:horizontal, kwargs...)
     widget, block = slider(parent.toolkit, parent, model, orientation=orientation)
-    obj = Slider(widget, block, model, parent, parent.toolkit, Dict())
+    react = Input(getValue(model))
+    obj = Slider(widget, block, model, react, parent, parent.toolkit, Dict())
     for (k, v) in kwargs
         obj[k] = v
     end
+
+    connect_react(obj, react)
+
     obj
 end
 function slider(parent::Container, items::Vector, value::Int=1; orientation::Symbol=:horizontal,kwargs...)
@@ -580,9 +615,9 @@ function slider(parent::Container, items::Vector; orientation::Symbol=:horizonta
     slider(parent, model, orientation=orientation, kwargs...)
 end
 
-slider(parent::Container, items::Union(Range, Range1,Ranges), value::Int=1; orientation::Symbol=:horizontal, kwargs...) =
+slider(parent::Container, items::Range, value::Int=1; orientation::Symbol=:horizontal, kwargs...) =
     slider(parent, [items], value; orientation=orientation, kwargs...)
-slider(parent::Container, items::Union(Range, Range1,Ranges); orientation::Symbol=:horizontal, kwargs...) =
+slider(parent::Container, items::Range; orientation::Symbol=:horizontal, kwargs...) =
     slider(parent, [items]; orientation=orientation, kwargs...)
 
     
@@ -608,7 +643,7 @@ end
 ##
 ## * `valueChanged (value)` is called when slider is moved. The value are [x,y] coordinates
 ##
-function slider2d(parent::Container, items1::Union(Range, Range1,Ranges), items2::Union(Range, Range1,Ranges); kwargs...) 
+function slider2d(parent::Container, items1::Range, items2::Range; kwargs...) 
     model = TwoDSliderModel(items1, items2)
     widget, block = slider2d(parent.toolkit, parent, model)
 
@@ -628,6 +663,7 @@ type SpinBox <: WidgetModel
     o
     block
     model
+    react
     parent
     toolkit
     attrs
@@ -645,16 +681,18 @@ end
 ##
 ## * `valueChanged (value)` is called when spinbox is updated
 ##  
-function spinbox(parent::Container, model::Model, rng::Union(Range, Range1,Ranges); kwargs...)
+function spinbox(parent::Container, model::Model, rng::Range; kwargs...)
     widget, block = spinbox(parent.toolkit, parent, model, rng)
-    obj = SpinBox(widget, block, model, parent, parent.toolkit, Dict())
+    react = Input(getValue(model))
+    obj = SpinBox(widget, block, model, react, parent, parent.toolkit, Dict())
     for (k, v) in kwargs
         obj[k] = v
     end
     obj.attrs[:range] = rng
+    connect_react(obj, react)
     obj
 end
-spinbox(parent::Container, rng::Union(Range, Range1); kwargs...) = spinbox(parent, ItemModel(rng.start), rng; kwargs...)
+spinbox(parent::Container, rng::Range; kwargs...) = spinbox(parent, ItemModel(start(rng)), rng; kwargs...)
 
 ## XXX deprecate (issue with integer vs. real...)
 ##setRange(obj::SpinBox, value) = setRange(obj.toolkit, obj, value)

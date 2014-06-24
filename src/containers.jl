@@ -324,6 +324,7 @@ function grid(parent::Container; kwargs...)
     widget, block = grid(parent.toolkit, parent)
     obj = GridContainer(widget, block, parent, parent.toolkit, {}, Dict())
 
+    obj.attrs[:size] = [0,0]
     obj.attrs[:spacing] = [2,2]
     for (k, v) in kwargs
         obj[k] = v
@@ -443,6 +444,7 @@ function formlayout(parent::Container; kwargs...)
 
     obj = FormLayout(widget, block, parent, parent.toolkit, {}, {}, Dict())
 
+    obj.attrs[:nrows] = 0
     obj.attrs[:spacing] = [5,2]
     obj[:sizepolicy] = (:expand, :expand)
     for (k, v) in kwargs
@@ -512,6 +514,7 @@ end
 ## 
 ## * `length` number of tables
 ## * `insert!` insert at `i` with label i in {1, 2, ..., length + 1}
+## * TODO: rename label
 function notebook(parent::Container, kwargs...)
     model = ItemModel(0)
     widget, block = notebook(parent.toolkit, parent, model)

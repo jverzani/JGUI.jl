@@ -61,11 +61,13 @@ end
 ## methods
 ## This allows o[:value] to work.
 getValue(model::Observable) = model.value
+setValue(model::Observable, value::Nothing) = nothing
 function setValue(model::Observable, value)
     if value != model.value
         model.value = value
         notify(model, "valueChanged", getValue(model))
     end
+    value
 end
 
 type EventModel <: Observable

@@ -1,5 +1,7 @@
 module JGUI
 
+using React
+
 import Base: show
 import Base: getindex, setindex!, length, 
              push!, append!, prepend!, insert!, splice!, shift!, unshift!, pop!,

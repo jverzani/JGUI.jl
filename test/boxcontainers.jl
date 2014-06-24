@@ -8,7 +8,7 @@ using JGUI
 w = window(); f = vbox(w); push!(w, f)
 
 ## push!
-btns = [push!(button(f, string("button $i"))) for i in 1:2]
+btns = [push!(f, button(f, string("button $i"))) for i in 1:2]
 
 ## append! is more convenient
 btns = [button(f, string("button $i")) for i in 3:4]
@@ -41,7 +41,7 @@ f[2]
 
 ## Alignment
 w = window(title="alignment")
-b = vbox(w); push!(b)
+b = vbox(w); push!(w,b)
 
 nw = button(b, "northwest")
 nw[:alignment] = (:left, :top)

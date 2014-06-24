@@ -297,7 +297,7 @@ function notebook_insert_child(::MIME"application/x-tcltk", parent::NoteBook, ch
 end
 
 function notebook_remove_child(::MIME"application/x-tcltk", parent::NoteBook, child::Widget)
-    index = findin(child, parent.children)
+    index = collect(Filter(i -> parent[i] == child, 1:length(parent)))[1]
     if index != 0
         Tk.tcl(getWidget(parent), "forget", index-1)
     end
@@ -667,10 +667,10 @@ function setValue{T <: Real}(widget::TkSlider2D, value::Vector{T})
 end
 
 ## spinbox
-function spinbox(::MIME"application/x-tcltk", parent::Container, model::ItemModel, rng::Union(Range, Range1))
+function spinbox(::MIME"application/x-tcltk", parent::Container, model::ItemModel, rng::Range)
     widget = Tk.Spinbox(parent[:widget])
     ## work around integer values in Tk.Spinbox
-    step = isa(rng, Range1) ? 1 : step(rng)
+    step = !isa(rng, UnitRange) ? 1 : step(rng)
     Tk.configure(widget, from=first(rng), to=first(rng) + (length(rng)-1)*step, increment=step)
     Tk.tcl(widget, "set", first(rng))
 
@@ -690,10 +690,6 @@ function spinbox(::MIME"application/x-tcltk", parent::Container, model::ItemMode
     (widget, widget)
 end
 
-# function setRange(::MIME"application/x-tcltk", obj::SpinBox, rng)
-#     step = isa(rng, Range1) ? 1 : step(rng)
-#     Tk.configure(obj[:widget], from=first(rng), to=first(rng) + (length(rng)-1)* step, increment= step)
-# end
 
 ## cairographic
 function cairographic(::MIME"application/x-tcltk", parent::Container, model::EventModel; width::Int=480, height::Int=400)

@@ -1,7 +1,7 @@
 using JGUI
 
 w = window(title="notebook")
-nb = notebook(w); push!(nb)
+nb = notebook(w); push!(w, nb)
 connect(nb, "valueChanged", value -> println("On tab $value"))
 
 b1 = button(nb, "one")
@@ -12,7 +12,7 @@ push!(nb, b1, "one")
 push!(nb, b2, "two")
 push!(nb, b3, "three")
 
-setvalue(nb, 3)
+setValue(nb, 3)
 @assert nb[:value] == 3
 
 pop!(nb, b2)

@@ -2,7 +2,7 @@
 ### Simple usage
 w = window()
 gr = grid(w)
-push!(gr)
+push!(w, gr)
 
 b11 = button(gr, "11")
 b22 = button(gr, "22")
@@ -17,7 +17,7 @@ gr[3,3] = b33
 ### alignment
 w = window()
 gr = grid(w)
-push!(gr)
+push!(w, gr)
 
 b11 = button(gr, "1,1")
 b11[:alignment] = (:left, :top)
@@ -35,7 +35,7 @@ gr[3,3] = b33
 using JGUI
 w = window()
 gr = grid(w)
-push!(gr)
+push!(w, gr)
 
 b11 = button(gr, "1,1")
 b11[alignment] = (:left, :top)
@@ -51,7 +51,7 @@ gr[:,:] = [b11 b22; nothing b33]
 using JGUI
 w = window()
 gr = grid(w)
-push!(gr)
+push!(w, gr)
 
 b11 = button(gr, "1,1")
 b22 = button(gr, "2,2")
@@ -67,7 +67,7 @@ gr[2, 2:3] = b33
 using JGUI
 w = window()
 gr = grid(w)
-push!(gr)
+push!(w, gr)
 
 b11 = button(gr, "1,1")
 b22 = button(gr, "2,2")

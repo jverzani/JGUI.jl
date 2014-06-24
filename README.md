@@ -36,7 +36,7 @@ session will likely lead to crashes. The toolkit is specified before
 
 
 ```
-ENV["toolkit"] = "Tk"		# default, can be skipped
+ENV["toolkit"] = "Gtk"		# default, can be skipped
 using JGUI
 ```
 
@@ -71,7 +71,9 @@ Here is a how one can add a title to the plot. First we modify the
 ```
 expr = quote
      using Winston
-     plot(x -> sin(u*x), 0, 2pi, title=title)
+     xs = linspace(0, 2pi)
+     ys = [sin(u*x) for x in xs]
+     plot(x, y, title=title)
 end
 ```
 
@@ -365,6 +367,19 @@ append!(f, [sl, l])
 ```
 
 
+### React
+
+The `React.jl` package is a signaling package. It will be integrated more fully, but for the output of one widget can be used as the input of another. The above example can be done via:
+
+```
+w =  window(title="label and slider")
+f = hbox(w); push!(f)
+sl = slider(f, 1:20)
+sl[:size] = [100, 20]
+l = label(f, "")
+l[:value] = sl			# connect value of slider to value of label.
+append!(f, [sl, l])
+```
 
 
 ## Widgets
