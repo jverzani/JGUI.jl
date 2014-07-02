@@ -245,7 +245,6 @@ end
 ## grid add child
 function grid_add_child(::MIME"application/x-tcltk", parent::GridContainer, child::Widget, i, j)
     sticky = compute_sticky(child)
-    println("Add child with sticky ", sticky)
     Tk.grid(child.block, i, j, sticky= (sticky == "" ? "{}" : sticky))
 end
 
@@ -311,7 +310,7 @@ function label(::MIME"application/x-tcltk", parent::Container, model::Model)
 
     (widget, widget)
 end
-
+setValue(::MIME"application/x-tcltk",obj::Label, value::Number) = setValue(obj, string(value))
 
 ## separator
 function separator(::MIME"application/x-tcltk", parent::Container; orientation::Symbol=:horizontal)

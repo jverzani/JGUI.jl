@@ -1,6 +1,5 @@
 module JGUI
 
-using React
 
 import Base: show
 import Base: getindex, setindex!, length, 
@@ -9,6 +8,9 @@ import Base: getindex, setindex!, length,
 import Base: size, endof, ndims
 import Base: connect, notify
 
+using React
+import React: lift, merge
+export lift, merge
 
 export properties
 
@@ -22,7 +24,7 @@ export window,
        destroy, raise, lower
 
 export labelframe,
-       hbox, vbox, addstretch, addstrut, addspacing,
+       box, hbox, vbox, addstretch, addstrut, addspacing,
        formlayout,
        notebook,
        children,
@@ -74,6 +76,7 @@ end
 
 
 include("types.jl")
+include("react.jl")
 include("methods.jl")
 include("icons.jl")
 include("models.jl")

@@ -187,6 +187,7 @@ function boxcontainer(parent::Container; direction::Symbol=:horizontal, kwargs..
     obj
 end
 
+box(parent::Container, direction=:h; kwargs...) = boxcontainer(parent, direction=direction==:h ? :horizontal : :vertical, kwargs...)
 hbox(parent::Container; kwargs...) = boxcontainer(parent, direction=:horizontal, kwargs...)
 vbox(parent::Container; kwargs...) = boxcontainer(parent, direction=:vertical, kwargs...)
 

@@ -38,7 +38,7 @@ gr = grid(w)
 push!(w, gr)
 
 b11 = button(gr, "1,1")
-b11[alignment] = (:left, :top)
+b11[:alignment] = (:left, :top)
 b11[:sizepolicy] = (:expand, :expand)
 
 b22 = button(gr, "2,2")

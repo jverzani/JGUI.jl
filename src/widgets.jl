@@ -96,7 +96,7 @@ setIcontheme(o::Window, value::Symbol) = o.attrs[:icontheme] = value
 
 ## get widget. Mostly just obj.o, but there may be exceptions
 getWidget(o::Widget) = getWidget(o.toolkit, o)
-getBlockt(o::Widget) = getBlock(o.toolkit, o)
+getBlock(o::Widget) = getBlock(o.toolkit, o)
 
 ## list Widget properties
 list_props(::@PROP("Widget")) = {:value => "Value of object",

@@ -1,5 +1,7 @@
 ## Gtk implementation
 
+include("gtk-addons.jl")
+
 ## TODO
 ## * storeview
 ## * treeview
@@ -36,7 +38,7 @@ function getSize(::MIME"application/x-gtk", o::Widget)
     [size(o[:block])...]
 end
 
-setSize(::MIME"application/x-gtk", o::Widget, value)  =  Gtk.G_.size_request(o[:widget], value...)
+setSize(::MIME"application/x-gtk", o::Widget, value)  =  Gtk.G_.size_request(o[:block], value...)
 
 getFocus(::MIME"application/x-gtk", o::Widget) = getproperty(o[:widget],:has_focus,Bool)
 
@@ -112,11 +114,12 @@ getLayout(widget::Container) = getLayout(widget.toolkit, widget)
 ## Window
 function window(::MIME"application/x-gtk"; visible::Bool=true, kwargs...)
     widget = @GtkWindow("")
-    if !visible setproperty!(widget, :visible, false) end
+    !visible && setproperty!(widget, :visible, false) 
 
     block = @GtkBox(true)
     push!(widget, block)
 
+## XXX clean this up by setting size on object...
     menu_block = @GtkBox(false)
     ccall((:gtk_box_pack_start, Gtk.libgtk), Void, 
           (Ptr{Gtk.GObject}, Ptr{Gtk.GObject}, Bool, Bool, Int),
@@ -203,7 +206,7 @@ function setMargin(::MIME"application/x-gtk", parent::BoxContainer, px::Vector{I
 end
 
 
-## stretch, strut, spacingXXX
+## stretch, strut, spacing XXX
 addspacing(::MIME"application/x-qt", parent::BoxContainer, val::Int) = parent[:widget][:layout]()[:addSpacing](val)
 addsstrut(::MIME"application/x-qt", parent::BoxContainer, val::Int) = parent[:widget][:layout]()[:addStrut](val)
 addstretch(::MIME"application/x-qt", parent::BoxContainer, val::Int) = parent[:widget][:layout]()[:addStretch](val)
@@ -211,6 +214,7 @@ addstretch(::MIME"application/x-qt", parent::BoxContainer, val::Int) = parent[:w
 
 function insert_child(::MIME"application/x-gtk", parent::BoxContainer, index, child::Widget)
     
+    ## XXX -- update this for v3
     ## we use Gtk.Alignment until deprecated
     expand, fill, padding = true, true, 0
     
@@ -267,7 +271,7 @@ end
 function grid_size(::MIME"application/x-gtk", widget::GridContainer)
     ## should dispatch on gtk version type!
     if Gtk.gtk_version >= 3
-       widget.attrs[:size]
+       widget.attrs[:size]      # internal book-keeping, no method
     else
         tbl = widget[:widget]
         [getproperty(tbl, :n_rows, Int), getproperty(tbl, :n_columns, Int)]
@@ -277,36 +281,13 @@ end
 ## grid spacing
 function setSpacing(::MIME"application/x-gtk", parent::GridContainer, px::Vector{Int})
     if Gtk.gtk_version >= 3
-        ## use ...
+        ## use ... XXX
         
     else
         tbl = widget[:widget]
         setproperty(tbl, :column_spacing, px[1])
         setproperty(tbl, :row_spacing, px[2])
     end
-end
-
-
-
-## Need to do something to configure rows and columns
-## grid add child
-function grid_add_child(::MIME"application/x-gtk", parent::GridContainer, child::Widget, i, j)
-
-    ## alignment???
-    parent[:widget][j, i] = align_gtk_widget(child) # reversed!!!
-
-    ## manage size
-    sz = parent.attrs[:size]
-    sz[1] = max(sz[1], i...)
-    sz[2] = max(sz[2], j...)
-    parent.attrs[:size] = sz
-
-    ## need to show XXX will be fixed
-    for i in parent[:widget] show(i) end
-end
-
-function grid_get_child_at(::MIME"application/x-gtk", parent::GridContainer, i::Int, j::Int)
-    error("No method itemAtPosition in Gtk.")
 end
 
 ##XXXXXXX
@@ -317,14 +298,43 @@ row_minimum_height(::MIME"application/x-qt", object::GridContainer, j::Int, heig
 column_stretch(::MIME"application/x-qt", object::GridContainer, j::Int, weight::Int) = object[:layout]()[:setColumnStretch](j-1, weight)
 
 row_stretch(::MIME"application/x-qt", object::GridContainer, i::Int, weight::Int) = object[:layout]()[:setRowStretch](i-1, weight)
-##################################################
 
+
+
+## Need to do something to configure rows and columns
+## grid add child
+function grid_add_child(::MIME"application/x-gtk", parent::GridContainer, child::Widget, i, j)
+
+    ## alignment???
+    parent[:widget][j, i] = align_gtk_widget(child) # reversed!!!
+
+    ## manage size for v3
+    sz = parent.attrs[:size]
+    sz[1] = max(sz[1], i...)
+    sz[2] = max(sz[2], j...)
+    parent.attrs[:size] = sz
+
+    ## need to show XXX will be fixed
+    for i in parent[:widget] show(i) end
+end
+
+## XXX  -- hack this in during add?
+function grid_get_child_at(::MIME"application/x-gtk", parent::GridContainer, i::Int, j::Int)
+    error("No method itemAtPosition in Gtk.")
+end
+
+##################################################
+## XXX too much code duplication with grid
 function formlayout(::MIME"application/x-gtk", parent::Container)
-    widget = @GtkGrid()
+    if Gtk.gtk_version >= 3
+        widget = @GtkGrid()
+    else
+        widget = @GtkTable()
+    end
     (widget, widget)
 end
 
-## XX labels..
+## XXX unify alignment here...
 function formlayout_add_child(::MIME"application/x-gtk", parent::FormLayout, child::Widget, label::Union(Nothing, String))
     if Gtk.gtk_version >= 3
         nrows = parent.attrs[:nrows]
@@ -361,7 +371,7 @@ end
 
 function setSpacing(::MIME"application/x-gtk", object::FormLayout, px::Vector{Int})
     if Gtk.gtk_version >= 3
-        ## use ...
+        ## use ... XXX see grid..
         
     else
         tbl = widget[:widget]
@@ -438,9 +448,9 @@ end
 
 ## Controls
 function button(::MIME"application/x-gtk", parent::Container, model::Model)
-    widget = @GtkButton(getValue(model))
+    widget = @GtkButton(string(getValue(model)))
     connect(model, "valueChanged", 
-            value -> setproperty!(widget,:label, value))
+            value -> setproperty!(widget,:label, string(value)))
     signal_connect(widget, :clicked) do obj, args...
         notify(model, "clicked")
         nothing
@@ -508,9 +518,16 @@ function lineedit(::MIME"application/x-gtk", parent::Container, model::Model)
     (widget, widget)
 end
 
-## XXX needs GtkEntryCompletion
+## XXX needs GtkEntryCompletion XXX It is there now!
 function setTypeahead(::MIME"application/x-gtk", obj::LineEdit, items)
-    XXX()
+    compl = @GtkEntryCompletion()
+    ## make model, set as model
+    mod = @GtkListStore
+    [push!(mod, (item,)) for item in items]
+    Gtk.G_.model(compl, mod)
+    Gtk.G_.text_column(compl, 0)
+    ## set' completion
+    Gtk.G_.completion(obj[:widget], compl)
 end    
 
 
@@ -518,10 +535,11 @@ end
 function textedit(::MIME"application/x-gtk", parent::Container, model::Model)
     widget = @GtkTextView()
     block = @GtkScrolledWindow()
+    [setproperty!(widget, x, true) for  x in [:hexpand, :vexpand]]
     push!(block, widget)
 
 
-    buffer = getproperty(widget, :buffer, @GtkTextBuffer)
+    buffer = getproperty(widget, :buffer, GtkTextBuffer)
 
     get_value() = join([i for i in buffer], "")
 
@@ -708,8 +726,7 @@ function combobox(::MIME"application/x-gtk", parent::Container, model::VectorMod
             return
         end
         if getproperty(widget, :has_entry, Bool)
-            ## not easy way to access text area
-            entry = ccall((:gtk_bin_get_child, Gtk.libgtk), Gtk.GtkEntry, (Ptr{Gtk.GObject}, ), widget)
+            entry = Gtk.G_.child(widget)
              Gtk.G_.text(entry, value)
         else
             i = findfirst(model.items, value) # need index
@@ -730,7 +747,7 @@ function combobox(::MIME"application/x-gtk", parent::Container, model::VectorMod
         for i in items
             push!(widget, string(i))
         end
-        set_index(0)            # clear selection?
+## XXX        set_index(0)            # clear selection?
     end
 
     set_items(model.items, [])
@@ -838,6 +855,7 @@ end
 
 ## Views XXX
 ## StoreProxyModel
+
 function store_proxy_model(parent, store::Store; tpl=nothing)
     if tpl == nothing
         record = store.items[1]
@@ -846,70 +864,24 @@ function store_proxy_model(parent, store::Store; tpl=nothing)
     end
     nms = names(record)
 
-    m = qnew_class_instance("StoreProxyModel")
-    m[:setParent](parent)       
-    ## add functions
-    m[:rowCount] = (index) -> length(store.items)
-    m[:columnCount] = (index) -> length(names(record))
-    m[:headerData] = (section::Int, orient, role) -> begin
-        
-        if orient.o ==  qt_enum("Horizontal").o #  match pointers
-            ## column, section is column
-            role == convert(Int, qt_enum("DisplayRole")) ?  nms[section + 1] : nothing ##replace(nms[section + 1],"_", " ") : nothing
-        else
-             role == convert(Int, qt_enum("DisplayRole")) ?  string(section + 1) : nothing
-        end
+    m = @GtkListStore([typeof(record.(x)) for x in nms]...)
+    ## add in any in store
+    for record in store.items
+        push!(m, tuple([record.(x) for x in nms]...))
     end
-    m[:data] = (index, role) -> begin
-        record = store.items[1]
-        nms = names(record)
-        
-        row = index[:row]() + 1
-        col = index[:column]() + 1
-        ## http://qt-project.org/doc/qt-5.0/qtcore/qt.html#ItemDataRole-enum
-        roles = ["DisplayRole"] 
-        for r in roles
-            if role == int(qt_enum(r))
-                item = store.items[row]
-                nm = nms[col]
-               return(string(item.(symbol(nm))))
-            end
-        end
-        if role == int(qt_enum("TextAlignmentRole")) 
-            return(qt_enum("AlignLeft")) ## XXX adjust to variable type?
-        end
-        if row == 1 && role == int(qt_enum("DecorationRole"))
-            return(nothing) # XXX icons...
-        end
-        ## More roles, but not now...: "EditRole",  "BackgroundRole", "ForegroundRole", "ToolTipRole", "WhatsThisRole"]
-        return(nothing)
-    end
-
-   m[:insertRows] = (row, count, index) -> begin
-       m[:beginInsertRows](index, row-1, row-1)
-       m[:endInsertRows]()
-       ## notify model? Was getting recursive call in that case.
-       true
-   end
-   m[:removeRows] = (row, count, index) -> begin
-       m[:beginRemoveRows](index, row-1, row - 1 + count - 1)
-       m[:endRemoveRows]()
-       true
-   end
 
    ## connect model to store so that store changes propogate XXX
-   connect(store.model, "rowInserted") do i
-       m[:insertRows](i, 1, PySide.QtCore[:QModelIndex]())
-   end
+    connect(store.model, "rowInserted") do record
+        push!(m, tuple([record.(x) for x in nms]...))
+    end
 
     connect(store.model, "rowRemoved") do i
-        m[:removeRows](i, 1, PySide.QtCore[:QModelIndex]())
+        splice!(m, i)
     end
 
     function rowUpdated(i::Int)
-        topleft = m[:index](i-1,0)
-        lowerright = m[:index](i, 0)
-        m[:emit](PySide.QtCore[:SIGNAL]("dataChanged"))#(topleft, lowerright)
+        record = store.items[i]
+        map((j, nm) -> m[i,j] = record.(nm), zip(1:length(nms), nms))
     end
     connect(store.model, "rowUpdated", rowUpdated)
 
@@ -920,104 +892,149 @@ function store_proxy_model(parent, store::Store; tpl=nothing)
 end
 
 ## storeview XXX
-function storeview(::MIME"application/x-qt", parent::Container, store::Store, model::ItemModel; tpl=nothing)
-    ## Widget
-    widget = Qt.QTableView(parent[:widget])
-    proxy_model = store_proxy_model(widget, store, tpl=tpl)
-    widget[:setModel](proxy_model)
+function make_column(x::String, nm::String, col::Int)
+    cr =  @GtkCellRendererText()
+    col = @GtkTreeViewColumn(nm, cr, {"text" => col-1})
+    col
+end
 
-    widget[:setSelectionBehavior](widget[:SelectRows])
+function make_column(x::Number, nm::String, col::Int)
+    cr =  @GtkCellRendererText()
+    col = @GtkTreeViewColumn(nm, cr, {"text" => col-1})
+    col
+end
+
+function make_column(x::Bool, nm::String, col::Int)
+    cr = @GtkCellRendererToggle()
+    col = @GtkTreeViewColumn(nm, cr, {"active"=> col-1 })
+end
+
+
+function storeview(::MIME"application/x-gtk", parent::Container, store::Store, model::ItemModel; tpl=nothing)
+    
+
+    ## Set up view
+    widget = @GtkTreeView()
+    block = @GtkScrolledWindow()
+    [setproperty!(widget, x, true) for  x in [:hexpand, :vexpand]]
+    push!(block, widget)
+
+    ## set up model
+    m = store_proxy_model(widget, store, tpl=tpl)
+    Gtk.G_.model(widget, m)
+
+    ## selection model
+    sel = Gtk.G_.selection(widget) 
+    ## add cell renderers
+    if tpl == nothing
+        record = store.items[1]
+    else
+        record = tpl
+    end
+
+    model = store.model         # JGUI model
+
+    nms = names(record)
+    for (j, nm) in enumerate(nms)
+        col = make_column(record.(nm), string(nm), j)
+        signal_connect(col, :clicked) do _
+            notify(model, "headerClicked", j)
+        end
+
+        push!(widget, col)
+    end
 
     ## configure
-    widget[:setAlternatingRowColors](true)
-    widget[:horizontalHeader]()[:setStretchLastSection](true)
+#    widget[:setAlternatingRowColors](true)
+#    widget[:horizontalHeader]()[:setStretchLastSection](true)
+    Gtk.G_.headers_clickable(widget, true)
 
     ## connect model to view on index changed
-    connect(model, "valueChanged") do rows
-        map(rows) do row
-            widget[:selectRow](row - 1)
-        end
+    connect(model, "valueChanged") do indices
+        unselectall!(widget)
+        map(index -> select!(widget, index), indices)
     end
-    ## set up callbacks
-    ## this uses a slot
-    qconnect(widget[:selectionModel](), :selectionChanged) do selected, deselected
-        indices = unique([idx[:row]() + 1 for idx in selected[:indexes]()])
+    
+    signal_connect(sel, :changed) do sel
+        indices = selected(widget)
         setValue(model, indices)
         notify(model, "selectionChanged", indices)
     end
-    qconnect(widget, :clicked) do index
-        notify(model, "clicked", index[:row]() + 1, index[:column]() + 1)
-    end
-    qconnect(widget, :doubleClicked) do index
-        notify(model, "doubleClick", index[:row]() + 1, index[:column]() + 1)
-    end
-    qconnect(widget[:horizontalHeader](), :sectionClicked) do index
-        notify(model, "headerClicked", index + 1)
+
+    ## clicked and doubleClicked
+    signal_connect(widget, :button_press_event) do w, e
+        row, col = tree_view_row_col_from_x_y(w, int(e.x), int(e.y))
+        if row > 0
+            if e.event_type == Gtk.GdkEventType.GDK_2BUTTON_PRESS
+                notify(model, "doubleClicked", row, col)
+            else
+                notify(model, "clicked", row, col)
+            end
+        end
+        return true
     end
 
-    (widget, widget)
+
+    (widget, block)
 end
 
 
-function getSelectmode(::MIME"application/x-qt", s::ModelView) 
-    s[:widget][:selectionMode]() == s[:widget][:SingleSelection] ? :single : :multiple
+function getSelectmode(::MIME"application/x-gtk", s::ModelView) 
+    sel = Gtk.G_.selection(s[:widget])
+    if Gtk.G_.mode(sel) == Gtk.GConstants.GtkSelectionMode.SINGLE
+        return :single
+    else
+        return :multiple
+    end
 end
 ## val is single, multiple
-function setSelectmode(::MIME"application/x-qt", s::ModelView, val::Symbol)
-    s[:widget][:setSelectionMode](val == :single ? s[:widget][:SingleSelection] : s[:widget][:ExtendedSelection])
+function setSelectmode(::MIME"application/x-gtk", s::ModelView, val::Symbol)
+    sel =  Gtk.G_.selection(s[:widget])
+    Gtk.G_.mode(sel, val == :single ? Gtk.GConstants.GtkSelectionMode.SINGLE : Gtk.GConstants.GtkSelectionMode.MULTIPLE)
 end
 
 ## getWidths
-function getWidths(::MIME"application/x-qt", s::ModelView)
+function getWidths(::MIME"application/x-gtk", s::ModelView)
     n = size(s.store)[2]
-    [s[:widget][:columnWidth](i-1) for i in 1:n]
+    [Gtk.G_.min_width(Gtk.G_.column(s.o,i-1)) for i in 1:n]
 end
 
-function setWidths(::MIME"application/x-qt", s::ModelView, widths::Vector{Int})
-    for i in 1:length(widths)
-        s[:widget][:setColumnWidth](i-1, widths[i])
+function setWidths(::MIME"application/x-gtk", s::ModelView, widths::Vector{Int})
+    for (i, width) in enumerate(widths)
+        Gtk.G_.min_width(Gtk.G_.column(s.o,i-1), width)
     end
 end
 
 ## heights
-function getHeights(::MIME"application/x-qt", s::ModelView)
-    n = size(s.store)[1]
-    [s[:widget][:rowHeight](i-1) for i in 1:n]
+function getHeights(::MIME"application/x-gtk", s::ModelView)
+    XXX("no heights")
 end
 
-function setHeights(::MIME"application/x-qt", s::ModelView, heights::Vector{Int})
-    for i in 1:size(s.store)[1]
-        s[:widget][:setRowHeight](i-1, heights[i])
-    end
+function setHeights(::MIME"application/x-gtk", s::ModelView, heights::Vector{Int})
+    XXX("no heights")
 end
 
 
-function getHeadervisible(::MIME"application/x-qt", s::StoreView)
-    s[:widget][:horizontalHeader]()[:isVisible]()
+function getHeadervisible(::MIME"application/x-gtk", s::StoreView)
+    Gtk.G_.headers_visible(s[:widget])
 end
-function setHeadervisible(::MIME"application/x-qt", s::StoreView, val::Bool)
-    s[:widget][:horizontalHeader]()[val ? :show : :hide]()
+function setHeadervisible(::MIME"application/x-gtk", s::StoreView, val::Bool)
+    XXX("Warning, this seems broken...")
+     Gtk.G_.headers_visible(s[:widget], val)
 end
 
 
-function getRownamesvisible(::MIME"application/x-qt", s::StoreView)
-    s[:widget][:verticalHeader]()[:isVisible]()
+function getRownamesvisible(::MIME"application/x-gtk", s::StoreView)
+    XXX("no rownames")
 end
 function setRownamesvisible(::MIME"application/x-qt", s::StoreView, val::Bool)
-  s[:widget][:verticalHeader]()[val ? :show : :hide]()
+    XXX("no rownames")
 end
 
 
 
 function setIcon(::MIME"application/x-qt", s::StoreView, i::Int, icon::Icon)
-    ## XXX need to set decoration role for item in row i, column 1
-end
-
-function update_context(::MIME"application/x-qt", s::StoreView, pt)
-    view = s[:widget]
-    index = view[:indexAt](pt)
-    ## want [i,j] here for row and column
-    s[:context] = [index[:row]() + 1, index[:column]() + 1]
+    XXX("no icons")
 end
 
 
