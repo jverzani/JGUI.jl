@@ -530,11 +530,11 @@ end
 
 ## interface
 length(object::NoteBook) = length(object.children)
-function setValue(object::NoteBook, i::Int) 
+function setValue(object::NoteBook, i::Int; signal::Bool=true) 
     if i < 1 || i > length(object)
         return
     end
-    setValue(object.model, i)
+    setValue(object.model, i; signal=signal)
 end
 getValue(object::NoteBook) = getValue(object.model)
 

@@ -738,24 +738,20 @@ function storeview(::MIME"application/x-tcltk", parent::Container, store::Store,
     Tk.scrollbars_add(block, widget)
 
     ## Configure based on store
-    if isa(tpl, Nothing)
-        tpl = store.items[1]
-    end
-    nms = map(string, names(tpl))
-    configure(widget, show="headings", columns = [1:length(nms)])
+    nc = length(store.types)
+    configure(widget, show="headings", columns = [1:nc])
     ## headers, initial widths
-    map(1:length(nms)) do i
+    map(1:nc) do i
         Tk.tcl(widget, "heading", i, 
-               text=Tk.tk_string_escape(string(nms[i])), 
                command=(path) -> notify(model, "headerClicked", i))
         Tk.tcl(widget, "column", i, width=100) # initial size, not 200
     end
 
-    Tk.tcl(widget, "column", length(nms), stretch=true)
+    Tk.tcl(widget, "column", nc, stretch=true)
 
     ## main callbacks
     function insert_row(i::Int, item)
-        values = composite_instance_to_values(item)
+        values = [map(string, item)...]
         tcl(widget, "insert", "{}", i-1, values=values)
     end
     connect(store.model, "rowInserted", i -> insert_row(i, store.items[i]))
@@ -770,7 +766,8 @@ function storeview(::MIME"application/x-tcltk", parent::Container, store::Store,
     function update_row(i::Int)
         item = store.items[i]
         row = split(Tk.tcl(widget, "children", "{}"))[i]
-        values = composite_instance_to_values(item)
+        values = [map(string, item)...]
+        print(values)
         tcl(widget, "item", row, values=values)
     end
     connect(store.model, "rowUpdated", update_row)
@@ -834,6 +831,7 @@ function storeview(::MIME"application/x-tcltk", parent::Container, store::Store,
     (widget, block)
 end
 
+
 ## context menu
 function menu(::MIME"application/x-tcltk", parent::StoreView)
     m = Tk.Menu(parent[:widget])
@@ -892,6 +890,20 @@ end
 getHeights(::MIME"application/x-tcltk", s::ModelView) = nothing
 setHeights(::MIME"application/x-tcltk", s::ModelView, heights::Vector{Int}) = nothing
 
+function getNames(::MIME"application/x-tcltk", parent::StoreView)
+    widget = parent[:widget]
+    nc = size(parent.store)[2]
+    String[Tk.tcl(widget, "heading", i, "-text") for i in 1:nc]
+end
+
+function setNames(::MIME"application/x-tcltk", parent::StoreView, nms::Vector)
+    widget = parent[:widget]
+    nc = length(nms)
+    for i in 1:nc
+        Tk.tcl(widget, "heading", i, 
+               text=Tk.tk_string_escape(nms[i]))
+    end
+end
 
 function getHeadervisible(::MIME"application/x-tcltk", s::StoreView)
     true
@@ -928,7 +940,7 @@ function treeview(::MIME"application/x-tcltk", parent::Container, store::TreeSto
     if isa(tpl, Nothing)
         tpl = store.children[1]
     end
-    nms = map(string, names(tpl.data))
+    nms = map(Tk.tk_string_escape, map(string, names(tpl.data)))
     configure(widget, show="tree headings", columns = [1:length(nms)])
     ## headers
     map(i -> tcl(widget, "heading", i, 

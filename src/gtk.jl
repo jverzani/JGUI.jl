@@ -856,23 +856,17 @@ end
 ## Views XXX
 ## StoreProxyModel
 
-function store_proxy_model(parent, store::Store; tpl=nothing)
-    if tpl == nothing
-        record = store.items[1]
-    else
-        record = tpl
-    end
-    nms = names(record)
+function store_proxy_model(parent, store::Store)
 
-    m = @GtkListStore([typeof(record.(x)) for x in nms]...)
+    m = @GtkListStore(store.types...)
     ## add in any in store
     for record in store.items
-        push!(m, tuple([record.(x) for x in nms]...))
+        push!(m, tuple(record...))
     end
 
    ## connect model to store so that store changes propogate XXX
     connect(store.model, "rowInserted") do record
-        push!(m, tuple([record.(x) for x in nms]...))
+        push!(m, tuple(record...))
     end
 
     connect(store.model, "rowRemoved") do i
@@ -881,7 +875,7 @@ function store_proxy_model(parent, store::Store; tpl=nothing)
 
     function rowUpdated(i::Int)
         record = store.items[i]
-        map((j, nm) -> m[i,j] = record.(nm), zip(1:length(nms), nms))
+        map(j -> m[i,j] = record[j], 1:length(record))
     end
     connect(store.model, "rowUpdated", rowUpdated)
 
@@ -892,25 +886,25 @@ function store_proxy_model(parent, store::Store; tpl=nothing)
 end
 
 ## storeview XXX
-function make_column(x::String, nm::String, col::Int)
+function make_column{T <: String}(::Type{T}, nm::String, col::Int)
     cr =  @GtkCellRendererText()
     col = @GtkTreeViewColumn(nm, cr, {"text" => col-1})
     col
 end
 
-function make_column(x::Number, nm::String, col::Int)
+function make_column{T<:Number}(::Type{T}, nm::String, col::Int)
     cr =  @GtkCellRendererText()
     col = @GtkTreeViewColumn(nm, cr, {"text" => col-1})
     col
 end
 
-function make_column(x::Bool, nm::String, col::Int)
+function make_column(::Type{Bool}, nm::String, col::Int)
     cr = @GtkCellRendererToggle()
     col = @GtkTreeViewColumn(nm, cr, {"active"=> col-1 })
 end
 
 
-function storeview(::MIME"application/x-gtk", parent::Container, store::Store, model::ItemModel; tpl=nothing)
+function storeview(::MIME"application/x-gtk", parent::Container, store::Store, model::ItemModel; kwargs...)
     
 
     ## Set up view
@@ -920,25 +914,17 @@ function storeview(::MIME"application/x-gtk", parent::Container, store::Store, m
     push!(block, widget)
 
     ## set up model
-    m = store_proxy_model(widget, store, tpl=tpl)
+    m = store_proxy_model(widget, store)
     Gtk.G_.model(widget, m)
 
     ## selection model
     sel = Gtk.G_.selection(widget) 
     ## add cell renderers
-    if tpl == nothing
-        record = store.items[1]
-    else
-        record = tpl
-    end
 
-    model = store.model         # JGUI model
-
-    nms = names(record)
-    for (j, nm) in enumerate(nms)
-        col = make_column(record.(nm), string(nm), j)
+    for j in 1:length(store.types)
+        col = make_column(store.types[j], "Column $j", j)
         signal_connect(col, :clicked) do _
-            notify(model, "headerClicked", j)
+            notify(store.model, "headerClicked", j)
         end
 
         push!(widget, col)
@@ -949,29 +935,37 @@ function storeview(::MIME"application/x-gtk", parent::Container, store::Store, m
 #    widget[:horizontalHeader]()[:setStretchLastSection](true)
     Gtk.G_.headers_clickable(widget, true)
 
+    ## XXX This is a problem XXX
+    id = signal_connect(sel, :changed) do sel
+        indices = selected(widget)
+        println("set model value $indices")
+        setValue(model, indices; signal=false) # model holds selection, store.model.value the value
+        notify(store.model, "selectionChanged", indices)
+        false
+    end
+
     ## connect model to view on index changed
     connect(model, "valueChanged") do indices
+        signal_handler_block(sel, id)
         unselectall!(widget)
+        indices = filter(x -> x > 0, indices) # <= n??
         map(index -> select!(widget, index), indices)
+        signal_handler_unblock(sel, id)
     end
-    
-    signal_connect(sel, :changed) do sel
-        indices = selected(widget)
-        setValue(model, indices)
-        notify(model, "selectionChanged", indices)
-    end
+ 
 
     ## clicked and doubleClicked
     signal_connect(widget, :button_press_event) do w, e
         row, col = tree_view_row_col_from_x_y(w, int(e.x), int(e.y))
+        println((row,col))
         if row > 0
             if e.event_type == Gtk.GdkEventType.GDK_2BUTTON_PRESS
-                notify(model, "doubleClicked", row, col)
+                notify(store.model, "doubleClicked", row, col)
             else
-                notify(model, "clicked", row, col)
+                notify(store.model, "clicked", row, col)
             end
         end
-        return true
+        return false
     end
 
 
@@ -994,16 +988,25 @@ function setSelectmode(::MIME"application/x-gtk", s::ModelView, val::Symbol)
 end
 
 ## getWidths
-function getWidths(::MIME"application/x-gtk", s::ModelView)
+function getWidths(::MIME"application/x-gtk", s::StoreView)
     n = size(s.store)[2]
     [Gtk.G_.min_width(Gtk.G_.column(s.o,i-1)) for i in 1:n]
 end
 
-function setWidths(::MIME"application/x-gtk", s::ModelView, widths::Vector{Int})
+function setWidths(::MIME"application/x-gtk", s::StoreView, widths::Vector{Int})
     for (i, width) in enumerate(widths)
         Gtk.G_.min_width(Gtk.G_.column(s.o,i-1), width)
     end
 end
+
+function getNames(::MIME"application/x-gtk", s::StoreView)
+    get_tree_view_names(s[:widget])
+end
+
+function setNames(::MIME"application/x-gtk", s::StoreView, nms::Vector)
+    set_tree_view_names(s[:widget], nms)
+end
+
 
 ## heights
 function getHeights(::MIME"application/x-gtk", s::ModelView)
@@ -1037,176 +1040,6 @@ function setIcon(::MIME"application/x-qt", s::StoreView, i::Int, icon::Icon)
     XXX("no icons")
 end
 
-
-##################################################
-##
-## StoreProxyModel
-## XXX This failed due to inability to write [:parent] method...
-# qnew_class("TreeStoreProxyModel", "QtCore.QAbstractItemModel")
-# function tree_store_proxy_model(parent, store::TreeStore; tpl=nothing)
-#     if tpl == nothing
-#         record = store.items[1]
-#     else
-#         record = tpl
-#     end
-#     nms = names(record)
-
-#     m = qnew_class_instance("TreeStoreProxyModel")
-
-#     ## helpers to translate qtmodel <--> treestore
-#     function index_to_path(index)
-#         ind = index
-#         ## return node in tree store for index
-#         ## get path by crawling back
-#         path = Int[]
-#         println("index_to_node, index:", ind)
-#         while ind[:isValid]()
-#             println((ind[:isValid](),  ind[:row]() ))
-#             path = unshift!(path, ind[:row]() + 1)
-#             println((path, ind))
-#             ind = ind[:parent]()
-#         end
-#         println("====")
-#         path
-#     end
-#     function index_to_node(index)
-#         path = index_to_path(index)
-#         if length(path) > 0
-#             path_to_node(store, path) # in models.jl
-#         else
-#             nothing
-#         end
-#     end
-#     function node_to_index(node)
-#         ## return qtindex fro a give node
-#         path = node_to_path(node) # in models.jl
-#         path_to_index(path)
-#     end
-#     function path_to_index(path)
-#         ## return index from 1-based path
-#         index = Qt.QModelIndex()
-#         println("path to index")
-#         println((path, index))
-#         while length(path) > 0
-#             r = shift!(path)
-#             index = m[:index](r + 1, 0, index)
-#             println((path, index))
-#         end
-#         println("====")
-#         index
-#     end
-
-#     m[:setParent](parent)       
-#     ## add functions
-#     ## parent, rowcount, columncount, data
-
-#     ## Returns the parent of the model item with the given index. 
-#     ## If the item has no parent, an invalid QModelIndex is returned.
-#     m[:parent] = (index) -> begin
-#         path = index_to_path(index)
-#         if length(path) > 1
-#             pop!(path)
-#             path_to_index(path)
-#         else
-#             PySide.QtCore.QModelIndex()
-#         end
-#     end
-#     m[:rowCount] = (index) -> begin
-#         println("rowCount")
-#         node = index_to_node(index)
-#         if isa(node, Nothing)
-#             return 0
-#         else
-#             parent = node.parent
-#             length(parent.items)
-#         end
-#     end
-#     m[:columnCount] = (index) -> length(names(record))
-#     m[:headerData] = (section::Int, orient, role) -> begin
-#         if orient.o ==  qt_enum("Horizontal").o #  match pointers
-#             ## column, section is column
-#             role == convert(Int, qt_enum("DisplayRole")) ?  nms[section + 1] : nothing
-#         else
-#              role == convert(Int, qt_enum("DisplayRole")) ?  string(section + 1) : nothing
-#         end
-#     end
-#     m[:data] = (index, role) -> begin
-#         println("data")
-#         node = index_to_node(index)
-#         if isa(node, Nothing)
-#             return nothing
-#         end
-
-#         record = node.data
-#         nms = names(record)
-        
-#         col = index[:column]() + 1
-#         ## http://qt-project.org/doc/qt-5.0/qtcore/qt.html#ItemDataRole-enum
-#         if role == int(qt_enum("DisplayRole"))
-#             nm = nms[col]
-#             return(string(node.(symbol(nm))))
-#         end
-#         other_roles = ["EditRole", "DecorationRole", "TextAlignmentRole", "BackgroundRole", "ForegroundRole", "ToolTipRole", "WhatsThisRole"]
-#         for r in other_roles
-#             if role == int(qt_enum(r))
-#                 if haskey(store.attrs, r)
-#                     ## store roles in dict keyed by hash(row, col) 
-#                     ## e.g., store.attrs[RoleName][hash(row, col)] = value
-#                     ## XXX need to do icon via
-#                     ## store.attrs["DecorationRole"] = Dict()
-#                     ## store.attrs["DecorationRole"][hash(1, 3)] = Qt.QIcon("ok.gif") ...
-#                     d = store.attrs[r]
-#                     key = hash(index[row]() + 1, col)
-#                     if haskey(d, key)
-#                         return string(d[key])
-#                     end
-#                 end
-#                 return nothing
-#             end
-#         end
-#         if role == int(qt_enum("TextAlignmentRole")) 
-#             return(qt_enum("AlignLeft")) ## XXX adjust to variable type?
-#         end
-#         return(nothing)
-#     end
-#     m[:index] = (row, column, parent) -> begin
-#         m[:createIndex](row, column)
-#     end
-#     m[:insertRows] = (row, count, index) -> begin
-#        println("insert rows")
-#        m[:beginInsertRows](index, row-1, row-1)
-#        m[:endInsertRows]()
-#        notify(store.model, "rowInserted", index_to_node(index), row)
-#        true
-#    end
-#    m[:removeRows] = (row, count, index) -> begin
-#        println("remove rows")
-#        m[:beginRemoveRows](index, row-1, 1)
-#        m[:endRemoveRows]()
-#        notify(store.model, "rowRemoved", index_to_node(index), row)
-#        true
-#    end
-
-#    ## connect model to store so that store changes propagate XXX
-#    connect(store.model, "rowInserted") do parent_node, i
-#        m[:insertRows](i, 1, node_to_index(parent_node))
-#    end
-
-#    connect(store.model, "rowRemoved") do parent_node, i 
-#        m[:removeRows](i, 1, node_to_index(parent_node))
-#    end
-#    connect(store.model, "rowUpdated") do parent_node, i 
-#        ## XXX
-#        topleft = m[:index](i-1,0)
-#        lowerright = m[:index](i, 0)
-#        m[:emit](PySide.QtCore[:SIGNAL]("dataChanged"))(topleft, lowerright)
-#    end
-
-
-
-#    ## return model
-#    m
-# end
 
 ## Tree view
 ## tpl: a template for the type, otherwise from tr.children[1]

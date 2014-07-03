@@ -61,11 +61,11 @@ end
 ## methods
 ## This allows o[:value] to work.
 getValue(model::Observable) = model.value
-setValue(model::Observable, value::Nothing) = nothing
-function setValue(model::Observable, value)
+setValue(model::Observable, value::Nothing; signal::Bool=true) = nothing
+function setValue(model::Observable, value; signal::Bool=true)
     if value != model.value
         model.value = value
-        notify(model, "valueChanged", getValue(model))
+        signal && notify(model, "valueChanged", getValue(model))
     end
     value
 end
@@ -123,7 +123,7 @@ function getValue(o::TwoDSliderModel)
 end
 
 ## value in items coordinates, convert to index
-function setValue(o::TwoDSliderModel, value)
+function setValue(o::TwoDSliderModel, value; signal::Bool=true)
     x, y = value
     function item2ind(item, items) 
         ix = indmin(abs(items - item))
@@ -133,7 +133,7 @@ function setValue(o::TwoDSliderModel, value)
     j = item2ind(y, o.items2)
     if o.value != [i,j]
         o.value = [i,j]
-        notify(o, "valueChanged", getValue(o))
+        signal && notify(o, "valueChanged", getValue(o))
     end
 end
 
@@ -170,30 +170,39 @@ from_string(m::Any, field::Symbol, x) = convert(eltype(m.(field)), x)
 abstract DataStore <: Object
 
 
-type Store{T} <: DataStore
+# type Store{T} <: DataStore
+#     model::Observable
+#     items::Vector{T}
+#     Store(items::Vector{T}) = new(ItemModel(), items)
+#     Store() = new(ItemModel(), T[])
+# end
+
+type Store <: DataStore
     model::Observable
-    items::Vector{T}
-    Store(items::Vector{T}) = new(ItemModel(), items)
-    Store() = new(ItemModel(), T[])
+    types::Vector{DataType}
+    items::Vector
+    Store(types...) = new(ItemModel(), [types...],  Vector[])
 end
 
 
-
 length(s::DataStore) = length(s.items)
-size(s::DataStore) = [length(s), length(names(s.items[1]))]
+size(s::DataStore) = [length(s), length(s.items[1])]
 
 getindex(s::DataStore, i::Int) = s.items[i]
 setindex!(s::DataStore, val, i::Int) = replace!(s, i, val)
 
 
-function insert!(s::DataStore, i::Int, val)
-    insert!(s.items, i, val)
+function insert!(s::DataStore, i::Int, vals)
+    ## verify types
+    vals = [convert(T,v) for (T, v) in zip(s.types, vals)]
+    insert!(s.items, i, vals)
     notify(s.model, "rowInserted", i)
 end
 
 function splice!(s::DataStore, i::Int)
-    splice!(s.items, i)
+    items = splice!(s.items, i)
     notify(s.model, "rowRemoved", i)
+    items
 end
 
 function replace!(s::DataStore, i::Int, item)

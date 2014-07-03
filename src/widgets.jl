@@ -3,7 +3,7 @@
 
 ## the `:value` property is the primary one for a control
 getValue(o::WidgetModel) = getValue(o.model)
-setValue(o::WidgetModel, value) = setValue(o.model, value)
+setValue(o::WidgetModel, value; signal::Bool=true) = setValue(o.model, value; signal=signal)
 
 ## the `:items` property is used by widgets with VectorModels -- that
 ## is, those widgets which are used to select 0, 1 or more from a
@@ -164,7 +164,7 @@ function label(parent::Container, model::Model; kwargs...)
 end
 label(parent::Container, value::String) = label(parent, ItemModel(value))
 label(parent::Container, value::Number) = label(parent, string(value))
-setValue(o::Label, value::Number) = setValue(o, string(value))
+setValue(o::Label, value::Number; signal::Bool=true) = setValue(o, string(value); signal=signal)
 
 ## Separator
 type Separator <: Style
@@ -293,7 +293,7 @@ end
 lineedit(parent::Container, value::String=""; kwargs...) = lineedit(parent, ItemModel(value); kwargs...)
 lineedit(parent::Container, value::Number; kwargs...) = lineedit(parent, string(value); kwargs...)
 
-setValue(obj::LineEdit, value::Number) = setValue(obj, string(value))
+setValue(obj::LineEdit, value::Number; signal::Bool=true) = setValue(obj, string(value); signal=signal)
 
 ## Call coerce if present. If can't be coerced, returns nothing
 function getValue(obj::LineEdit)
@@ -426,10 +426,10 @@ list_props(::@PROP("CheckBox")) = {:label => "checkbox label"}
 
 
 abstract StrictWidgetVectorModel <: WidgetVectorModel
-function setValue(o::StrictWidgetVectorModel, value)
+function setValue(o::StrictWidgetVectorModel, value; signal::Bool=true)
     ## is value in vector?
     if isa(value, Nothing) || any(value .== o[:items])
-        setValue(o.model, value)
+        setValue(o.model, value; signal=signal)
     end
 end
 
@@ -655,7 +655,7 @@ function slider2d(parent::Container, items1::Range, items2::Range; kwargs...)
 end
 ## get and set value override
 getValue(widget::Slider2D) = getValue(widget.toolkit, widget)
-setValue(widget::Slider2D, value) = setValue(widget.toolkit, widget, value)
+setValue(widget::Slider2D, value; signal::Bool=true) = setValue(widget.toolkit, widget, value; signal=signal)
 
 
 ## spinbox: integer or real
@@ -830,10 +830,13 @@ end
 ##
 ## Methods:
 ##
-## getValue returns selected items
+## getValue returns selected items as rows
 ## getIndex: return index (:single) or [indices] (:multiple)
-function storeview(parent::Container, store::Store; tpl=nothing, selectmode::Symbol=:single, kwargs...)
-    model = ItemModel()         # for selection
+## setIndex: use 0 (:single) to clear, Int[] (:multiple) to clear, 
+## getNames: return Vector{String} of names
+## setNames: pass `Vector{String}` of names
+function storeview(parent::Container, store::Store; selectmode::Symbol=:single, kwargs...)
+    model = ItemModel([0])         # for selection
     widget, block = storeview(parent.toolkit, parent, store, model)
     obj = StoreView(widget, block, store, model, parent, parent.toolkit, Dict())
 
@@ -857,18 +860,26 @@ function getIndex(s::StoreView)
     val = s.model[:value]
     s[:selectmode] == :single ? val[1] : val
 end
-function setIndex(s::StoreView, index::Int) 
-    s.model[:value] = isa(index, Vector) ? index : [index]
+function setIndex(s::StoreView, index::Vector{Int}) 
+    s.model[:value] = index
 end
+setIndex(s::StoreView, index::Int)  = setIndex(s, [index])
 function getValue(s::StoreView)
-    indices = s[:index]
+    items = s.store.items
+    indices = filter(x -> x > 0, indices)
     items = s.store.items
     items[indices]
 end
-function setValue(s::StoreView, val)
+function setValue(s::StoreView, val; signal::Bool=true)
     println("Use s[:index] to set by row index")
 end
     
+## names
+getNames(s::StoreView) = getNames(s.toolkit, s)
+function setNames{T<:String}(s::StoreView, nms::Vector{T}) 
+    @assert length(nms) == size(s.store)[2]
+    setNames(s.toolkit, s, nms)
+end
 
 ## is header visible? (Can't suppress in Tk)
 getHeadervisible(s::StoreView) = setHeadervisible(s.toolkit, s)

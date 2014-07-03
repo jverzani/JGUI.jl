@@ -157,6 +157,19 @@ function tree_view_row_col_from_x_y(treeView::GtkTreeView, x::Integer, y::Intege
     return(0,0)
 end
 
+## Names
+function get_tree_view_names(treeView::GtkTreeView)
+    columns = Gtk.GList(ccall((:gtk_tree_view_get_columns, Gtk.libgtk), 
+                              Ptr{Gtk._GSList{Gtk.GtkTreeViewColumn}}, (Ptr{GObject},), treeView))
+    [getproperty(column, :title, String) for column in columns]
+end
+
+function set_tree_view_names(treeView::GtkTreeView, nms::Vector)
+    columns = Gtk.GList(ccall((:gtk_tree_view_get_columns, Gtk.libgtk), 
+                              Ptr{Gtk._GSList{Gtk.GtkTreeViewColumn}}, (Ptr{GObject},), treeView))
+    [setproperty!(column, :title, nm) for (column, nm) in zip(columns, nms)]
+end
+
 
 ### TreeStores ...
 ##

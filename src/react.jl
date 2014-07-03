@@ -39,7 +39,7 @@ function connect_react(obj::WidgetModel, react::Signal)
         end
     end
 end
-function setValue(obj::WidgetModel, value::Signal) 
+function setValue(obj::WidgetModel, value::Signal; signal::Bool=true) 
     lift(Any, value) do x
         if !isa(x, Nothing)
             obj[:value] = x
@@ -47,7 +47,7 @@ function setValue(obj::WidgetModel, value::Signal)
     end
     nothing
 end
-setValue(obj::WidgetModel, value::WidgetModel) = setValue(obj, value[:react])
+setValue(obj::WidgetModel, value::WidgetModel; signal::Bool=true) = setValue(obj, value[:react]; signal=signal)
 ## give react.jl methods
 push!(obj::WidgetModel, value) = push!(obj[:react], value)
 

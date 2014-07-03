@@ -410,7 +410,7 @@ The basic widgets are:
 
 * `listview` Show a vector of values allowing selection of one or more. (Not `Gtk`.)
 
-* `storeview`  used to display store of records.  (Not `Gtk`.)
+* `storeview`  used to display store of records.  
 
 * `treeview` used to display tree structured records.  (Not `Gtk`.)
 
@@ -456,32 +456,24 @@ represents a case, and column some measurement associate to that
 case. Basically a spreadsheet with some consistency in the usage. The
 `storeview` widget can display such data.
 
-A `Store` is a vector of records, or cases. Each record is an instance
-of a composite type. The records are displayed in a grid , one row per
-record. The `storeview` widget is used to display values in an
+A `Store` is a vector of records, or cases. Each record is an array of
+type `Any` or a `tuple`. The records are displayed in a grid , one row
+per record. The `storeview` widget is used to display values in an
 underlying `Store` object.
 
-Here is an example. First we define a type for our items and some
-instances:
+Here is an example. First a store is defined. We specify the type of
+variables for each column, as this information is needed in some
+toolkits (such as `Gtk`, where this design is used for
+`@GtkListStore`).
 
 ```
-ENV["toolkit"] = "Tk"		# not Gtk!!
-type Test 
-    x::Int
-    y::Real
-    z::String
-end
 
-
-t1 = Test(1, 1.0, "one")
-t2 = Test(2, 2.0, "two")
-t3 = Test(3, 3.0, "three")
+store = Store(Int, Float64, String)
+push!(store, (1, 1.0, "one"))
+push!(store, (2, 2.0, "two"))
+push!(store, (3, 3.0, "three"))
 ```
 
-Then we can place these into a store to pass to `storeview`:
-```
-store = Store{Test}([t1, t2, t3])
-```
 
 Here is how we lay it out:
 
@@ -489,10 +481,10 @@ Here is how we lay it out:
 w = window(size=[300, 300])
 sv = storeview(w, store)
 push!(sv)			
-
+sv[:names] = ["Int", "Float64", "String"]
 sv[:widths] = [100, 100, 100]	# column widths
 sv[:selectmode] = :multiple	# :single or :multiple
-id = connect(sv, "rowClicked", (row, col) -> println((row, col))) # sample handler
+id = connect(sv, "clicked", (row, col) -> println((row, col))) # sample handler
 
 raise(w)
 ```
@@ -500,11 +492,11 @@ raise(w)
 One can add and remove items through `insert!`, `splice!`; one can modify existing items through indexing:
 
 ```
-t4 = Test(4, 4.0, "four")
+t4 = (4, 4.0, "four")
 push!(store, t4)
 splice!(store, 1)
 item = store[1]
-item.z = uppercase(item.z)
+item[3] = uppercase(item[3])
 store[1] = item
 ```
 
