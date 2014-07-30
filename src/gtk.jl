@@ -865,7 +865,8 @@ function store_proxy_model(parent, store::Store)
     end
 
    ## connect model to store so that store changes propogate XXX
-    connect(store.model, "rowInserted") do record
+    connect(store.model, "rowInserted") do i
+        record = store.items[i]
         push!(m, tuple(record...))
     end
 
@@ -924,7 +925,7 @@ function storeview(::MIME"application/x-gtk", parent::Container, store::Store, m
     for j in 1:length(store.types)
         col = make_column(store.types[j], "Column $j", j)
         signal_connect(col, :clicked) do _
-            notify(store.model, "headerClicked", j)
+            notify(model, "headerClicked", j)
         end
 
         push!(widget, col)
@@ -935,34 +936,43 @@ function storeview(::MIME"application/x-gtk", parent::Container, store::Store, m
 #    widget[:horizontalHeader]()[:setStretchLastSection](true)
     Gtk.G_.headers_clickable(widget, true)
 
-    ## XXX This is a problem XXX
-    id = signal_connect(sel, :changed) do sel
-        indices = selected(widget)
-        println("set model value $indices")
-        setValue(model, indices; signal=false) # model holds selection, store.model.value the value
-        notify(store.model, "selectionChanged", indices)
-        false
-    end
+    ## notify JGUI model of changes to selection
+#    id = signal_connect(sel, :changed) do sel
+#        indices = selected(widget)
+#        setValue(model, indices; signal=false) # model holds selection, store.model.value the value
+#        notify(model, "selectionChanged", indices)
+#        false
+#    end
 
-    ## connect model to view on index changed
+    # ## connect model to view on index changed
     connect(model, "valueChanged") do indices
-        signal_handler_block(sel, id)
-        unselectall!(widget)
-        indices = filter(x -> x > 0, indices) # <= n??
+        if Gtk.G_.mode(sel) == Gtk.GConstants.GtkSelectionMode.MULTIPLE
+            unselectall!(widget)
+        else
+            if indices == [0] & Gtk.hasselection(sel)
+                m, iter = selected(sel)
+                ccall((:gtk_tree_selection_unselect_iter, Gtk.libgtk), Void,
+                      (Ptr{Gtk.GObject}, Ptr{Gtk.GtkTreeIter}),
+                      sel, iter)
+                return
+            end
+        end
+        
+        indices = filter(x -> 0 < x <= length(store), indices) 
         map(index -> select!(widget, index), indices)
-        signal_handler_unblock(sel, id)
     end
  
 
     ## clicked and doubleClicked
+    ## issue with clicking on the header!
     signal_connect(widget, :button_press_event) do w, e
         row, col = tree_view_row_col_from_x_y(w, int(e.x), int(e.y))
-        println((row,col))
+
         if row > 0
             if e.event_type == Gtk.GdkEventType.GDK_2BUTTON_PRESS
-                notify(store.model, "doubleClicked", row, col)
+                notify(model, "doubleClicked", row, col)
             else
-                notify(store.model, "clicked", row, col)
+                notify(model, "clicked", row, col)
             end
         end
         return false

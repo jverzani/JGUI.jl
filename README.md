@@ -379,6 +379,7 @@ sl[:size] = [100, 20]
 l = label(f, "")
 l[:value] = sl			# connect value of slider to value of label.
 append!(f, [sl, l])
+raise(w)
 ```
 
 

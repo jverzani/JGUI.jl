@@ -134,7 +134,7 @@ notify(o::WidgetModel, signal::Symbol, args...) = notify(o, string(signal), args
 
 ## Label
 
-type Label <: WidgetModel
+type Label <: WidgetReact
     o
     block
     model
@@ -187,7 +187,7 @@ end
 ##################################################
 ## Button widget
 
-type Button <: WidgetModel
+type Button <: WidgetReact
     o
     block
     model
@@ -245,7 +245,7 @@ list_props(::@PROP("Button")) = {:icon => "Set accompanying icon"}
 ## (activated, ())
 ## (keystroke, (key))
 
-type LineEdit <: WidgetModel
+type LineEdit <: WidgetReact
     o
     block
     model
@@ -317,7 +317,7 @@ list_props(::@PROP("LineEdit")) = {:placeholdertext => "Text to display when wid
                                    }
 
 ## TextEdit
-type TextEdit <: WidgetModel
+type TextEdit <: WidgetReact
     o
     block
     model
@@ -361,6 +361,7 @@ end
 textedit(parent::Container, value::String=""; kwargs...) = textedit(parent, ItemModel(value); kwargs...)
 textedit(parent::Container, value::Number; kwargs...) = textedit(parent, string(value); kwargs...)
 
+setValue(obj::TextEdit, value::Number) = setValue(obj, string(value))
 
 
 ## add to textedit via push!
@@ -371,7 +372,7 @@ push!(o::TextEdit, value) = push_textedit(o.toolkit, o, value)
 ## Selection widgets
 
 ## checkbox
-type CheckBox <: WidgetModel
+type CheckBox <: WidgetReact
     o
     block
     model
@@ -565,7 +566,7 @@ end
 ## slider
 ## Slider slides over indices in a sortable vector (not low to high, use linspace or range to control)
 ## so model has items as items to select from, value an index
-type Slider <: WidgetModel
+type Slider <: WidgetReact
     o
     block
     model
@@ -593,10 +594,11 @@ end
 ##
 ## Notes:
 ## use cb[:value] = nothing to deselect all 
-function slider(parent::Container, model::VectorModel; orientation::Symbol=:horizontal, kwargs...)
+function slider(parent::Container, model::VectorModel; orientation::Symbol=:horizontal, size=[200,-1], kwargs...)
     widget, block = slider(parent.toolkit, parent, model, orientation=orientation)
     react = Input(getValue(model))
     obj = Slider(widget, block, model, react, parent, parent.toolkit, Dict())
+
     for (k, v) in kwargs
         obj[k] = v
     end
@@ -659,7 +661,7 @@ setValue(widget::Slider2D, value; signal::Bool=true) = setValue(widget.toolkit, 
 
 
 ## spinbox: integer or real
-type SpinBox <: WidgetModel
+type SpinBox <: WidgetReact
     o
     block
     model
@@ -811,14 +813,10 @@ end
 ##
 ## * `store::Store` a data store. 
 ##
-## * `tpl` an instance of the composite type to display. Needed to determine
-##   number of columns and headers if store is empty when passed in.
-##
 ## * `selectmode in [:single, :multiple]
 ##
 ## Signals:
 ##
-## * `valueChanged value` index (single) or [indices] (multiple)
 ## * `selectionChanged value` (indices)
 ## * `rowInserted, i`
 ## * `rowRemoved, i`
@@ -848,6 +846,14 @@ function storeview(parent::Container, store::Store; selectmode::Symbol=:single, 
     for (k, v) in kwargs
         obj[k] = v
     end
+
+    connect(store.model, "rowInserted") do row
+        notify(obj.model, "rowInserted", row)
+    end
+    connect(store.model, "rowRemoved") do row
+        notify(obj.model, "rowRemoved", row)
+    end
+
     obj
 end
 
@@ -858,20 +864,24 @@ setindex!(s::StoreView, val, i::Int) = replace!(s, i, val)
 ## value is value, but should refer to things by index
 function getIndex(s::StoreView)
     val = s.model[:value]
-    s[:selectmode] == :single ? val[1] : val
+    if s[:selectmode] == :single
+        length(val) == 0 && return 0
+        return(val[1])
+    else
+        return(val)
+    end
 end
 function setIndex(s::StoreView, index::Vector{Int}) 
     s.model[:value] = index
 end
 setIndex(s::StoreView, index::Int)  = setIndex(s, [index])
 function getValue(s::StoreView)
+    indices = filter(x -> x > 0, s[:index])
     items = s.store.items
-    indices = filter(x -> x > 0, indices)
-    items = s.store.items
-    items[indices]
+    items[collect(indices)]
 end
 function setValue(s::StoreView, val; signal::Bool=true)
-    println("Use s[:index] to set by row index")
+    error("Use storeview[:index] to set by row index")
 end
     
 ## names
@@ -922,6 +932,7 @@ append!(s::StoreView, vals::Vector)  = append!(s.store, vals)
 splice!(s::StoreView, i::Int)        = splice!(s.store, i)
 pop!(s::StoreView)                   = splice!(s.store, length(s))
 replace!(s::StoreView, i::Int, item) = replace!(s.store, i, item)
+
 
 ## list view
 type ListItem <: AbstractStoreItem

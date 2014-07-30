@@ -246,4 +246,3 @@ function manipulate(expr, args...;
     self
 end
 
-

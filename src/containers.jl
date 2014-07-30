@@ -439,7 +439,7 @@ end
 ##
 ## The `getValue` method will return a dictionary of control values keyed by the labels.
 ##
-function formlayout(parent::Container; kwargs...)
+function formlayout(parent::Container;  kwargs...)
   
     widget, block = formlayout(parent.toolkit, parent)
 
@@ -460,6 +460,8 @@ function push!(parent::FormLayout, child::Widget, label::Union(Nothing, String))
     push!(parent.child_labels, label)
     formlayout_add_child(parent.toolkit, parent, child, label)
 end
+
+push!(parent::FormLayout, child::Widget; label::String="") = push!(parent, child, label)
 
 ## return dictionary of control values
 function getValue(widget::FormLayout)

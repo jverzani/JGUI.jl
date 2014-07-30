@@ -52,7 +52,7 @@ export action, menubar, menu,
 ## adjust this to pick a gtoolkit
 #__init__() = println("hi")
 
-export manipulate
+export manipulate, @wlift
 
 
 
@@ -92,6 +92,7 @@ if istk()
     include("tk.jl")
     ENV["WINSTON_OUTPUT"] = :tk
     export cairographic
+    include("winston.jl")
 elseif isqt()
     default_toolkit = MIME("application/x-qt")
     include("qt.jl")
@@ -101,9 +102,10 @@ elseif isgtk()
     include("gtk.jl")
     ENV["WINSTON_OUTPUT"] = :gtk
     export cairographic
+    include("winston.jl")
 end
 
-include("winston.jl")
+
 
 
 

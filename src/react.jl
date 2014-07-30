@@ -24,10 +24,10 @@
 
 
 ## For using a react value
-getReact(o::WidgetModel) = o.react
+getReact(o::WidgetReact) = o.react
 getReact(o::Any) = o
 
-function connect_react(obj::WidgetModel, react::Signal)
+function connect_react(obj::WidgetReact, react::Signal)
     connect(obj, :valueChanged) do x
         if !isa(x, Nothing) 
             push!(react, x)
@@ -39,7 +39,7 @@ function connect_react(obj::WidgetModel, react::Signal)
         end
     end
 end
-function setValue(obj::WidgetModel, value::Signal; signal::Bool=true) 
+function setValue(obj::WidgetReact, value::Signal; signal::Bool=true) 
     lift(Any, value) do x
         if !isa(x, Nothing)
             obj[:value] = x
@@ -47,9 +47,39 @@ function setValue(obj::WidgetModel, value::Signal; signal::Bool=true)
     end
     nothing
 end
-setValue(obj::WidgetModel, value::WidgetModel; signal::Bool=true) = setValue(obj, value[:react]; signal=signal)
+setValue(obj::WidgetReact, value::WidgetReact; signal::Bool=true) = setValue(obj, value[:react]; signal=signal)
 ## give react.jl methods
-push!(obj::WidgetModel, value) = push!(obj[:react], value)
+push!(obj::WidgetReact, value) = push!(obj[:react], value)
 
-React.lift(f::Function, obj::WidgetModel, objs::Union(Signal, WidgetModel)...) = lift(f, Any, obj[:react], map(getReact, objs)...)
-React.merge(obj::WidgetModel, xs...) = merge(obj[:react], map(x->x[:react], xs)...)
+React.lift(f::Function, obj::WidgetReact, objs::Union(Signal, WidgetReact)...) = lift(f, Any, obj[:react], map(getReact, objs)...)
+React.merge(obj::WidgetReact, xs...) = merge(obj[:react], map(x->x[:react], xs)...)
+
+
+
+## The `@lift` macro from `React` for the reactive widgets
+## The call `@manipulate ex` will find widget in `ex` and replace them with their value
+##
+## example:
+## w = window()
+## f = formlayout(w); push!(w,f)
+## sl = slider(f, 1:10); push!(f, sl, "sl")
+## sl1 = slider(f, 1:10); push!(f, sl1,"sl1")
+## raise(w)
+##
+## @manipulate println(sl * sl1)
+React.signal(x::WidgetReact) = x
+macro wlift(ex)
+    ex = React.sub_val(ex, current_module())
+    ex, sigs = React.extract_signals(ex, current_module())
+    args = Symbol[]
+    vals = Any[]
+    for (k, v) in sigs
+        push!(args, v)
+        push!(vals, JGUI.getReact(k))
+    end
+
+    Expr(:call, :lift,
+         Expr(:->, Expr(:tuple, args...), ex),
+         vals)
+end
+

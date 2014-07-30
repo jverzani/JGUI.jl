@@ -753,18 +753,15 @@ setActive(o::PyPlotGraphic, value) = pltm[:figure](o.id)
 ## StoreProxyModel
 qnew_class("StoreProxyModel", "QtCore.QAbstractTableModel")
 function store_proxy_model(parent, store::Store; tpl=nothing)
-    if tpl == nothing
-        record = store.items[1]
-    else
-        record = tpl
-    end
-    nms = names(record)
+   
+    ncols = length(store.types)
+    nms = repmat(["X"], ncols) .* map(string, 1:ncols)
 
     m = qnew_class_instance("StoreProxyModel")
     m[:setParent](parent)       
     ## add functions
     m[:rowCount] = (index) -> length(store.items)
-    m[:columnCount] = (index) -> length(names(record))
+    m[:columnCount] = (index) -> ncols
     m[:headerData] = (section::Int, orient, role) -> begin
         
         if orient.o ==  qt_enum("Horizontal").o #  match pointers
@@ -776,7 +773,6 @@ function store_proxy_model(parent, store::Store; tpl=nothing)
     end
     m[:data] = (index, role) -> begin
         record = store.items[1]
-        nms = names(record)
         
         row = index[:row]() + 1
         col = index[:column]() + 1
@@ -785,8 +781,7 @@ function store_proxy_model(parent, store::Store; tpl=nothing)
         for r in roles
             if role == int(qt_enum(r))
                 item = store.items[row]
-                nm = nms[col]
-               return(string(item.(symbol(nm))))
+                return(string(item[col]))
             end
         end
         if role == int(qt_enum("TextAlignmentRole")) 
@@ -903,6 +898,21 @@ function setHeights(::MIME"application/x-qt", s::ModelView, heights::Vector{Int}
     for i in 1:size(s.store)[1]
         s[:widget][:setRowHeight](i-1, heights[i])
     end
+end
+
+
+function getNames(::MIME"application/x-qt", s::StoreView)
+    n = size(s.store)[2]
+    model = s[:widget][:model]()
+    [model[:headerData](i-1, PySide.qt_enum("Horizontal"), 0) for i in 1:n]
+end
+
+## XXX this doesn't work!
+function setNames(::MIME"application/x-qt", s::StoreView, nms::Vector)
+    @assert length(nms) == size(s.store)[2]
+    model = s[:widget][:model]()
+    [model[:setHeaderData](i-1, PySide.qt_enum("Horizontal"), nm, 0) for (i,nm) in enumerate(nms)]
+    s[:widget][:setModel](model)
 end
 
 

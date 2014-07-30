@@ -189,7 +189,13 @@ length(s::DataStore) = length(s.items)
 size(s::DataStore) = [length(s), length(s.items[1])]
 
 getindex(s::DataStore, i::Int) = s.items[i]
+getindex(s::DataStore, i::Int, j::Int) = s.items[i][j]
 setindex!(s::DataStore, val, i::Int) = replace!(s, i, val)
+function setindex!(s::DataStore, val, i::Int, j::Int) 
+    cur = s[i]
+    cur[j] = val
+    replace!(s, i, cur)
+end
 
 
 function insert!(s::DataStore, i::Int, vals)
