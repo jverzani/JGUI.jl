@@ -510,26 +510,29 @@ In addition to `rowClicked`, there are `rowDoubleClicked`, `headerClicked`, and 
 
 ## Treeview example
 
-A treeview uses a treestore to hold the data, again specified using a composite type. Here is a simple example:
+A treeview uses a treestore to hold the data. Here is a simple example:
 
 ```
 ENV["toolkit"] = "Tk"		# not Gtk!!!
-type Test2 
-    x::Int
-    y::Real
-    z::String
-end
 
-t1  = Test2(1, 1.0, "one")
-t11 = Test2(11, 11.0, "one-one")
-t2  = Test2(2, 2.0, "two")
-```
+tstore = treestore(Int, Float64, String)
 
-```
-tstore = treestore()
+t1 = (1, 1.0, "one")
+t11 = (11, 11.0, "one-one")
+t2  = (2, 2.0, "two")
+
+
 w = window(size=[300, 300])
-tv = JGUI.treeview(w, tstore, tpl=t1) # pass in something to determine columns, headers
-push!(tv)	      
+tv = treeview(w, tstore)
+tv[:names] = ["Int", "Float", "String"]
+tv[:widths] = [50,50,-1]
+
+tv[:keyname] = "key"
+tv[:keywidth] = 100
+
+push!(w, tv)  
+
+raise(w)
 ```
 
 To manage child items, we have `insert!` (with signature `(store, parent, sibling position, label, [data])`):
@@ -546,7 +549,7 @@ child of the root. We use the path to find a node to open via:
 
 ```
 node = path_to_node(tstore, [1])
-expand_node(tstore, node)
+expand_node(tv, node)
 ```
 
 We can remove nodes via a two-argument form of `pop!`

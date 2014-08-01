@@ -268,38 +268,6 @@ end
 ##
 ## Nodes can be expanded or collapsed through `expand_node` and `collapse_node`
 ##
-## Example:
-## ## some (simple) composite type 
-## type Test 
-##     x::Int
-##     y::Real
-##     z::String
-## end
-##
-## ## some instances
-## t1 = Test(1, 1.0, "one")
-## t11 = Test(11, 11.0, "one-one")
-## t2 = Test(2, 2.0, "two")
-##
-## ## create a store
-## tstore = treestore()
-## w = window(size=[300, 300])
-## ## store has no children, so we pass in a template to construct the headers and specify number of columns
-## tv = JGUI.treeview(w, tstore, tpl=t1)
-## push!(tv)
-##
-## ## manage children through insert! Use nothing for parent if at toplevel
-## node = insert!(tstore, nothing, 1, "label1", t1)
-## insert!(tstore, node, 1, "label11", t11)
-## node = insert!(tstore, nothing, 2, "label2", t2)
-##
-## ## update node
-## node = path_to_node(tstore, [1,1])
-## update_node(tstore, node, text="label 1 1")
-## 
-## ## Can delete nodes:
-## node = path_to_node(tstore, [1,1])  # first child of first child
-## pop!(tstore, node)
 ##
 treestore(types...) = TreeStore(types...)
 
