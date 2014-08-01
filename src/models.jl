@@ -170,13 +170,6 @@ from_string(m::Any, field::Symbol, x) = convert(eltype(m.(field)), x)
 abstract DataStore <: Object
 
 
-# type Store{T} <: DataStore
-#     model::Observable
-#     items::Vector{T}
-#     Store(items::Vector{T}) = new(ItemModel(), items)
-#     Store() = new(ItemModel(), T[])
-# end
-
 type Store <: DataStore
     model::Observable
     types::Vector{DataType}
@@ -263,7 +256,7 @@ end
 ## necessary, as often nodes that expand are not of the same type (directories are different from files, say).
 ##
 ## A node in a tree has a corresponding path -- a vector of
-## indicies. The functions `node_to_path` and `path_to_node`
+## indices. The functions `node_to_path` and `path_to_node`
 ## translate.
 ##
 ## Nodes can be expanded or collapsed through `expand_node` and `collapse_node`

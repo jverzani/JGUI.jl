@@ -119,7 +119,7 @@ type LabelFrame <: BinContainer
     attrs::Dict
 end
 
-## Label frame is a bin container to surround anothe container in a frame with a title.
+## Label frame is a bin container to surround another container in a frame with a title.
 ##
 ## Arguments:
 ##
@@ -413,8 +413,8 @@ function getindex(object::GridContainer, i::Union(Vector, Range1), j::Union(Vect
     [object[ii, jj] for j in jj, ii in i]
 end
 
-## Remove a child. What to name this?
-function pop!(parent::GridContainer, child::Widget)
+## Remove a child.
+function delete!(parent::GridContainer, child::Widget)
     filter!(x -> !(x == child), parent.children)
     remove_child(parent.toolkit, parent, child)
 end
