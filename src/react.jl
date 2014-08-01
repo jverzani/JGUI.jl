@@ -27,7 +27,7 @@
 getReact(o::WidgetReact) = o.react
 getReact(o::Any) = o
 
-function connect_react(obj::WidgetReact, react::Signal)
+function connect_react(obj::WidgetReact, react::React.Signal)
     connect(obj, :valueChanged) do x
         if !isa(x, Nothing) 
             push!(react, x)
@@ -39,7 +39,7 @@ function connect_react(obj::WidgetReact, react::Signal)
         end
     end
 end
-function setValue(obj::WidgetReact, value::Signal; signal::Bool=true) 
+function setValue(obj::WidgetReact, value::React.Signal; signal::Bool=true) 
     lift(Any, value) do x
         if !isa(x, Nothing)
             obj[:value] = x
@@ -51,7 +51,7 @@ setValue(obj::WidgetReact, value::WidgetReact; signal::Bool=true) = setValue(obj
 ## give react.jl methods
 push!(obj::WidgetReact, value) = push!(obj[:react], value)
 
-React.lift(f::Function, obj::WidgetReact, objs::Union(Signal, WidgetReact)...) = lift(f, Any, obj[:react], map(getReact, objs)...)
+React.lift(f::Function, obj::WidgetReact, objs::Union(React.Signal, WidgetReact)...) = lift(f, Any, obj[:react], map(getReact, objs)...)
 React.merge(obj::WidgetReact, xs...) = merge(obj[:react], map(x->x[:react], xs)...)
 
 

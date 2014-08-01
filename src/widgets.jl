@@ -463,7 +463,7 @@ function radiogroup(parent::Container, model::VectorModel; orientation::Symbol=:
     for (k, v) in kwargs
         obj[k] = v
     end
-    connect_react(obj, react)
+#    connect_react(obj, react)
     obj
 end
 
@@ -551,7 +551,7 @@ function combobox(parent::Container, model::VectorModel; editable::Bool=false, k
     for (k, v) in kwargs
         obj[k] = v
     end
-    connect_react(obj, react)
+#    connect_react(obj, react)
     obj
 end
 
@@ -885,7 +885,7 @@ function setValue(s::StoreView, val; signal::Bool=true)
 end
     
 ## names
-getNames(s::StoreView) = getNames(s.toolkit, s)
+getNames(s::ModelView) = getNames(s.toolkit, s)
 function setNames{T<:String}(s::StoreView, nms::Vector{T}) 
     @assert length(nms) == size(s.store)[2]
     setNames(s.toolkit, s, nms)
@@ -1004,9 +1004,9 @@ end
 ## Notes:
 ## There are two models: one for the store where we can insert! and friends and one for the widget
 ## where the valueChanged, nodeExpand, ... are held. These are not shared between views of the same model
-function treeview(parent::Container, store::TreeStore; tpl=nothing, kwargs...)
+function treeview(parent::Container, store::TreeStore;  kwargs...)
     model = ItemModel()
-    widget, block = treeview(parent.toolkit, parent, store, model; tpl=tpl)
+    widget, block = treeview(parent.toolkit, parent, store, model)
     obj = TreeView(widget, block, store, model, parent, parent.toolkit, Dict())
     for (k, v) in kwargs
         obj[k] = v
@@ -1015,9 +1015,19 @@ function treeview(parent::Container, store::TreeStore; tpl=nothing, kwargs...)
 end
 
 ## properties
+## XXX no way to set column of keys...
+function setNames{T<:String}(s::TreeView, nms::Vector{T}) 
+    @assert length(nms) == length(s.store.types)
+    setNames(s.toolkit, s, nms)
+end
+
+getKeyname(tr::TreeView) = getKeyname(tr.toolkit, tr)
+setKeyname(tr::TreeView, nm::String) = setKeyname(tr.toolkit, tr, nm)
+
 getKeywidth(tr::TreeView) = getKeywidth(tr.toolkit, tr)
 setKeywidth(tr::TreeView, width::Int) = setKeywidth(tr.toolkit, tr, width)
-list_props(::@PROP("TreeView")) = {:keywidth => "Width in pixels of column holding keys"
+list_props(::@PROP("TreeView")) = {:keyname => "Name of column holding keys",
+                                   :keywidth => "Width in pixels of column holding keys"
                                  }
                                  
 

@@ -9,8 +9,8 @@ import Base: size, endof, ndims
 import Base: connect, notify
 
 using React
-import React: lift, merge
-export lift, merge
+#import React: lift, merge
+#export lift, merge
 
 export properties
 
@@ -56,7 +56,7 @@ export manipulate, @wlift
 
 
 
-## To use different toolkit try ENV["Tk"] = true, or ENV["Qt"] = true
+## which toolkit? Default to Gtk
 if !haskey(ENV, "toolkit")
     ENV["toolkit"] = "Gtk"
 end
@@ -76,7 +76,9 @@ end
 
 
 include("types.jl")
+
 include("react.jl")
+
 include("methods.jl")
 include("icons.jl")
 include("models.jl")

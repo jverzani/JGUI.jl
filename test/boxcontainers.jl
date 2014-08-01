@@ -58,3 +58,4 @@ append!(b, [nw, center, sw])
 
 
 
+raise(w)

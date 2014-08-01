@@ -10,6 +10,7 @@ include("gtk-addons.jl")
 
 
 XXX() = error("not defined")
+XXX(msg) = println(msg)
 ## Icons
 function get_icon(::MIME"application/x-gtk", o::StockIcon)
     if isa(o.nm, Nothing)
@@ -291,13 +292,13 @@ function setSpacing(::MIME"application/x-gtk", parent::GridContainer, px::Vector
 end
 
 ##XXXXXXX
-column_minimum_width(::MIME"application/x-qt", object::GridContainer, j::Int, width::Int) = object[:layout]()[:setColumnMinimumWidth](j-1, width)
+column_minimum_width(::MIME"application/x-gtk", object::GridContainer, j::Int, width::Int) = XXX("column_minimum_width")
 
-row_minimum_height(::MIME"application/x-qt", object::GridContainer, j::Int, height::Int) = object[:layout]()[:setRowMinimumdHeight](i-1, height)
+row_minimum_height(::MIME"application/x-gtk", object::GridContainer, j::Int, height::Int) = XXX("row_minimum_width")
 
-column_stretch(::MIME"application/x-qt", object::GridContainer, j::Int, weight::Int) = object[:layout]()[:setColumnStretch](j-1, weight)
+column_stretch(::MIME"application/x-gtk", object::GridContainer, j::Int, weight::Int) = XXX("Column_stretch")
 
-row_stretch(::MIME"application/x-qt", object::GridContainer, i::Int, weight::Int) = object[:layout]()[:setRowStretch](i-1, weight)
+row_stretch(::MIME"application/x-gtk", object::GridContainer, i::Int, weight::Int) = XXX("row_stretch")
 
 
 
@@ -662,6 +663,10 @@ function radiogroup(::MIME"application/x-gtk", parent::Container, model::VectorM
         end
     end
     
+    ## XXX must call vsibile here
+    setproperty!(g, :visible,  true)
+    showall(g)
+
     (g, g)
 end
 
@@ -859,6 +864,7 @@ end
 function store_proxy_model(parent, store::Store)
 
     m = @GtkListStore(store.types...)
+
     ## add in any in store
     for record in store.items
         push!(m, tuple(record...))
@@ -1052,16 +1058,46 @@ end
 
 
 ## Tree view
-## tpl: a template for the type, otherwise from tr.children[1]
-function treeview(::MIME"application/x-qt", parent::Container, store::TreeStore, model::ItemModel; tpl=nothing)
-    widget = Qt.QTreeWidget(parent[:widget])
+function store_proxy_model(parent, store::TreeStore)
+    "XXX adapt for treeview"
+    m = @GtkListStore(store.types...)
 
-    ## headers
-    if isa(tpl, Nothing)
-        tpl = store.children[1].data
+    ## add in any in store
+    ## XXX Need to recurse here
+    for record in store.items
+        push!(m, tuple(record...))
     end
-    ## first column is for key
-    widget[:setHeaderLabels](append([""],names(tpl)))
+
+   ## connect model to store so that store changes propogate XXX
+    connect(store.model, "rowInserted") do i
+        record = store.items[i]
+        push!(m, tuple(record...))
+    end
+
+    connect(store.model, "rowRemoved") do i
+        splice!(m, i)
+    end
+
+    function rowUpdated(i::Int)
+        record = store.items[i]
+        map(j -> m[i,j] = record[j], 1:length(record))
+    end
+    connect(store.model, "rowUpdated", rowUpdated)
+
+
+
+   ## return model
+   m
+end
+
+## tpl: a template for the type, otherwise from tr.children[1]
+function treeview(::MIME"application/x-gtk", parent::Container, store::TreeStore, model::ItemModel)
+    error("XXX")
+    widget = @GtkTreeView()
+    block = @GtkScrolledWindow()
+    [setproperty!(widget, x, true) for  x in [:hexpand, :vexpand]]
+    push!(block, widget)
+
 
     ## set flags ...
 
@@ -1189,18 +1225,32 @@ function treeview(::MIME"application/x-qt", parent::Container, store::TreeStore,
 
     
     
-    (widget, widget)
+    (widget, block)
 end
 
 ## Properties
+function getNames(::MIME"application/x-gtk", tv::TreeView)
+    tv.attrs[:headerLabels]
+end
+
+function setNames{T<:String}(::MIME"application/x-gtk", tv::TreeView, nms::Vector{T})
+    "XXX"
+end
+
+function getKeyname(::MIME"application/x-gtk", tr::TreeView)
+    "XXX"
+end
+function setKeyname(::MIME"application/x-gtk", tr::TreeView, nm::String)
+    "XXX"
+end
 
 
 ## keywidth is first column
 function getKeywidth(::MIME"application/x-qt", tr::TreeView)
-    tr[:widget][:columnWidth](0)
+    "XXX"
 end
 function setKeywidth(::MIME"application/x-qt", tr::TreeView, width::Int)
-    tr[:widget][:setColumnWidth](0, width)
+    "XXX"
 end
 function getWidths(::MIME"application/x-qt", tr::TreeView)
     "XXX"

@@ -1,6 +1,5 @@
 using JGUI
 using Base.Test
-## react widget
 
 ## connect values
 w = window()
@@ -15,16 +14,21 @@ lab[:value] = ed
 ed[:value] = "new value"
 @assert lab[:value] == ed[:value]
 
+raise(w)
 
+if !JGUI.isqt()
 
-## cairographics
-w = window()
-f=vbox(w)
-push!(f)
+    ## cairographics
+    ## manipulate like
+    w = window()
+    f=vbox(w)
+    push!(f)
+    
+    n = slider(f, 1:10)
+    g = cairographic(f)
+    
+    append!(f, [n, g])
 
-n = slider(f, 1:10)
-g = cairographic(f)
+    @wlift display(g, plot(sin, 0, n*pi))
 
-append!(f, [n, g])
-
-@wlift display(g, plot(sin, 0, n*pi))
+end

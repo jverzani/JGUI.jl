@@ -252,13 +252,13 @@ function grid_get_child_at(::MIME"application/x-qt", parent::GridContainer, i::I
 end
 
 ##XXza
-column_minimum_width(::MIME"application/x-qt", object::GridContainer, j::Int, width::Int) = object[:layout]()[:setColumnMinimumWidth](j-1, width)
+column_minimum_width(::MIME"application/x-qt", object::GridContainer, j::Int, width::Int) = object[:layout][:setColumnMinimumWidth](j-1, width)
 
-row_minimum_height(::MIME"application/x-qt", object::GridContainer, j::Int, height::Int) = object[:layout]()[:setRowMinimumdHeight](i-1, height)
+row_minimum_height(::MIME"application/x-qt", object::GridContainer, j::Int, height::Int) = object[:layout][:setRowMinimumdHeight](i-1, height)
 
-column_stretch(::MIME"application/x-qt", object::GridContainer, j::Int, weight::Int) = object[:layout]()[:setColumnStretch](j-1, weight)
+column_stretch(::MIME"application/x-qt", object::GridContainer, j::Int, weight::Int) = object[:layout][:setColumnStretch](j-1, weight)
 
-row_stretch(::MIME"application/x-qt", object::GridContainer, i::Int, weight::Int) = object[:layout]()[:setRowStretch](i-1, weight)
+row_stretch(::MIME"application/x-qt", object::GridContainer, i::Int, weight::Int) = object[:layout][:setRowStretch](i-1, weight)
 ##################################################
 
 function formlayout(::MIME"application/x-qt", parent::Container)
@@ -679,11 +679,12 @@ setValue(::MIME"application/x-qt", widget::Slider2D, value) = setValue(widget.mo
 ## spinbox
 function spinbox(::MIME"application/x-qt", parent::Container, model::ItemModel, rng::Union(Range,Range1,Ranges))
     widget = isa(rng, Range) ? Qt.QDoubleSpinBox(parent[:widget]) : Qt.QSpinBox(parent[:widget])
-    step = isa(rng, Range1) ? 1 : step(rng)
+
+    n = length([rng])             # expensive
 
     widget[:setMinimum](first(rng))
-    widget[:setMaximum](first(rng) + (length(rng)*n-1)* step)
-    widget[:setSingleStep]( step)
+    widget[:setMaximum](first(rng) + (length(rng)*n-1)* step(rng))
+    widget[:setSingleStep]( step(rng))
 
     qconnect(widget, :valueChanged, (value) -> setValue(model, value))
     connect(model, "valueChanged", value -> widget[:setValue](value))
@@ -1117,15 +1118,8 @@ end
 
 ## Tree view
 ## tpl: a template for the type, otherwise from tr.children[1]
-function treeview(::MIME"application/x-qt", parent::Container, store::TreeStore, model::ItemModel; tpl=nothing)
+function treeview(::MIME"application/x-qt", parent::Container, store::TreeStore, model::ItemModel)
     widget = Qt.QTreeWidget(parent[:widget])
-
-    ## headers
-    if isa(tpl, Nothing)
-        tpl = store.children[1].data
-    end
-    ## first column is for key
-    widget[:setHeaderLabels](append([""],names(tpl)))
 
     ## set flags ...
 
@@ -1160,8 +1154,8 @@ function treeview(::MIME"application/x-qt", parent::Container, store::TreeStore,
     ###########################
     ## connect model and widget
     function insertNode(parentnode, i, childnode)
-        vals = [child.text]
-        if !isa(child.data, Nothing)
+        vals = [childnode.text]
+        if !isa(childnode.data, Nothing)
             vals = append!(vals, node_to_values(childnode))
         end
         item = PySide.Qt.QTreeWidgetItem(vals)
@@ -1189,9 +1183,7 @@ function treeview(::MIME"application/x-qt", parent::Container, store::TreeStore,
     function updatedNode(node)
         item = node_to_item(node)
         nms = names(node.data)
-        for i in 1:length(nms)
-            item[:setText](i-1, to_string(node, node.data.(nms[i])))
-        end
+        [item[:setText](i-1, to_string(node, d)) for (i,d) in enumerate(node.data)]
     end
     connect(store.model, "updatedNode", updatedNode)
     
@@ -1257,7 +1249,24 @@ function treeview(::MIME"application/x-qt", parent::Container, store::TreeStore,
 end
 
 ## Properties
+function getNames(::MIME"application/x-qt", tv::TreeView)
+    tv.attrs[:headerLabels]
+end
 
+function setNames{T<:String}(::MIME"application/x-qt", tv::TreeView, nms::Vector{T})
+    tv.attrs[:headerLabels] = nms
+    widget = tv[:widget]
+    widget[:setHeaderLabels](["",nms...])
+end
+
+function getKeyname(::MIME"application/x-qt", tr::TreeView)
+    tr.attrs[:keyHeaderLabel]
+end
+function setKeyname(::MIME"application/x-qt", tr::TreeView, nm::String)
+    tr.attrs[:keyHeaderLabel] = nm
+    widget = tr[:widget]
+    widget[:setHeaderLabels]([nm, tr.attrs[:headerLabels]...])
+end
 
 ## keywidth is first column
 function getKeywidth(::MIME"application/x-qt", tr::TreeView)

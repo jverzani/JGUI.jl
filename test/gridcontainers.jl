@@ -1,3 +1,5 @@
+using JGUI
+using Base.Test
 
 ### Simple usage
 w = window()
@@ -13,6 +15,7 @@ gr[1,1] = b11
 gr[2,2] = b22
 gr[3,3] = b33
 
+raise(w)
 
 ### alignment
 w = window()
@@ -47,8 +50,8 @@ b33[:alignment] = (:right, :bottom)
 
 gr[:,:] = [b11 b22; nothing b33]
 
+raise(w)
 ### spanning multiple columns
-using JGUI
 w = window()
 gr = grid(w)
 push!(w, gr)
@@ -61,10 +64,9 @@ b33 = button(gr, "3,3")
 gr[1:2, 1] = b11
 gr[1,3] = b22
 gr[2, 2:3] = b33
-
+raise(w)
 ### configure weights -- abuse of notation
 
-using JGUI
 w = window()
 gr = grid(w)
 push!(w, gr)
@@ -78,3 +80,4 @@ gr[1,:] = [b11 b22 b33]
 column_stretch(gr, 1, 1)
 column_stretch(gr, 2, 2)
 column_stretch(gr, 3, 3)
+raise(w)

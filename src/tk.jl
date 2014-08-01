@@ -731,7 +731,7 @@ end
 
 ## Views
 ## storeview
-function storeview(::MIME"application/x-tcltk", parent::Container, store::Store, model::ItemModel; tpl=nothing)
+function storeview(::MIME"application/x-tcltk", parent::Container, store::Store, model::ItemModel)
     ## Widget
     block = Tk.Frame(getWidget(parent))
     widget = Tk.Treeview(block)
@@ -882,8 +882,14 @@ function getWidths(::MIME"application/x-tcltk", s::ModelView)
     Int[get_width(i) for i in 1:ncols]
 end
 function setWidths(::MIME"application/x-tcltk", s::ModelView, widths::Vector{Int})
+    widget = s.o
     for i in 1:length(widths)
-        Tk.tcl(s.o, "column", i, width=widths[i])
+        width = widths[i]
+        if width < 0
+            Tk.tcl(widget, "column", i, stretch=true)
+        else
+            Tk.tcl(widget, "column", i, width=width)
+        end
     end
 end
 ## XXX set these?
@@ -930,24 +936,19 @@ end
 
 ##################################################
 ## Tree view
-## tpl: a template for the type, otherwise from tr.children[1]
-function treeview(::MIME"application/x-tcltk", parent::Container, store::TreeStore, model::ItemModel; tpl=nothing)
+function treeview(::MIME"application/x-tcltk", parent::Container, store::TreeStore, model::ItemModel)
     block = Tk.Frame(getWidget(parent))
     widget = Tk.Treeview(block)
     scrollbars_add(block, widget)
     
     ## add headers from type, connect header click
-    if isa(tpl, Nothing)
-        tpl = store.children[1]
-    end
-    nms = map(Tk.tk_string_escape, map(string, names(tpl.data)))
-    configure(widget, show="tree headings", columns = [1:length(nms)])
+    ncols = length(store.types)
+    configure(widget, show="tree headings", columns = [1:ncols])
     ## headers
     map(i -> tcl(widget, "heading", i, 
-                 text=Tk.tk_string_escape(string(nms[i])), 
                  command=(path) -> notify(model, "headerClicked", i)),
-        1:length(nms))
-    Tk.tcl(widget, "column", length(nms), stretch=true)
+        1:ncols)
+    Tk.tcl(widget, "column",ncols, stretch=true)
 
     ## connect to model
     ## insertNode, removeNode, updatedNode, expandNode, collapseNode
@@ -1049,6 +1050,13 @@ function tk_item_to_path(widget, item)
     path
 end
 
+## [:names]
+function getNames(::MIME"application/x-tcltk", parent::TreeView)
+    widget = parent[:widget]
+    nc = length(parent.store.types)
+    String[Tk.tcl(widget, "heading", i, "-text") for i in 1:nc]
+end
+
 ## path --> item
 function tk_path_to_item(widget, path::Vector{Int})
     ## Is there no better way then to list all children
@@ -1060,6 +1068,18 @@ function tk_path_to_item(widget, path::Vector{Int})
     item
 end
 ## Properties
+
+function setNames{T<:String}(::MIME"application/x-tcltk", parent::TreeView, nms::Vector{T})
+    widget = parent[:widget]
+    [Tk.tcl(widget, "heading", i, text=Tk.tk_string_escape(nm)) for (i,nm) in enumerate(nms)]
+end
+function getKeyname(::MIME"application/x-tcltk", tr::TreeView)
+    string(Tk.tcl(tr.o, "column", "#0", "-text"))
+end
+function setKeyname(::MIME"application/x-tcltk", tr::TreeView, nm::String)
+    Tk.tcl(tr.o, "column", "#0", text=nm)
+end
+
 function getKeywidth(::MIME"application/x-tcltk", tr::TreeView)
     parseint(Tk.tcl(tr.o, "column", "#0", "-width"))
 end

@@ -20,4 +20,6 @@ sv[:index] = 0                  # clear?
 @assert sv[:index] == 0
 
 sv[:selectmode] = :multiple
-selection = Gtk.G_.selection(sv.o)
+## XXX
+
+raise(w)

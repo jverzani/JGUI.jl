@@ -1,5 +1,5 @@
-##ENV["toolkit"] = "Qt"
-using JGUI, Base.Test
+using JGUI
+using Base.Test
 
 
 w = window()

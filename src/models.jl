@@ -236,13 +236,9 @@ type TreeNode <: Object
     children::Vector            # TreeNodes
 end
 
-## make string array of values
-function composite_instance_to_values(d)
-    String[to_string(d, d.(nm)) for nm in names(d)]
-end
 function node_to_values(node::TreeNode)
-    d = node.data
-    composite_instance_to_values(d)
+    ds = node.data
+    String[string(d) for d in ds]
 end
 
 
@@ -252,10 +248,10 @@ abstract AbstractTreeStore <: DataStore
 ## Would like to put in data type here...
 type TreeStore <: DataStore
     model::Observable
+    types::Vector{DataType}
     children::Vector{TreeNode}
     attrs::Dict
-    TreeStore() = new(ItemModel(), TreeNode[], Dict())
-    TreeStore(items) = new(ItemModel(), items, Dict())
+    TreeStore(types...) = new(ItemModel(), [types...], TreeNode[], Dict())
 end
 
 ## A store for display through `treeview`
@@ -305,8 +301,8 @@ end
 ## node = path_to_node(tstore, [1,1])  # first child of first child
 ## pop!(tstore, node)
 ##
-treestore(items) = TreeStore(items)
-treestore() = TreeStore()
+treestore(types...) = TreeStore(types...)
+
 
 ## some store methods
 function index_of(node::TreeNode)
@@ -354,7 +350,7 @@ function insert!(store::TreeStore, parentnode::Union(Nothing, TreeNode), i::Int,
     childnode
 end
 function push!(tr::TreeStore, parentnode::Union(Nothing, TreeNode), node::TreeNode)
-    n= parentnode == nothing ? length(tr.children) : length(parendnode.children)
+    n= parentnode == nothing ? length(tr.children) : length(parentnode.children)
     insert!(tr, parentnode, n+1, node)
 end
 function push!(tr::TreeStore, parentnode::Union(Nothing, TreeNode), text::String, data) 

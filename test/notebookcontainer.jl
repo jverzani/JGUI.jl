@@ -1,4 +1,5 @@
 using JGUI
+using Base.Test
 
 w = window(title="notebook")
 nb = notebook(w); push!(w, nb)
@@ -18,3 +19,5 @@ setValue(nb, 3)
 pop!(nb, b2)
 @assert length(nb) == 2
 @assert nb[1][:value] == "one"
+
+raise(w)
