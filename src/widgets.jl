@@ -293,7 +293,13 @@ end
 lineedit(parent::Container, value::String=""; kwargs...) = lineedit(parent, ItemModel(value); kwargs...)
 lineedit(parent::Container, value::Number; kwargs...) = lineedit(parent, string(value); kwargs...)
 
-setValue(obj::LineEdit, value::Number; signal::Bool=true) = setValue(obj, string(value); signal=signal)
+function setValue(obj::LineEdit, value; signal::Bool=true) 
+    value = string(value)
+    if !isa(obj.coerce, Nothing)
+        value = string(obj.coerce(value))
+    end
+    setValue(obj.model, value ; signal=signal)
+end
 
 ## Call coerce if present. If can't be coerced, returns nothing
 function getValue(obj::LineEdit)

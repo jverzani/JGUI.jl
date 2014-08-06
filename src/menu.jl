@@ -111,7 +111,7 @@ end
 
 
 
-
+## addAction for adding to a menu
 function addAction(menu::Menu, action::Action)
     addAction(menu.toolkit, menu, action)
 end
@@ -131,3 +131,6 @@ end
 function addAction(menu::Menu, cb::CheckBox)
     addAction(menu.toolkit, menu, cb)
 end
+
+## if a Menu is like a queue, the addAction is like push!
+push!(menu::Menu, obj) = addAction(menu, obj)

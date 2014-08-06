@@ -279,6 +279,7 @@ function node_to_path(node::TreeNode)
     parent = node.parent
     while !isa(parent, Union(TreeStore, Nothing))
         unshift!(path, index_of(parent))
+        parent = parent.parent
     end
     path
 end
@@ -328,8 +329,13 @@ function splice!(store::TreeStore, parentnode::Union(Nothing, TreeNode), i::Int)
     splice!(parentnode.children, i)
     notify(store.model, "removeNode", parentnode, i)
 end
-function pop!(store::TreeStore, node::TreeNode)
+
+## remove node from store
+function delete!(store::TreeStore, node::TreeNode)
     parentnode = node.parent
+    if isa(parentnode, TreeStore)
+        parentnode = nothing
+    end
     ### how to get indexof node
     i = index_of(node)
 

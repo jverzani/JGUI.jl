@@ -974,6 +974,7 @@ function treeview(::MIME"application/x-tcltk", parent::Container, store::TreeSto
             Tk.tcl(widget, "item", node.index, text=node.text)
         end
     end
+    ## these are for the view -- not the store
     connect(model, "expandNode") do node
         Tk.tcl(widget, "item", node.index, open=true)
     end
@@ -1369,7 +1370,8 @@ function addAction(::MIME"application/x-tcltk", parent::Menu, action::Action)
 end
 
 function addAction(::MIME"application/x-tcltk", parent::Menu, value::Separator)
-    Tk.menu_add(parent[:widget], value[:widget])
+    ## bugTk.menu_add(parent[:widget], value[:widget])
+    Tk.tcl(parent[:widget], "add", "separator")
 end
 
 function addAction(::MIME"application/x-tcltk", parent::Menu, value::RadioGroup)

@@ -1610,17 +1610,34 @@ function addAction(::MIME"application/x-qt", parent::Menu, value::RadioGroup)
     for item in value.model.items
         action = Qt.QAction(item, parent[:widget])
         action[:setCheckable](true)
+        if item == value[:value]
+            action[:setChecked](true)
+        end
         widget[:addAction](action)
         parent[:widget][:addAction](action)
     end
+
+    connect(value, :valueChanged) do val
+        a = filter(a -> a[:text]() == value[:value], widget[:actions]())
+        if length(a) >= 1
+            a[1][:setChecked](true)
+        end
+    end
+
     qconnect(widget, :triggered) do action
         notify(value.model, "valueChanged", action[:text]())
     end
+
+    widget
 end
 
 function addAction(::MIME"application/x-qt", parent::Menu, value::CheckBox)
     widget = Qt.QAction(value[:label], parent[:widget])
     widget[:setCheckable](true)
+    widget[:setChecked](value[:value])
+    connect(value, "valueChanged") do val
+        widget[:setChecked](val)
+    end
     ## widget[:setIcon](...)
     qconnect(widget, :changed) do 
         notify(value.model, "valueChanged", widget[:isChecked]())

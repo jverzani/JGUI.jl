@@ -3,7 +3,7 @@ module JGUI
 
 import Base: show
 import Base: getindex, setindex!, length, 
-             push!, append!, prepend!, insert!, splice!, shift!, unshift!, pop!,
+             push!, append!, prepend!, insert!, splice!, delete!, shift!, unshift!, pop!,
              findin
 import Base: size, endof, ndims
 import Base: connect, notify

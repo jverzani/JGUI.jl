@@ -11,6 +11,7 @@ svg, html...
 storeview: update state
 icons in storeview
 dialog return value -- must look up in dlg.state
+<del>menus: radiobuttons and checkbuttons have issues</del>
 <del>imageview -- ain't working</del>
 <del>storeview: hooke up model -> view callbacks </del>
 <del>box: strectch and expand argument...</del>
@@ -21,11 +22,13 @@ warnings on loading Tk
 
 # Gtk
 
+* need treeview
+* spacing, sizing, ..
+- implemented for 3.x. It is odd though. Child sizepolicy effects all siblings in a box container.
+[The following need constructors...]
 * modal window()
-* need the "views"
 * dialogs
 * menubars: radio and checkbuttons
-* spacing, sizing, ..
 
 # bonepile
 <del>spinbox</del>

@@ -32,7 +32,7 @@ function push!(parent::BinContainer, child::Widget)
     set_child(parent.toolkit, parent, child)
 end
 clear(parent::BinContainer) = pop!(parent)
-
+length(parent::BinContainer) = length(children(parent))
 
 ##################################################
 ##
@@ -219,6 +219,14 @@ list_props(::@PROP("BoxContainer")) = {:margin  => "[x,y] area in pixels around 
                                        :spacing => "[x,y] padding around each child widget"
                                        }
 
+## findin
+## return index of child in parent or 0 if not present
+function findin(child::Widget, parent::Container) 
+    kids = children(parent)
+    n = length(kids)
+    out = [1:n][child .== kids]
+    length(out) == 0 ? 0 : out[1] 
+end
 
 ## add child to parent
 
@@ -251,6 +259,7 @@ function prepend!{T <: Widget}(parent::BoxContainer, children::Vector{T})
 end
 prepend!(parent::BoxContainer, child) = prepend!(parent, [child])
 
+
 ## Remove a child by index
 function splice!(parent::Container, index::Int)
     child = children(parent)[index]
@@ -259,29 +268,19 @@ function splice!(parent::Container, index::Int)
     child
 end
 
+## remove child from container
+function delete!(parent::Container, child::Widget)
+    splice!(parent, findin(child, parent))
+end
 
 ## delete last one
 function pop!(parent::Container) 
     splice!(parent, length(parent))
 end
 
-## remove child from contaier, using pop! in Dict sense
-function pop!(parent::Container, child::Widget)
-    splice!(parent, findin(child, parent))
-end
-
-
 ## shift off first one
 shift!(parent::Container) = splice!(parent, 1)
 
-## findin
-## return index of child in parent or 0 if not present
-function findin(child::Widget, parent::Container) 
-    kids = children(parent)
-    n = length(kids)
-    out = [1:n][child .== kids]
-    length(out) == 0 ? 0 : out[1] 
-end
  
 
 ##################################################

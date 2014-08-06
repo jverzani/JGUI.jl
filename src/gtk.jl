@@ -61,9 +61,17 @@ update_context(::MIME"application/x-qt", o::Widget, pt) = nothing
 getWidget(::MIME"application/x-gtk", o::Widget) = o.o
 getBlock(::MIME"application/x-gtk", o::Widget) = o.block
 
-### XXX
 function setSizepolicy(::MIME"application/x-gtk", o::Widget, policies) 
     o.attrs[:sizepolicy] = policies
+    ## modify widget!
+    if Gtk.gtk_version >= 3    
+        hexpand = policies[1] == :expand ? true : false
+        vexpand = policies[2] == :expand ? true : false
+        Gtk.G_.hexpand(o[:block], hexpand)
+        Gtk.G_.vexpand(o[:block], vexpand)
+    else
+        "XXX"
+    end
 end
 
 
@@ -80,14 +88,11 @@ function align_gtk_widget(o::Widget; xscale=1, yscale=1)
 
 
     align = [map_align[k] for k in o[:alignment]]
-
+    
 
     if Gtk.gtk_version >= 3
-        ## align with out GtkAlignment
-        ## XXX TODO
-        o.block
-        
-
+#        Gtk.G_.halign(o[:block], align[1])
+#        Gtk.G_.valign(o[:block], align[2])
     else
         al = GtkAlignment(align[1], align[2], xscale, yscale)
 
@@ -166,12 +171,35 @@ function setModal(::MIME"application/x-tcltk", o::Window, value::Bool)
 end
 
 function set_child(::MIME"application/x-gtk", parent::Window, child::Widget)
+    if Gtk.gtk_version >= 3
+        Gtk.G_.hexpand(child.block, true)
+        Gtk.G_.vexpand(child.block, true)
+    else
+        "XXX"
+    end
+    Gtk.push!(parent.block[2], child.block)
+    showall(parent.o)
+end
+
+## don't expand in all directions for box containers. Hacky!
+function set_child(::MIME"application/x-gtk", parent::Window, child::BoxContainer)
+    if child.attrs[:direction] == :horizontal
+        Gtk.G_.vexpand(child.block, true)
+    else
+         Gtk.G_.hexpand(child.block, true)
+    end
     Gtk.push!(parent.block[2], child.block)
     showall(parent.o)
 end
 
 ## for BinContainer, only one child we pack and expand...
 function set_child(::MIME"application/x-gtk", parent::BinContainer, child::Widget)
+    if Gtk.gtk_version >= 3
+        Gtk.G_.hexpand(child.block, true)
+        Gtk.G_.vexpand(child.block, true)
+    else
+        "XXX"
+    end
     Gtk.push!(parent[:widget], child.block)
     parent[:visible] && showall(parent[:widget])
 end
@@ -208,9 +236,43 @@ end
 
 
 ## stretch, strut, spacing XXX
-addspacing(::MIME"application/x-qt", parent::BoxContainer, val::Int) = parent[:widget][:layout]()[:addSpacing](val)
-addsstrut(::MIME"application/x-qt", parent::BoxContainer, val::Int) = parent[:widget][:layout]()[:addStrut](val)
-addstretch(::MIME"application/x-qt", parent::BoxContainer, val::Int) = parent[:widget][:layout]()[:addStretch](val)
+function addspacing(::MIME"application/x-qt", parent::BoxContainer, val::Int) 
+    box = parent[:widget]
+    if parent.attrs[:direction] == :horizontal
+        child = vbox(parent)
+        child[:size] = [val, 1]
+        push!(parent, child)
+    else
+        child = hbox(parent)
+        child[:size] = [1, val]
+        push!(parent, child)
+    end
+end
+
+function addsstrut(::MIME"application/x-qt", parent::BoxContainer, val::Int) 
+    box = parent[:widget]
+    if parent.attrs[:direction] == :horizontal
+        child = vbox(parent)
+        child[:size] = [1, val]
+        push!(parent, child)
+    else
+        child = hbox(parent)
+        child[:size] = [val, 1]
+        push!(parent, child)
+    end
+end
+function addstretch(::MIME"application/x-qt", parent::BoxContainer, val::Int) 
+    box = parent[:widget]
+    if parent.attrs[:direction] == :horizontal
+        child = vbox(parent)
+        child[:sizepolicy] = (:expand, :fixed)
+        push!(parent, child)
+    else
+        child = hbox(parent)
+        child[:sizepolicy] = (:fixed, :expand)
+        push!(parent, child)
+    end
+end
 
 
 function insert_child(::MIME"application/x-gtk", parent::BoxContainer, index, child::Widget)
@@ -233,8 +295,8 @@ function insert_child(::MIME"application/x-gtk", parent::BoxContainer, index, ch
     end
     fill = expand
 
-
-    child_widget = align_gtk_widget(child, xscale=xscale, yscale=yscale)
+    child_widget = child[:block]
+#    child_widget = align_gtk_widget(child, xscale=xscale, yscale=yscale)
 
     ccall((:gtk_box_pack_start, Gtk.libgtk),
               Void,
@@ -1529,17 +1591,19 @@ setCommand(::MIME"application/x-gtk", action::Action, value::Function) = nothing
 
 ## menus
 function menubar(::MIME"application/x-gtk", parent::Window)
-    widget = @GtkMenuBar()
+    widget = Gtk.@GtkMenuBar()
+    Gtk.G_.hexpand(widget, true)
     push!(parent.block[1], widget)
-    show(parent.block[1])
+    showall(parent.block[1])
     widget
 end
 
 ## toplevel menu item
 function menu(::MIME"application/x-gtk", parent::MenuBar, label)
-    item = @GtkMenuItem(label)
-    mitem = @GtkMenu(item)
+    item = Gtk.@GtkMenuItem(label)
+    mitem = Gtk.@GtkMenu(item)
     push!(parent[:widget], item)
+    showall(parent[:widget])
     mitem
 end
 
@@ -1548,6 +1612,7 @@ function menu(::MIME"application/x-gtk", parent::Menu, label)
     item = @GtkMenuItem(label)
     mitem = @GtkMenu(item)
     push!(parent[:widget], item)
+    showall(parent[:widget])
     mitem
 end
 
@@ -1577,10 +1642,12 @@ function addAction(::MIME"application/x-gtk", parent::Menu, action::Action)
     end
     
     push!(parent[:widget], item)
+    showall(parent[:widget])
 end
 
 function addAction(::MIME"application/x-gtk", parent::Menu, value::Separator)
-    push!(parent[:widget], Gtk.SeparatorMenuItem())
+    push!(parent[:widget], Gtk.@SeparatorMenuItem())
+    showall(parent[:widget])
 end
 
 function addAction(::MIME"application/x-gtk", parent::Menu, value::RadioGroup)
