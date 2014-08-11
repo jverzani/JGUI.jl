@@ -3,8 +3,6 @@
 include("gtk-addons.jl")
 
 ## TODO
-## * storeview
-## * treeview
 ## * dialogs
 ## * others
 
@@ -236,7 +234,7 @@ end
 
 
 ## stretch, strut, spacing XXX
-function addspacing(::MIME"application/x-qt", parent::BoxContainer, val::Int) 
+function addspacing(::MIME"application/x-gtk", parent::BoxContainer, val::Int) 
     box = parent[:widget]
     if parent.attrs[:direction] == :horizontal
         child = vbox(parent)
@@ -249,7 +247,7 @@ function addspacing(::MIME"application/x-qt", parent::BoxContainer, val::Int)
     end
 end
 
-function addsstrut(::MIME"application/x-qt", parent::BoxContainer, val::Int) 
+function addsstrut(::MIME"application/x-gtk", parent::BoxContainer, val::Int) 
     box = parent[:widget]
     if parent.attrs[:direction] == :horizontal
         child = vbox(parent)
@@ -261,7 +259,7 @@ function addsstrut(::MIME"application/x-qt", parent::BoxContainer, val::Int)
         push!(parent, child)
     end
 end
-function addstretch(::MIME"application/x-qt", parent::BoxContainer, val::Int) 
+function addstretch(::MIME"application/x-gtk", parent::BoxContainer, val::Int) 
     box = parent[:widget]
     if parent.attrs[:direction] == :horizontal
         child = vbox(parent)
@@ -905,11 +903,6 @@ function spinbox(::MIME"application/x-gtk", parent::Container, model::ItemModel,
     (widget, widget)
 end
 
-## XXX don't want to suppor this 
-# function setRange(::MIME"application/x-qt", obj::SpinBox, rng)
-#     step = isa(rng, Range1) ? 1 : step(rng)
-#     widget = obj[:widget]
-# end   
 
 ## cairographic
 function cairographic(::MIME"application/x-gtk", parent::Container, 
@@ -1120,62 +1113,77 @@ end
 
 
 ## Tree view
-function store_proxy_model(parent, store::TreeStore)
-    "XXX adapt for treeview"
-    m = @GtkListStore(store.types...)
+function store_proxy_model(::MIME"application/x-gtk", store::TreeStore)
+    ## proxy gtkTreeStore to JGUI::TreeStore
 
-    ## add in any in store
-    ## XXX Need to recurse here
-    for record in store.items
-        push!(m, tuple(record...))
+    gtkstore = Gtk.@TreeStore(String, store.types...)
+
+    
+    ## Intial synchronize jgui store with gtkstore
+    function add_children(parentnode; node=nothing)
+        if length(parentnode.children) > 0
+            for i in 1:length(parentnode.children)
+                child = parentnode.children[i]
+                cnode = push!(gtkstore, tuple(child.text, child.data...), node)
+                add_children(child, node=cnode)
+            end
+        end
+    end
+    add_children(store)
+
+    ## connect tree store to gtkstore
+    connect(store.model, "insertNode") do parent, ind, child
+        ## how to get index from parent!!!
+    insert!(gtkstore, node_to_path(parent), child.data, how=:parent, where=:after)
     end
 
-   ## connect model to store so that store changes propogate XXX
-    connect(store.model, "rowInserted") do i
-        record = store.items[i]
-        push!(m, tuple(record...))
+    connect(store.model, "removeNode") do parent, ind
+        if isa(parent, Union(TreeStore, Nothing))
+            path = [ind]
+        else
+            path = [node_to_path(parent), ind]
+        end
+        splice!(gtkstore, path)
     end
-
-    connect(store.model, "rowRemoved") do i
-        splice!(m, i)
+    
+    connect(store.model, "updatedNode") do node
+        ## XXX how to update in place? I can delete then remove, but this seems wrong
+        ind = node.index
+        splice!(gtkstore, ind)
+        insert!(gtkstore, ind, node.data, how=:sibling, where=:after)
     end
-
-    function rowUpdated(i::Int)
-        record = store.items[i]
-        map(j -> m[i,j] = record[j], 1:length(record))
-    end
-    connect(store.model, "rowUpdated", rowUpdated)
-
-
-
-   ## return model
-   m
+    
+    gtkstore
 end
 
 ## tpl: a template for the type, otherwise from tr.children[1]
 function treeview(::MIME"application/x-gtk", parent::Container, store::TreeStore, model::ItemModel)
-    error("XXX")
-    widget = @GtkTreeView()
+
+    ## get store
+    gtkstore = store_proxy_model(parent.toolkit, store)
+
+    ## view of store
+    widget = @GtkTreeView(Gtk.TreeModel(gtkstore))
     block = @GtkScrolledWindow()
     [setproperty!(widget, x, true) for  x in [:hexpand, :vexpand]]
     push!(block, widget)
 
-
-    ## set flags ...
-
-    ## helper functions relating
-    function path_to_item(path)
-        ## return QTreeWidgetItem from path
-        path = copy(path)
-        length(path) == 0 && return nothing
-        root = shift!(path)
-        item = widget[:topLevelItem](root - 1)
-        while length(path) > 0
-            i = shift!(path)
-            item = item[:child](i-1)
+    ## make cell renderers
+    ## key is a string
+    rend = Gtk.@CellRendererText()
+    col = Gtk.@TreeViewColumn("", rend, {"text" => 0})
+    push!(widget, col)
+    ## others
+    for j in 1:length(store)
+        col = make_column(store.types[j], "Column $j", j)
+        signal_connect(col, :clicked) do _
+            notify(model, "headerClicked", j)
         end
-        item
+        push!(widget, col)
     end
+
+    
+    ## XXX
     function node_to_item(node)
         path_to_item(node_to_path(node))
     end
@@ -1190,99 +1198,93 @@ function treeview(::MIME"application/x-gtk", parent::Container, store::TreeStore
         unshift!(path, widget[:indexOfTopLevelItem](item) + 1)
         path
     end
+
+    ## 
+    function expandNode(tview, gtkstore, node)
+        ind = node_to_path(node)
+        path = Gtk.path(Gtk.TreeModel(gtkstore), Gtk.iter_from_index(gtkstore, ind)[])
+        ccall((:gtk_tree_view_expand_row, Gtk.libgtk), Bool, 
+              (Ptr{GObject}, Ptr{Gtk.GtkTreePath}, Cint), 
+              tview, path, false)
+    end
+    function collapseNode(tview, gtkstore, node)
+        ind = node_to_path(node)
+        path = Gtk.path(Gtk.TreeModel(gtkstore), Gtk.iter_from_index(gtkstore, ind)[])
+        ccall((:gtk_tree_view_collapse_row, Gtk.libgtk), Bool, 
+              (Ptr{GObject}, Ptr{Gtk.GtkTreePath}), 
+              tview, path)
+    end
     
+
     ###########################
     ## connect model and widget
-    function insertNode(parentnode, i, childnode)
-        vals = [child.text]
-        if !isa(child.data, Nothing)
-            vals = append!(vals, node_to_values(childnode))
-        end
-        item = PySide.Qt.QTreeWidgetItem(vals)
-
-        if isa(parentnode, Union(Nothing, TreeStore)) # TreeStore is root, TreeNode is node
-            widget[:insertTopLevelItem](i-1, item)
-        else
-            parent_path = node_to_path(parentnode)
-            parent_item = path_to_item(parent_path)
-            parent_item[:insertChild](i-1, item)
-        end
-    end
-    connect(store.model, "insertNode", insertNode)
-
-    function removeNode(parentnode, i)
-        if isa(parentnode, TreeStore) 
-            widget[:takeTopLevelItem](i-1)
-        else
-            item = node_to_item(parentnode)
-            item[:takeChild](i-1)
-        end
-    end
-    connect(store.model, "removeNode", removeNode)
-
-    function updatedNode(node)
-        item = node_to_item(node)
-        nms = names(node.data)
-        for i in 1:length(nms)
-            item[:setText](i-1, to_string(node, node.data.(nms[i])))
-        end
-    end
-    connect(store.model, "updatedNode", updatedNode)
-    
-    ## expand Node on view model, not store model
-    function expandNode(node)
-        item = node_to_item(node)
-        item[:setExpanded](true)
-    end
     connect(model, "expandNode", expandNode)
-
-    function collapseNode(node)
-        item = node_to_item(node)
-        item[:setExpanded](false)
-    end
     connect(model, "collapseNode", collapseNode)
 
+
+    
     connect(model, "valueChanged") do value
-        item = path_to_item(value)
-        widget[:setCurrentItem](item)
-    end
-
-    ## iterate of tstore children to set things
-    function add_children(parentnode)
-        if length(parentnode.children) > 0
-            for i in 1:length(parentnode.children)
-                child = parentnode.children[i]
-                insertNode(parentnode, i, child)
-                add_children(child)
-            end
+        ## XXX set selection. Fails!! selection is matching 
+        return()
+        selection = Gtk.G_.selection(widget)
+        function path_from_index(index)
+            ind = join(index - 1, ":")
+            ccall((:gtk_tree_path_new_from_string,Gtk.libgtk), GtkTreePath, (Ptr{Uint8}, ), bytestring(ind))
         end
+        path = path_from_index(value)
+        ccall((:gtk_tree_selection_select_path, Gtk.libgtk), Void,
+              (Gtk.GtkTreeSelection, Gtk.GtkTreePath), selection, path)
+
     end
-    add_children(store)
 
-
+    ##
 
     ## connect widget to model
-    qconnect(widget, :itemSelectionChanged) do
-        sel_item = widget[:selectedItems]()[1]
-        path = item_to_path(sel_item)
-        ## some how this totally fails, yet
-        setValue(model, path)
+    ## selection changed, set model
+    selection = Gtk.G_.selection(widget)
+    signal_connect(selection, :changed) do sel
+        ## XXX this function call is a hack to be addressed at Gtk level
+        index = JGUI.gtk_jgui_tree_selected(widget)
+        notify(store.model, "valueChanged", index)
+        false
     end
-    qconnect(widget, :itemExpanded) do item
-        path = item_to_path(item)
-        notify(model, "nodeExpand", path)
+
+    ## connect expand node event to model
+    signal_connect(widget, :row_activated) do view, path, col
+        ## XXX this function call is a hack to be addressed at Gtk level
+        index = JGUI.gtk_jgui_tree_selected(widget)
+        notify(model, "activated", index)
+        false
     end
-    qconnect(widget, :itemCollapsed) do item
-        path = item_to_path(item)
-        notify(model, "nodeCollapse", path)
+
+    ## connect expand node event to model
+    signal_connect(widget, :row_expanded) do view, path, col
+        ## XXX this function call is a hack to be addressed at Gtk level
+        index = JGUI.gtk_jgui_tree_selected(widget)
+        notify(model, "nodeExpand", index)
+        false
     end
-    qconnect(widget, :itemClicked) do item, column
-        path = item_to_path(item)
-        notify(model, "clicked", path, column + 1)
+
+
+    signal_connect(widget, :row_collapsed) do view, path, col
+        ## XXX this function call is a hack to be addressed at Gtk level
+        index = JGUI.gtk_jgui_tree_selected(widget)
+        notify(model, "nodeCollapse", index)
     end
-    qconnect(widget, :itemDoubleClicked) do item, column
-        path = item_to_path(item)
-        notify(model, "doubleClicked", path, column + 1)
+
+    ## more issues?
+    signal_connect(widget, :button_press_event) do widget, event
+        ## look up path, column
+        ## check state for double, single click
+        ## notify
+        if event.event_type in [Gtk.GdkEventType.GDK_2BUTTON_PRESS, Gtk.GdkEventType.GDK_BUTTON_PRESS]
+            double = event.event_type == Gtk.GdkEventType.GDK_2BUTTON_PRESS
+            signal = double ? "doubleClicked" : "clicked"
+            index = JGUI.gtk_jgui_tree_selected(widget)
+            column = 0          # XXX Get column!!!
+            notify(model, signal, index, column)
+        end
+        false
     end
 
     
@@ -1291,62 +1293,79 @@ function treeview(::MIME"application/x-gtk", parent::Container, store::TreeStore
 end
 
 ## Properties
-function getNames(::MIME"application/x-gtk", tv::TreeView)
-    tv.attrs[:headerLabels]
+function getNames(::MIME"application/x-gtk", tr::TreeView)
+    tview = tr[:widget]
+    n = length(tr.store)
+    function get_name(i)
+        col = Gtk.G_.column(tview, i)
+        bytestring(Gtk.G_.title(col))
+    end
+    String[get_name(i) for i in 1:n]
 end
 
-function setNames{T<:String}(::MIME"application/x-gtk", tv::TreeView, nms::Vector{T})
-    "XXX"
+function setNames{T<:String}(::MIME"application/x-gtk", tr::TreeView, nms::Vector{T})
+    tview = tr[:widget]
+    @assert length(tview.store) == length(names)
+    for (i, nm) in enumerate(names)
+        col = Gtk.G_.column(tview, i)
+        Gtk.G_.title(col, nm)
+    end
+
 end
 
 function getKeyname(::MIME"application/x-gtk", tr::TreeView)
-    "XXX"
+    tview = tr[:widget]
+    col = Gtk.G_.column(tview, 0)
+    bytestring(Gtk.G_.title(col))
 end
 function setKeyname(::MIME"application/x-gtk", tr::TreeView, nm::String)
-    "XXX"
+    tview = tr[:widget]
+    col = Gtk.G_.column(tview, 0)
+    Gtk.G_.title(col, nm)
 end
 
 
 ## keywidth is first column
-function getKeywidth(::MIME"application/x-qt", tr::TreeView)
-    "XXX"
+function getKeywidth(::MIME"application/x-gtk", tr::TreeView)
+    tview = tr[:widget]
+    col = Gtk.G_.column(tview, 0)
+    Gtk.G_.width(col)
 end
-function setKeywidth(::MIME"application/x-qt", tr::TreeView, width::Int)
-    "XXX"
+function setKeywidth(::MIME"application/x-gtk", tr::TreeView, width::Int)
+    tview = tr[:widget]
+    col = Gtk.G_.column(tview, 0)
+    Gtk.G_.min_width(col, width)
 end
-function getWidths(::MIME"application/x-qt", tr::TreeView)
-    "XXX"
+function getWidths(::MIME"application/x-gtk", tr::TreeView)
+    tview = tr[:widget]
+    widths = Int[]
+    for (i, width) in enumerate(widths)
+        col = Gtk.G_.column(tview, i)
+        push!(widths, Gtk.G_.width(col))
+    end
+    widths
 end
-function setWidths(::MIME"application/x-qt", tr::TreeView, widths::Vector{Int})
-    "XXX"
+function setWidths(::MIME"application/x-gtk", tr::TreeView, widths::Vector{Int})
+    @assert length(tr.store) == length(widths)
+    tview = tr[:widget]
+    for (i, width) in enumerate(widths)
+        col = Gtk.G_.column(tview, i)
+        Gtk.G_.min_width(col, width)
+    end
+
 end
-function getHeights(::MIME"application/x-qt", tr::TreeView)
-    "XXX"
+function getHeights(::MIME"application/x-gtk", tr::TreeView)
+    "XXX"  ## height is only fixed or floating in gtk(???)
 end
-function setHeights(::MIME"application/x-qt", tr::TreeView, heights::Vector{Int})
+function setHeights(::MIME"application/x-gtk", tr::TreeView, heights::Vector{Int})
     "XXX"
 end
 
 
-function setIcon(::MIME"application/x-qt", s::TreeView, path::Vector{Int}, icon::Icon)
-    widget = s[:widget]
-    function path_to_item(path) # DRY!!
-        ## return QTreeWidgetItem from path
-        length(path) == 0 && return nothing
-        root = shift!(path)
-        item = widget[:topLevelItem](root - 1)
-        while length(path) > 0
-            i = shift!(path)
-            item = item[:child](i-1)
-        end
-        item
-    end
-    item = path_to_item(path)
-    if isa(icon.theme, Nothing) 
-        icon.theme = s[:icontheme]
-    end
-    widget[:widget][:setIcon]()
-    item[:setIcon](get_icon(s.toolkit, icon))
+function setIcon(::MIME"application/x-gtk", tr::TreeView, path::Vector{Int}, icon::Icon)
+    tview = tr[:widget]
+    XXX("Set icons")
+    ## XXX  do I need a column in our gtkstore for icon?
 end
 
 ## Images

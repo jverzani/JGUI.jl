@@ -997,7 +997,9 @@ end
 ##
 ## Signals:
 ##
-## * `valueChanged (value)` gives selected path
+## * `valueChanged (value)` Selection changes, this passes on selected path
+##
+## * `activated (value)` Selection is activated, typically double click but may be enter key
 ##
 ## * `nodeExpand (path)` gives path when node expands
 ##

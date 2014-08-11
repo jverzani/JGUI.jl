@@ -64,45 +64,90 @@ end
         ## This is a function of the view -- not the model
 ## 
 ## return Int[] of selected indices
-# function Gtk.selected(view::Gtk.GtkTreeView)
-#     selection = Gtk.G_.selection(view)
-#     ret = Int[]
+function gtk_jgui_selected(view::Gtk.GtkTreeView)
+    selection = Gtk.G_.selection(view)
+    ret = Int[]
 
-#     hasselection(selection) || return ret
+    hasselection(selection) || return ret
 
 
-#     if getproperty(selection, :mode, Int) == Gtk.GConstants.GtkSelectionMode.MULTIPLE
-#         model = Gtk.mutable(GtkTreeModel(getproperty(view, :model, Gtk.GtkListStore)))
-#         rows = Gtk.GLib.GList(ccall((:gtk_tree_selection_get_selected_rows, Gtk.libgtk), 
-#                                     Ptr{Gtk._GSList{Gtk.GtkTreePath}},
-#                                     (Ptr{GObject}, Ptr{GtkTreeModel}), 
-#                                     selection, model))
+    if getproperty(selection, :mode, Int) == Gtk.GConstants.GtkSelectionMode.MULTIPLE
+        model = Gtk.mutable(GtkTreeModel(getproperty(view, :model, Gtk.GtkListStore)))
+        rows = Gtk.GLib.GList(ccall((:gtk_tree_selection_get_selected_rows, Gtk.libgtk), 
+                                    Ptr{Gtk._GSList{Gtk.GtkTreePath}},
+                                    (Ptr{GObject}, Ptr{GtkTreeModel}), 
+                                    selection, model))
 
-#         for path in rows
-#             i = ccall((:gtk_tree_path_to_string, Gtk.libgtk), Ptr{Uint8}, 
-#                       ( Ptr{GtkTreePath},),
-#                       path) |> bytestring |> int |> x -> x .+ 1
-#             push!(ret, i)
-#         end
-#     else
-#         ## Gtk.selected *should* work here, but last line gives
-#         ## coercion issue.
-#         ## m, iter = selected(selection) # issue with Gtk.selected
-#         m = Gtk.mutable(Ptr{GtkTreeModel})
-#         iter = Gtk.mutable(GtkTreeIter)
-#         res = bool(ccall((:gtk_tree_selection_get_selected,Gtk.libgtk),Cint,
-#                          (Ptr{GObject},Ptr{Ptr{GtkTreeModel}},Ptr{GtkTreeIter}),
-#                          selection,m,iter))
+        for path in rows
+            i = ccall((:gtk_tree_path_to_string, Gtk.libgtk), Ptr{Uint8}, 
+                      ( Ptr{GtkTreePath},),
+                      path) |> bytestring |> int |> x -> x .+ 1
+            push!(ret, i)
+        end
+    else
+        ## Gtk.selected *should* work here, but last line gives
+        ## coercion issue.
+        ## m, iter = selected(selection) # issue with Gtk.selected
+        m = Gtk.mutable(Ptr{GtkTreeModel})
+        iter = Gtk.mutable(GtkTreeIter)
+        res = bool(ccall((:gtk_tree_selection_get_selected,Gtk.libgtk),Cint,
+                         (Ptr{GObject},Ptr{Ptr{GtkTreeModel}},Ptr{GtkTreeIter}),
+                         selection,m,iter))
 
-#         !res && error("No selection of GtkTreeSelection")
-#         ## what is row?
-#         i = ccall((:gtk_tree_model_get_string_from_iter, Gtk.libgtk), 
-#                   Ptr{Uint8}, 
-#                   (Ptr{GObject}, Ptr{GtkTreeIter}), m[], iter) |> bytestring |> int |> x -> x+1
-#         push!(ret, i)
-#     end
-#     ret
-# end
+        !res && error("No selection of GtkTreeSelection")
+        ## what is row?
+        i = ccall((:gtk_tree_model_get_string_from_iter, Gtk.libgtk), 
+                  Ptr{Uint8}, 
+                  (Ptr{GObject}, Ptr{GtkTreeIter}), m[], iter) |> bytestring |> int |> x -> x+1
+        push!(ret, i)
+    end
+    ret
+end
+
+## return path of selected
+function gtk_jgui_tree_selected(view::Gtk.GtkTreeView)
+    selection = Gtk.G_.selection(view)
+    ret = Any[]
+
+    hasselection(selection) || return ret
+
+    ## convert i:j:k -> [i+1, j+1, k+1]
+    path_to_index(p) =  map(x -> x+1, map(int, split(p, ":") ))
+
+    
+    if getproperty(selection, :mode, Int) == Gtk.GConstants.GtkSelectionMode.MULTIPLE
+        model = Gtk.mutable(GtkTreeModel(getproperty(view, :model, Gtk.GtkListStore)))
+        rows = Gtk.GLib.GList(ccall((:gtk_tree_selection_get_selected_rows, Gtk.libgtk), 
+                                    Ptr{Gtk._GSList{Gtk.GtkTreePath}},
+                                    (Ptr{GObject}, Ptr{GtkTreeModel}), 
+                                    selection, model))
+
+        for path in rows
+            i = ccall((:gtk_tree_path_to_string, Gtk.libgtk), Ptr{Uint8}, 
+                      ( Ptr{GtkTreePath},),
+                      path) |> bytestring |> path_to_index
+            push!(ret, i)
+        end
+    else
+        ## Gtk.selected *should* work here, but last line gives
+        ## coercion issue.
+        ## m, iter = selected(selection) # issue with Gtk.selected
+        m = Gtk.mutable(Ptr{GtkTreeModel})
+        iter = Gtk.mutable(GtkTreeIter)
+        res = bool(ccall((:gtk_tree_selection_get_selected,Gtk.libgtk),Cint,
+                         (Ptr{GObject},Ptr{Ptr{GtkTreeModel}},Ptr{GtkTreeIter}),
+                         selection,m,iter))
+
+        !res && error("No selection of GtkTreeSelection")
+        ## what is row?
+        i = ccall((:gtk_tree_model_get_string_from_iter, Gtk.libgtk), 
+                  Ptr{Uint8}, 
+                  (Ptr{GObject}, Ptr{GtkTreeIter}), m[], iter) |> bytestring |> path_to_index
+        push!(ret, i)
+    end
+    ## return just one for tree
+    ret[1]
+end
 
 ## Add to selection using index
 function Base.select!(view::Gtk.GtkTreeViewLeaf, index::Int)

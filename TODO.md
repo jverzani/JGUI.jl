@@ -22,13 +22,18 @@ warnings on loading Tk
 
 # Gtk
 
-* need treeview
+* treeview
+  - JGUI.gtk_jgui_tree_selected hack is needed, should be inGtk
+  - in button press event, don't have column!
+  - need mechanism to set selection from index
 * spacing, sizing, ..
 - implemented for 3.x. It is odd though. Child sizepolicy effects all siblings in a box container.
+* button group needed
 [The following need constructors...]
 * modal window()
 * dialogs
 * menubars: radio and checkbuttons
+ -- context in popups?
 
 # bonepile
 <del>spinbox</del>

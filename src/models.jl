@@ -266,6 +266,8 @@ treestore(types...) = TreeStore(types...)
 
 
 ## some store methods
+length(store::TreeStore)  = length(store.types)
+
 function index_of(node::TreeNode)
     parentnode = node.parent
     findfirst(parentnode.children, node)
