@@ -731,51 +731,45 @@ function radiogroup(::MIME"application/x-gtk", parent::Container, model::VectorM
 end
 
 ## buttongroup XXX
-function buttongroup(::MIME"application/x-qt", parent::Container, model::VectorModel; exclusive::Bool=false)
-    block = Qt.QGroupBox(parent[:widget])
-    lyt = Qt.QHBoxLayout(block)
-    block[:setLayout](lyt)
+function buttongroup(::MIME"application/x-gtk", parent::Container, model::VectorModel; exclusive::Bool=false)
+    if exclusive
+        error("exclusive not implemented")
+    end
 
-    widget = Qt.QButtonGroup(parent[:widget])
-    widget[:setExclusive](exclusive)
+    block = @GtkBox(false)
 
+    function exclusive_handler(btn)
+        ## XXX write me
+    end
+    function non_exclusive_handler(btn)
+        buttons = collect(block)
+        chosen = Bool[getproperty(btn, :active, Bool) for btn in buttons]
+        names = [getproperty(btn, :label, String) for btn in buttons]
+        model[:value] = names[chosen]
+    end
 
-
+    choices = map(string, copy(model.items))
+    for choice in choices
+        btn = Gtk.@GtkToggleButton(choice)
+        signal_connect(exclusive ? exclusive_handler : non_exclusive_handler, btn, :toggled)
+        push!(block, btn)
+    end
     
-    btns = map(model.items) do label
-        btn = Qt.QPushButton(parent[:widget])
-        btn[:setText](label)
-        btn[:setCheckable](true)
-        widget[:addButton](btn)
-        lyt[:addWidget](btn)
-        btn
-    end
-
-#    selected = findfirst(model.items, model.value)
-#    btns[selected][:setChecked](true)
-
-    connect(model, "valueChanged") do value 
-        ## XXX need to look up which button to set
-        ## value is a vector of String[] type
-        btns = widget[:buttons]()
-
-        map(btns) do btn
-            btn[:setChecked](btn[:text]() in  model.items)
-        end
-    end
-    qconnect(widget, :buttonReleased) do btn
-        checked = filter(b -> b[:isChecked](), widget[:buttons]())
-        vals = String[b[:text]() for b in  checked]
-        if length(checked) == 0
-            setValue(model, String[])
+    connect(model, "valueChanged") do values
+        if exclusive
+            "XXX"
         else
-            setValue(model, vals)
+            buttons = collect(block)
+            for button in buttons
+                label = getproperty(button, :label, String)
+                setproperty!(button, :active, label in values)
+            end
         end
     end
-    
-    (widget, block)
-end
 
+    (block, block)
+    
+end
 
 ## 
 function combobox(::MIME"application/x-gtk", parent::Container, model::VectorModel; editable::Bool=false)

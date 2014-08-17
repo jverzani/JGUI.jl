@@ -506,6 +506,7 @@ function buttongroup(parent::Container, model::VectorModel; exclusive::Bool=true
     for (k, v) in kwargs
         obj[k] = v
     end
+    obj.attrs[:exclusive] = exclusive
     obj
 end
 
@@ -519,6 +520,8 @@ function buttongroup(parent::Container, items::Vector, value=nothing; exclusive:
     buttongroup(parent, model, exclusive=exclusive, kwargs...)
 end
 
+## set by label
+setValue(obj::ButtonGroup, values::Vector) = (obj.model[:value] = map(string, values))
 
 ## combobox
 type ComboBox <:  WidgetVectorModel
