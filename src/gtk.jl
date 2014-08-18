@@ -732,14 +732,25 @@ end
 
 ## buttongroup XXX
 function buttongroup(::MIME"application/x-gtk", parent::Container, model::VectorModel; exclusive::Bool=false)
-    if exclusive
-        error("exclusive not implemented")
-    end
 
     block = @GtkBox(false)
 
     function exclusive_handler(btn)
-        ## XXX write me
+        ## XXX can have 0 or 1 selected
+        val = getproperty(btn, :active, Bool)
+        buttons = collect(block)
+        chosen = [getproperty(btn, :active, Bool) for btn in buttons]
+        
+        if val
+            others = filter(button -> button != btn, buttons)
+            for button in others
+                setproperty!(button, :active, false)
+            end
+            model[:value] = getproperty(btn, :label, String)
+        else
+            ## XXX this is called when there is no selection, clearly an issue
+            model[:value] = "" ## XXX Of course, this should not be possible!
+        end
     end
     function non_exclusive_handler(btn)
         buttons = collect(block)
@@ -751,19 +762,24 @@ function buttongroup(::MIME"application/x-gtk", parent::Container, model::Vector
     choices = map(string, copy(model.items))
     for choice in choices
         btn = Gtk.@GtkToggleButton(choice)
+        value = model[:value]
+        if !isa(value, Nothing)
+            if exclusive value = [value] end
+            setproperty!(btn, :active, choice in value)
+        end
         signal_connect(exclusive ? exclusive_handler : non_exclusive_handler, btn, :toggled)
         push!(block, btn)
     end
     
     connect(model, "valueChanged") do values
         if exclusive
-            "XXX"
-        else
-            buttons = collect(block)
-            for button in buttons
-                label = getproperty(button, :label, String)
-                setproperty!(button, :active, label in values)
-            end
+            values = [values]
+        end
+
+        buttons = collect(block)
+        for button in buttons
+            label = getproperty(button, :label, String)
+            setproperty!(button, :active, label in values)
         end
     end
 

@@ -46,6 +46,7 @@ update_context(::MIME"application/x-qt", o::Widget, pt) = nothing
 
 
 getWidget(::MIME"application/x-qt", o::Widget) = o.o
+getBlock(::MIME"application/x-qt", o::Widget) = o.block
 
 function setSizepolicy(::MIME"application/x-qt", o::Widget, policies) 
     o.attrs[:sizepolicy] = policies
@@ -58,7 +59,7 @@ function setSizepolicy(::MIME"application/x-qt", o::Widget, policies)
                 nothing => QtGui["QSizePolicy"]["Fixed"]
                 }
     sizepolicy = [hpolicies[policies[1]], vpolicies[policies[2]]]
-    o[:widget][:setSizePolicy](sizepolicy...)
+    o[:block][:setSizePolicy](sizepolicy...)
 end
 
 function get_alignment(o::Widget)
@@ -490,29 +491,30 @@ function buttongroup(::MIME"application/x-qt", parent::Container, model::VectorM
     widget[:setExclusive](exclusive)
 
 
-
+    value = model.value
+    if !isa(value, Vector) value = [value] end
     
     btns = map(model.items) do label
         btn = Qt.QPushButton(parent[:widget])
         btn[:setText](label)
         btn[:setCheckable](true)
+        btn[:setChecked](label in value)
         widget[:addButton](btn)
         lyt[:addWidget](btn)
         btn
     end
 
-#    selected = findfirst(model.items, model.value)
-#    btns[selected][:setChecked](true)
-
     connect(model, "valueChanged") do value 
+
         ## XXX need to look up which button to set
         ## value is a vector of String[] type
+        if !isa(value, Vector) value = [value] end
         btns = widget[:buttons]()
-
         map(btns) do btn
-            btn[:setChecked](btn[:text]() in  model.items)
+            btn[:setChecked](btn[:text]() in  value)
         end
     end
+
     qconnect(widget, :buttonReleased) do btn
         checked = filter(b -> b[:isChecked](), widget[:buttons]())
         vals = String[b[:text]() for b in  checked]

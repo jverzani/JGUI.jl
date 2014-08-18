@@ -511,11 +511,11 @@ function buttongroup(parent::Container, model::VectorModel; exclusive::Bool=true
 end
 
 function buttongroup(parent::Container, items::Vector, value=nothing; exclusive::Bool=true, kwargs...)
-    if !exclusive && !isa(value, Nothing)
-        if !isa(value, Vector)
-            value = [value]
-        end
+    if !exclusive
+        if value == nothing value = String[] end
+        if !isa(value, Vector) value = [value] end
     end
+    
     model = VectorModel(items, value)
     buttongroup(parent, model, exclusive=exclusive, kwargs...)
 end

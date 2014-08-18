@@ -28,7 +28,8 @@ warnings on loading Tk
   - need mechanism to set selection from index
 * spacing, sizing, ..
 - implemented for 3.x. It is odd though. Child sizepolicy effects all siblings in a box container.
-* button group needed
+* button group
+  - exclusive=true can have 0 or 1 selection, but not just 1 like a radio.
 [The following need constructors...]
 * modal window()
 * dialogs
