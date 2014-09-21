@@ -95,7 +95,7 @@ function set_child(::MIME"application/x-tcltk", parent::BinContainer, child::Wid
 end
 
 ## Label frame
-function labelframe(::MIME"application/x-tcltk", parent::BinContainer, label::String, alignment::Union(Nothing, Symbol)=nothing)
+function labelframe(::MIME"application/x-tcltk", parent::BinContainer, label::String; alignment::Union(Nothing, Symbol)=nothing)
     widget = Tk.Labelframe(getWidget(parent), string(label))
     if isa(alignment, Symbol)
         Tk.configure(widget, labelanchor=(alignment==:left ? "nw" : alignment==:center ? "n" : alignment==:right ? "ne" : "n"))
@@ -314,7 +314,8 @@ setValue(::MIME"application/x-tcltk",obj::Label, value::Number) = setValue(obj, 
 
 ## separator
 function separator(::MIME"application/x-tcltk", parent::Container; orientation::Symbol=:horizontal)
-    widget = Tk.Separator(getWidget(parent), orientation == :horizontal)
+    widget = Tk.Separator(getWidget(parent))
+    configure(widget,  orient = (orientation == :horizontal ? "horizontal" : "vertical"))
     (widget, widget)
 end
 
@@ -475,8 +476,21 @@ function buttongroup(::MIME"application/x-tcltk", parent::Container, model::Vect
     end
     btns = [val=>add_button(val) for val in getItems(model)]
     ## set intial value
-    if !isa(model.value, Nothing)
-        map(val -> Tk.set_enabled(btns[val], false), model.value)
+    items = model.items
+    value = model.value
+    if value != nothing
+        if !isa(value, Vector) value = [value] end
+        for item in items
+            Tk.set_enabled(btns[item], item in value)
+        end
+    end
+    connect(model, "valueChanged") do value
+        if value != nothing
+            if !isa(value, Vector) value = [value] end
+            for item in model.items
+                Tk.set_enabled(btns[item], item in value)
+            end
+        end
     end
 
     if exclusive
@@ -565,7 +579,11 @@ function slider(::MIME"application/x-tcltk", parent::Container, model::VectorMod
 
     (widget, widget)
 end
-
+function setSize(::MIME"application/x-tcltk", o::Slider, value) 
+    i = o.attrs[:orientation] == :horizontal ? 1 : 2
+    Tk.configure(o.block, length=value[i])
+end
+    
 
 ## slider2d
 type TkSlider2D <: Tk.Tk_Widget
@@ -669,8 +687,8 @@ end
 function spinbox(::MIME"application/x-tcltk", parent::Container, model::ItemModel, rng::Range)
     widget = Tk.Spinbox(parent[:widget])
     ## work around integer values in Tk.Spinbox
-    step = !isa(rng, UnitRange) ? 1 : step(rng)
-    Tk.configure(widget, from=first(rng), to=first(rng) + (length(rng)-1)*step, increment=step)
+    stp = step(rng)
+    Tk.configure(widget, from=first(rng), to=first(rng) + (length(rng)-1)*stp, increment=stp)
     Tk.tcl(widget, "set", first(rng))
 
     connect(model, "valueChanged") do value
@@ -1135,7 +1153,7 @@ function imageview(::MIME"application/x-tcltk", parent::Container)
 end
 
 function setImage(o::ImageView, img::String)
-    nm = get_icon(o.toolkit. o, FileIcon(img))
+    nm = get_icon(o.toolkit, o, FileIcon(img))
     Tk.tcl("image", "create", "photo", nm, file=img)
     Tk.configure(o[:widget], image=nm, compound="image")
 end

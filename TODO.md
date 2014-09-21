@@ -1,3 +1,8 @@
+* Remove manipulate, remove reactive (use GtkInteract for that)
+* docile docs
+<del>* sync up with Reactive? Not so easy due to asynchronous push! bit</del>
+* should have T parmeter on models...
+
 **write tests**
 window: closeHandler (return logical, only one so not a model)
 cairographics: (x,y) in which coordinates? pixels? Use Tim Holy's conversion to user coordinates?

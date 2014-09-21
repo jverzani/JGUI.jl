@@ -63,12 +63,12 @@ end
 getValue(model::Observable) = model.value
 setValue(model::Observable, value::Nothing; signal::Bool=true) = nothing
 function setValue(model::Observable, value; signal::Bool=true)
-    if value != model.value
-        model.value = value
-        signal && notify(model, "valueChanged", getValue(model))
-    end
-    value
-end
+     if value != model.value
+         model.value = value
+         signal && notify(model, "valueChanged", getValue(model))
+     end
+     value
+ end
 
 type EventModel <: Observable
     observers::Dict
@@ -123,7 +123,7 @@ function getValue(o::TwoDSliderModel)
 end
 
 ## value in items coordinates, convert to index
-function setValue(o::TwoDSliderModel, value; signal::Bool=true)
+function setValue{T <: Number}(o::TwoDSliderModel, value::Vector{T}; signal::Bool=true)
     x, y = value
     function item2ind(item, items) 
         ix = indmin(abs(items - item))

@@ -89,6 +89,7 @@ function align_gtk_widget(o::Widget; xscale=1, yscale=1)
     
 
     if Gtk.gtk_version >= 3
+        o.block # XXX
 #        Gtk.G_.halign(o[:block], align[1])
 #        Gtk.G_.valign(o[:block], align[2])
     else
@@ -144,6 +145,7 @@ end
 ### window methods
 function raise(::MIME"application/x-gtk", o::Window) 
     setproperty!(o[:widget], :visible, true)
+    showall(o[:widget])
 end
 lower(::MIME"application/x-gtk", o::Window) = setproperty!(o[:widget], :visible, false)
 destroy_window(::MIME"application/x-gtk", o::Window) = Gtk.destroy(o[:widget])
@@ -206,7 +208,7 @@ end
 
 ## Label frame
 function labelframe(::MIME"application/x-gtk", parent::BinContainer, 
-                    label::String, alignment::Union(Nothing, Symbol)=nothing)
+                    label::String; alignment::Union(Nothing, Symbol)=nothing)
     widget = @GtkFrame(label)
 
     if isa(alignment, Symbol)
@@ -403,7 +405,9 @@ function formlayout_add_child(::MIME"application/x-gtk", parent::FormLayout, chi
             label == ""
         end
         ## XXX spacing...
-        parent[:widget][1, nrows+1] = @GtkLabel(label)
+        lab = @GtkLabel(label)
+        setproperty!(lab, :xalign, 1.0)
+        parent[:widget][1, nrows+1] = lab
         parent[:widget][2, nrows+1] = child.block
 
         parent.attrs[:nrows] = nrows + 1
@@ -426,7 +430,7 @@ function formlayout_add_child(::MIME"application/x-gtk", parent::FormLayout, chi
         parent[:widget][2, nrows+1] = align_gtk_widget(child, xscale=1.0, yscale=0.0)  ## reversed
         
     end
-    map(show,  parent[:widget])
+    map(showall,  parent[:widget])
 
 end
 
@@ -580,10 +584,10 @@ function lineedit(::MIME"application/x-gtk", parent::Container, model::Model)
 end
 
 ## XXX needs GtkEntryCompletion XXX It is there now!
-function setTypeahead(::MIME"application/x-gtk", obj::LineEdit, items)
+function setTypeahead(::MIME"application/x-gtk", obj::LineEdit, items::Vector)
     compl = @GtkEntryCompletion()
     ## make model, set as model
-    mod = @GtkListStore
+    mod = @GtkListStore(eltype(items))
     [push!(mod, (item,)) for item in items]
     Gtk.G_.model(compl, mod)
     Gtk.G_.text_column(compl, 0)
@@ -604,7 +608,10 @@ function textedit(::MIME"application/x-gtk", parent::Container, model::Model)
 
     get_value() = join([i for i in buffer], "")
 
-    connect(model, "valueChanged", value -> setproperty!(buffer, :text, join(value, "\n")))
+    set_text(buffer, value::String) = setproperty!(buffer, :text, value)
+    set_text{T <: String}(buffer, value::Vector{T}) = set_text(buffer, join(value, "\n"))
+    
+    connect(model, "valueChanged", value -> set_text(buffer, value))
     signal_connect(buffer, :changed) do obj, args...
         model.value = get_value()
 
@@ -732,26 +739,22 @@ end
 
 ## buttongroup XXX
 function buttongroup(::MIME"application/x-gtk", parent::Container, model::VectorModel; exclusive::Bool=false)
-
     block = @GtkBox(false)
 
-    function exclusive_handler(btn)
-        ## XXX can have 0 or 1 selected
-        val = getproperty(btn, :active, Bool)
-        buttons = collect(block)
-        chosen = [getproperty(btn, :active, Bool) for btn in buttons]
-        
-        if val
-            others = filter(button -> button != btn, buttons)
-            for button in others
-                setproperty!(button, :active, false)
+    function exclusive_handler(btn, xs...)
+        val =  getproperty(btn, :active, Bool)
+        btns = collect(block)
+        if !val
+            ## set button state
+            for b in btns
+                setproperty!(b, :active, b==btn)
             end
+            ## set widget state
             model[:value] = getproperty(btn, :label, String)
-        else
-            ## XXX this is called when there is no selection, clearly an issue
-            model[:value] = "" ## XXX Of course, this should not be possible!
         end
+        true                    # stop propogation of events
     end
+
     function non_exclusive_handler(btn)
         buttons = collect(block)
         chosen = Bool[getproperty(btn, :active, Bool) for btn in buttons]
@@ -767,7 +770,12 @@ function buttongroup(::MIME"application/x-gtk", parent::Container, model::Vector
             if exclusive value = [value] end
             setproperty!(btn, :active, choice in value)
         end
-        signal_connect(exclusive ? exclusive_handler : non_exclusive_handler, btn, :toggled)
+        if exclusive
+            signal_connect(exclusive_handler, btn, :button_press_event)
+        else
+            signal_connect(non_exclusive_handler, btn, :toggled)
+        end
+
         push!(block, btn)
     end
     
@@ -1008,12 +1016,13 @@ function storeview(::MIME"application/x-gtk", parent::Container, store::Store, m
     Gtk.G_.headers_clickable(widget, true)
 
     ## notify JGUI model of changes to selection
-#    id = signal_connect(sel, :changed) do sel
-#        indices = selected(widget)
-#        setValue(model, indices; signal=false) # model holds selection, store.model.value the value
-#        notify(model, "selectionChanged", indices)
-#        false
-#    end
+    id = signal_connect(sel, :changed) do sel
+#        indices = selected(widget) # XXX Errors XXX
+        indices = Int[]
+        setValue(model, indices; signal=false) # model holds selection, store.model.value the value
+        notify(model, "selectionChanged", indices)
+        false
+    end
 
     # ## connect model to view on index changed
     connect(model, "valueChanged") do indices

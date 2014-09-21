@@ -147,7 +147,7 @@ end
 
 
 ## Label frame
-function labelframe(::MIME"application/x-qt", parent::BinContainer, label::String, alignment::Union(Nothing, Symbol)=nothing)
+function labelframe(::MIME"application/x-qt", parent::BinContainer, label::String; alignment::Union(Nothing, Symbol)=nothing)
     widget = Qt.QFrame(parent[:widget])
     widget[:setFrameStyle](widget[:Sunken])
 

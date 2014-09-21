@@ -17,7 +17,6 @@ abstract Layout <: Object
 
 abstract Control <: Widget
 abstract WidgetModel <: Control
-abstract WidgetReact <: WidgetModel
 abstract WidgetVectorModel <: WidgetModel
 abstract Style <: Widget
 

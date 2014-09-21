@@ -8,10 +8,6 @@ import Base: getindex, setindex!, length,
 import Base: size, endof, ndims
 import Base: connect, notify
 
-using React
-#import React: lift, merge
-#export lift, merge
-
 export properties
 
 export getValue, setValue, setIcon
@@ -50,16 +46,31 @@ export action, menubar, menu,
 
 
 ## adjust this to pick a gtoolkit
-#__init__() = println("hi")
+function pick_toolkit()
+    toolkits = ["Gtk", "Tk", "Qt"]
+    toolkit_map = {"Gtk"=>"Gtk", "Tk"=>"Tk", "Qt"=>"PySide"}
 
-export manipulate, @wlift
+    ## filter these
 
+    println("Which toolkit to use:")
+    for (i, kit) in enumerate(toolkits)
+        println("\t[$i] $kit")
+    end
+    i = parseint(chomp(readline()))
 
-
-## which toolkit? Default to Gtk
-if !haskey(ENV, "toolkit")
-    ENV["toolkit"] = "Gtk"
+    toolkit = toolkits[i]
+    ENV["toolkit"] = toolkit
 end
+
+## which toolkit?
+#__init__() = haskey(ENV, "toolkit") || pick_toolkit()
+if !haskey(ENV, "toolkit")
+    ENV["toolkit"] = "Gtk"      # default to Gtk for now
+end
+
+export manipulate
+
+
 
 isqt() = lowercase(ENV["toolkit"]) == lowercase("Qt")
 istk() = lowercase(ENV["toolkit"]) == lowercase("Tk") 
@@ -74,10 +85,13 @@ elseif isgtk()
     using Gtk, Cairo
 end
 
+using Docile
+@docstrings
+
+
 
 include("types.jl")
 
-include("react.jl")
 
 include("methods.jl")
 include("icons.jl")

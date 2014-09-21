@@ -185,6 +185,9 @@ end
 
 ## This is Gtk.path_at_pos modified to get more
 function tree_view_row_col_from_x_y(treeView::GtkTreeView, x::Integer, y::Integer)
+    return(0,0)
+
+    ## XXX THIS IS FAILING XXX
     pathPtr = Gtk.mutable(Ptr{GtkTreePath})
     vcol = Gtk.mutable(@GtkTreeViewColumn())
     path = GtkTreePath() 

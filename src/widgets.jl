@@ -1,41 +1,73 @@
-
 ## General Widget properties
 
-## the `:value` property is the primary one for a control
+## :value is the main value
+@doc "get the `:value` property, the primary value for a control" ->
 getValue(o::WidgetModel) = getValue(o.model)
-setValue(o::WidgetModel, value; signal::Bool=true) = setValue(o.model, value; signal=signal)
 
-## the `:items` property is used by widgets with VectorModels -- that
-## is, those widgets which are used to select 0, 1 or more from a
-## collection.
+@doc """
+Set the `:value` property, the primary value for a control
+
+The `signal::Bool` argument indicates if any events should be signalled.
+
+""" ->
+function setValue(o::WidgetModel, value; signal::Bool=true) 
+    setValue(o.model, value; signal=signal)
+end
+
+## :items is use for vector models to provide the items to select from
+@doc """
+Get the `:items` property. Used by widgets with VectorModels -- that
+is, those widgets which are used to select 0, 1 or more from a
+collection.
+""" ->
 getItems(o::WidgetVectorModel) = getItems(o.model)
+
+@doc "set the `:items` property" ->
 setItems(o::WidgetVectorModel, value) = setItems(o.model, value)
 
-## `:enabled` is used to make a widget sensitive (or not) to user input
+## :enabled indicates if a widget is sensitive to user input
+@doc "Get the `:enabled` property. This indicates if a widget is sensitive (or not) to user input" ->
 getEnabled(o::Widget) = getEnabled(o.toolkit, o)
+
+@doc "Set the `:enabled` property. This indicates if a widget is sensitive (or not) to user input" ->
 setEnabled(o::Widget, value::Bool) = setEnabled(o.toolkit, o, value)
 
-## `:visible` controls if a widget is shown
+## :visible indicates if a widget is drawn to the screen
+@doc "Get the `:visible` property. Indicates if a widget is shown" ->
 getVisible(o::Widget) = getVisible(o.toolkit, o)
+
+@doc "Set the `:visible` property. Indicates if a widget is shown" ->
 setVisible(o::Widget, value::Bool) = setVisible(o.toolkit, o, value)
 
-## `:focus` can be used to set the focus on a control
+
+## :focus inidicates if a control has keyboard focus
+@doc "Get the `:focus` property" ->
 getFocus(o::Widget) = getFocus(o.toolkit, o)
+
+@doc "Set the `:focus` property. The control with focus receive keyboard input" ->
 setFocus(o::Widget, value::Bool) = setFocus(o.toolkit, o, value)
 
-## `:context` is used to pass information to context menus
+@doc "Get the `:context` property. Context used to pass information to context menus" ->
 getContext(o::Widget) = o.attrs[:context]
+
+@doc "Set the `:context` property. Contextis used to pass information to context menus" ->
 setContext(o::Widget, ctx) = o.attrs[:context] = ctx
 
-## `:size` controls the size request of a widget. Can be useful for top-level windows
+@doc "Get the `:size` property. Indicates the size request of a widget. Can be useful for top-level windows" ->
 getSize(o::Widget) = getSize(o.toolkit, o)
+
+@doc "Set the `:size` property. Indicates the size request of a widget. Specified by a `Int[w,h]`" ->
 setSize{T <: Int}(o::Widget, sz::Vector{T}) = setSize(o.toolkit, o, sz)
 
 
 
-## `:sizepolicy` determines how a widget expands to fill its allocated
-## space.  The value is specified as a tuple (x,y) with each being be
-## one of `:fixed`, `:expand`, or `nothing`.
+@doc """
+Get the `:sizepolicy` property.
+
+The `:sizepolicy` determines how a widget expands to fill its allocated
+space.  The value is specified as a tuple (x,y) with each being be
+one of `:fixed`, `:expand`, or `nothing`.
+""" ->
 function getSizepolicy(o::Widget)
     if haskey(o.attrs, :sizepolicy)
         o.attrs[:sizepolicy]
@@ -43,6 +75,8 @@ function getSizepolicy(o::Widget)
         (nothing, nothing)
     end
 end
+
+@doc "set the `:sizepolicy` property" ->
 function setSizepolicy(o::Widget, value)
     ## must have proper policy (nothing, :fixed, :expand)
     x, y = value
@@ -51,10 +85,16 @@ function setSizepolicy(o::Widget, value)
 
 end
 
-## `:alignment` is used to determine how a control is aligned in its
-## allocated space. The value is specified as a tuple (xalign, yalign)
-## where xaligh is in (:left, :right, :center, :justify) and yalign
-## one of (:top, :bottom, :center).
+@doc """
+Get the `:alignment` property.
+
+The `:alignment` property is used to determine how a control is aligned in its
+allocated space. The value is specified as a tuple of the form  (xalign, yalign)
+with
+
+- xalign in (:left, :right, :center, :justify) 
+- yalign one of (:top, :bottom, :center)
+""" ->
 function getAlignment(o::Widget) 
     if haskey(o.attrs, :alignment)
         o.attrs[:alignment]
@@ -63,6 +103,7 @@ function getAlignment(o::Widget)
     end
 end
 
+@doc "Set the `:alignment` property" ->
 function setAlignment(o::Widget, value) #x::Union(Symbol, Nothing), y::Union(Symbol, Nothing))
     
     x, y = value
@@ -84,13 +125,20 @@ function setAlignment(o::Widget, value) #x::Union(Symbol, Nothing), y::Union(Sym
     end
        
 end
+
 ## for box containers, (not tcltk, but Qt)
+@doc "Get the `:stretch` property for a widget. XXX" ->
 getStretch(o::Widget) = haskey(o.attrs, :stretch) ? o.attrs[:stretch] : 0
+
+@doc "Set then `:stretch` property for a widget. XXX" ->
 setStretch(o::Widget, stretch::Int) = o.attrs[:stretch] = stretch
 
 ## icontheme
+@doc "Get the `:icontheme` property for a widget. Not yet implemented" ->
 getIcontheme(o::Widget) = getIcontheme(o.parent)
 getIcontheme(o::Window) = o.attrs[:icontheme]
+
+@doc "Set the `:icontheme` property for a widget. Not yet implemented" ->
 setIcontheme(o::Widget, value::Symbol) = setIcontheme(o.parent, value)
 setIcontheme(o::Window, value::Symbol) = o.attrs[:icontheme] = value
 
@@ -99,6 +147,14 @@ getWidget(o::Widget) = getWidget(o.toolkit, o)
 getBlock(o::Widget) = getBlock(o.toolkit, o)
 
 ## list Widget properties
+@doc """
+List properties available for a  widget
+
+The properties are retrieved and set using indexing notation, where the property is specified through
+a symbol, as in `:size` or `:enabled`. 
+
+The underlying toolkits provide significantly more properties to control a widgets display or behaviour.
+""" ->
 list_props(::@PROP("Widget")) = {:value => "Value of object",
                                  :items => "Any items to select from",
                                  :enabled => "is widget sensitive to user input",
@@ -134,32 +190,40 @@ notify(o::WidgetModel, signal::Symbol, args...) = notify(o, string(signal), args
 
 ## Label
 
-type Label <: WidgetReact
+type Label <: WidgetModel
     o
     block
     model
-    react
     parent
     toolkit
     attrs
 end
 
-## Basic label widget
-##
+@doc """
+Basic label widget
+
 ## Arguments:
-## * `parent::Container` parent container
-## * `value::Union(ItemModel, String)` either a model (for sharing) or string.
-##
+* `parent::Container` parent container
+* `value::Union(ItemModel, String)` either a model (for sharing) or string.
+
 ## Signals:
-## * `valueChanged (value)` called when label text is updated.
+* `valueChanged (value)` called when label text is updated.
+
+## Example:
+```julia
+w = window(title="label")
+l = label(w, "label")
+push!(w, l)
+l[:value] = "new label"
+```
+
+""" ->
 function label(parent::Container, model::Model; kwargs...)
     widget, block = label(parent.toolkit, parent, model)
-    react = Input(getValue(model))
-    obj = Label(widget, block, model, react, parent, parent.toolkit, Dict())
+    obj = Label(widget, block, model, parent, parent.toolkit, Dict())
     for (k, v) in kwargs
         obj[k] = v
     end
-    connect_react(obj, react)
     obj
 end
 label(parent::Container, value::String) = label(parent, ItemModel(value))
@@ -175,10 +239,24 @@ type Separator <: Style
     attrs
 end
 
-## Add a horizontal or vertical line to a layout
-##
+@doc """
+Add a horizontal or vertical line to a layout
+
 ## Arguments:
-## * `orientation::Symbol` one of `:horizontal` (default) or `:vertical`
+* `orientation::Symbol` one of `:horizontal` (default) or `:vertical`
+
+## Example
+```julia
+w = window(title="separator")
+g = vbox(w); push!(w, g)
+l1 = label(g, "top label")
+s = separator(g)
+l2 = label(g, "bottom label")
+append!(g, [l1, s, l2])
+```
+
+
+""" ->
 function separator(parent::Container; orientation::Symbol=:horizontal)
     widget, block = separator(parent.toolkit, parent, orientation=orientation)
     Separator(widget, block, parent, parent.toolkit, Dict())
@@ -187,39 +265,49 @@ end
 ##################################################
 ## Button widget
 
-type Button <: WidgetReact
+type Button <: WidgetModel
     o
     block
     model
-    react
     parent
     toolkit
     attrs
 end
 
-## A button object
-##
+@doc """
+Primary control to initiate an action
+
 ## Arguments:
-## * `parent::Container` a parent container
-## * `value::Union(ItemModel, String)` If a model, value is shared. If a string, used as label
-##
+* `parent::Container` a parent container
+* `value::Union(ItemModel, String)` If a model, value is shared. If a string, used as label
+
 ## Signals:
-## * `clicked ()`: called when clicked
-## * `valueChanged (value)`: called when label is changed
-##
+* `clicked ()`: called when clicked
+* `valueChanged (value)`: called when label is changed
+
+## Examples:
+
+```julia
+w = window(title="buttons")
+g = vbox(w); push!(w, g)
+b1 = button(g, "click me")
+push!(g, b1)
+connect(b1, :clicked, () -> b1[:value] = "that tickled")
+```
+
+""" ->
 function button(parent::Container, model::Model; kwargs...)
     widget, block = button(parent.toolkit, parent, model)
-    react = Input(getValue(model))
-    obj = Button(widget, block, model, react, parent, parent.toolkit, Dict())
+    obj = Button(widget, block, model,  parent, parent.toolkit, Dict())
     for (k, v) in kwargs
         obj[k] = v
     end
-    connect_react(obj, react)
     obj
 end
 button(parent::Container, value::String; kwargs...) = button(parent, ItemModel(value); kwargs...)
 button(parent::Container, value::Number; kwargs...) = button(parent, string(value); kwargs...)
 
+@doc "Set `:icon` property for a button. Icon specified by `Icon`, symbol or string." ->
 function setIcon(object::Button, icon::Icon;
                  theme::Union(Nothing, Symbol) = nothing,
                  size::Union(Nothing, Vector{Int}) = nothing)
@@ -245,48 +333,69 @@ list_props(::@PROP("Button")) = {:icon => "Set accompanying icon"}
 ## (activated, ())
 ## (keystroke, (key))
 
-type LineEdit <: WidgetReact
+type LineEdit <: WidgetModel
     o
     block
     model
-    react
     parent
     toolkit
     coerce
     attrs
 end
 
-## single line text entry
-##
+@doc """
+Single line text entry
+
 ## Arguments:
-## * `value` is an item model (for sharing) or a string or a number
-## * `coerce` is a function to be called on the string value in the edit
-## box before getValue. Even if a number is specified as the value,
-## the return will be a string unless coerced.
-## 
+* `value` is an item model (for sharing) or a string or a number
+* `coerce` is a function to be called on the string value in the edit
+box before getValue. Even if a number is specified as the value,
+the return will be a string unless coerced.
+
 ## Signals:
-## * `editingFinished` (value) called when <return> key is pressed or blur
-## * `focusIn`  called on focus in event
-## * `focusOut` (value) called on focus out event
-## * `textChanged` (key) called on each keystroke
-## * `valueChanged` (value) called on each change, even keystrokes
-##
+* `editingFinished` (value) called when <return> key is pressed or blur
+* `focusIn`  called on focus in event
+* `focusOut` (value) called on focus out event
+* `textChanged` (key) called on each keystroke
+* `valueChanged` (value) called on each change, even keystrokes
+
 ## TODO
-## * typeahead values
-## * validation
-## * undo/redo stack
-## ...
+* typeahead values
+* validation
+* undo/redo stack
+* ...
+
+## Examples
+```julia
+w = window(title="lineedit")
+f = formlayout(w); push!(w, f)
+
+le1 = lineedit(f, "test")
+push!(f, le1, "vanilla")
+
+le2 = lineedit(f, "")
+le2[:typeahead] = ["one", "two", "three"]
+push!(f, le2, "typeahead")
+
+le3 = lineedit(f, "", placeholdertext="write something here")
+push!(f, le3, "placeholder")
+
+le4 = lineedit(f, "", placeholdertext="type here to get echo")
+connect(le4, :textChanged) do key
+    println("Typed", key)
+end
+push!(f, le4, "echo")
+```
+
+""" ->
 function lineedit(parent::Container, model::Model; coerce::Union(Nothing, Function)=nothing, kwargs...)
     widget, block = lineedit(parent.toolkit, parent, model)
 
-    react = Input(getValue(model))
 
-    obj = LineEdit(widget, block, model, react, parent, parent.toolkit, coerce, Dict())
+    obj = LineEdit(widget, block, model,  parent, parent.toolkit, coerce, Dict())
     for (k, v) in kwargs
         obj[k] = v
     end
-
-    connect_react(obj, react)
 
     obj
 end
@@ -323,50 +432,66 @@ list_props(::@PROP("LineEdit")) = {:placeholdertext => "Text to display when wid
                                    }
 
 ## TextEdit
-type TextEdit <: WidgetReact
+type TextEdit <: WidgetModel
     o
     block
     model
-    react
     parent
     toolkit
     attrs
 end
 
-## Multi-line text edit
+@doc """
+Multi-line text edit box
+
+Text can be changed by setting the `:value` property. To append text, use `push!`.
+
+
 ## Arguments:
-## * `parent::Container`: parent container
-## * `value::Union(ItemModel, String)`: inital string or an `ItemModel` to share
-##
+* `parent::Container`: parent container
+* `value::Union(ItemModel, String)`: inital string or an `ItemModel` to share
+
 ## Signals:
-## * `activated` (value) called when blur occurs
-## * `focusIn`  called on focus out event
-## * `focusOut` (value) called on focus out event
-## * `textChanged` (key) called on each keystroke
-## * `valueChanged` (value) called on each change, even keystrokes
-## * 
+* `activated` (value) called when blur occurs
+* `focusIn`  called on focus out event
+* `focusOut` (value) called on focus out event
+* `textChanged` (key) called on each keystroke
+* `valueChanged` (value) called on each change, even keystrokes
+* 
+
 ## TODO:
-## * set size
-## * to add text not just replace
-## * get just the selection
-## * selection changed signal
-## * ...
+* set size, font, ...
+* get just the selection
+* selection changed signal
+* ...
+
+## Examples:
+```julia
+w = window()
+t = textedit(w, "")
+t[:value] = "Some new text"
+push!(w, t)
+
+connect(t, :focusIn, () -> println("Text edit got focus"))
+```
+
+
+""" ->
 function textedit(parent::Container, model::Model; kwargs...)
     widget, block = textedit(parent.toolkit, parent, model)
-    react = Input(getValue(model))
 
-    obj = TextEdit(widget, block, model, react, parent, parent.toolkit, Dict())
+    obj = TextEdit(widget, block, model, parent, parent.toolkit, Dict())
     for (k, v) in kwargs
         obj[k] = v
     end
-
-    connect_react(obj, react)
 
     obj
 end
 textedit(parent::Container, value::String=""; kwargs...) = textedit(parent, ItemModel(value); kwargs...)
 textedit(parent::Container, value::Number; kwargs...) = textedit(parent, string(value); kwargs...)
 
+## some presumably common things of interest
+setValue(obj::TextEdit, value::Vector) = setValue(obj, join(map(string, value), "\n"))
 setValue(obj::TextEdit, value::Number) = setValue(obj, string(value))
 
 
@@ -378,37 +503,47 @@ push!(o::TextEdit, value) = push_textedit(o.toolkit, o, value)
 ## Selection widgets
 
 ## checkbox
-type CheckBox <: WidgetReact
+type CheckBox <: WidgetModel
     o
     block
     model
-    react
     parent
     toolkit
     attrs
 end
 
-## checkbox
-## 
-## standard toggle for true/false values. Optional label.
-##
+@doc """
+standard toggle for true/false values. Optional label.
+
 ## Arguments:
-## * `value::Bool` initial state of widget
-## * `label::MaybeString` optional label
-##
+
+ * `value::Bool` initial state of widget
+ * `label::MaybeString` optional label
+
 ## Signals:
-##
-## * `valueChanged (value)` called when widget toggles state.
-##
+
+ * `valueChanged (value)` called when widget toggles state.
+
+## Examples:
+
+```julia
+w = window(title="checkbox")
+cb = checkbox(w, true, "Check me, please")
+push!(w, cb)
+connect(cb, :valueChanged) do value
+    println("Changed to ", value)
+end
+```
+
+""" ->
 function checkbox(parent::Container, model::Model, label::Union(Nothing, String); kwargs...)
     widget, block = checkbox(parent.toolkit, parent, model, label)
-    react = Input(getValue(model))
-    obj = CheckBox(widget, block, model, react, parent, parent.toolkit, Dict())
+    obj = CheckBox(widget, block, model, parent, parent.toolkit, Dict())
     obj[:label] = label
     for (k, v) in kwargs
         obj[k] = v
     end
-    connect_react(obj, react)
+
     obj
 end
 
@@ -444,32 +579,44 @@ type RadioGroup <: StrictWidgetVectorModel
     o
     block
     model
-    react
     parent
     toolkit
     attrs
 end
 
-## Radio button group
-##
-## Value, not index, is used to store state.
-##
+@doc """
+Radio button group
+
+Value, not index, is used to store state.
+
 ## Arguments:
-##
-##
+* `items`: items to choose from
+* `value=items[1]`: initial value for selection
+* `orientation::Symbol=:horizontal` (or `:vertical`).
+
 ## Signals:
-## * `valueChanged (value)` called when selected value is updated
-##
+* `valueChanged (value)` called when selected value is updated
+
 ## TODO
-## * how to set items to be selected? (need `setItems` method)
+* how to set items to be selected? (need `setItems` method)
+
+## Examples
+```julia
+w = window(title="radiogroup")
+items = ["one", "two", "three"]
+rg = radiogroup(w, items)
+push!(w, rg)
+connect(rg, :valueChanged, val -> println(val))
+rg[:value] = "two"
+```
+
+""" ->
 function radiogroup(parent::Container, model::VectorModel; orientation::Symbol=:horizontal, kwargs...)
     widget, block = radiogroup(parent.toolkit, parent, model, orientation=orientation)
-    react = Input(getValue(model))
-    obj = RadioGroup(widget, block, model, react, parent, parent.toolkit, Dict())
+    obj = RadioGroup(widget, block, model, parent, parent.toolkit, Dict())
     for (k, v) in kwargs
         obj[k] = v
     end
-#    connect_react(obj, react)
     obj
 end
 
@@ -489,17 +636,43 @@ type ButtonGroup <: StrictWidgetVectorModel
     attrs
 end
 
-## buttongroup (Like radio group with buttons, toolbar style, exclusive=true)
-##
+@doc """ 
+
+A buttongroup is like a radio group with toggle buttons
+(toolbar style). The group can be exclusive (one selected only) or not
+
+Call as `buttongroup(parent, items)` or `buttongroup(parent, items, initialselection)`.
+
 ## Arguments:
-## * `exclusive::Bool` if `true` (the default), then like a radio
-##    group. Otherwise can select zero, one or more of the buttons.
-##
+
+* `exclusive::Bool` if `true` (the default), then like a radio
+   group. Otherwise can select zero, one or more of the buttons.
+
 ## Signals
-## * `valueChanged (value)` when a button is toggled
-##
+
+* `valueChanged (value)` when a button is toggled
+
 ## TODO
-## * `setItems` method
+
+* `setItems` method
+
+## Examples
+```julia
+w = window(title="buttongroup")
+f = formlayout(w); push!(w, f)
+
+ebg = buttongroup(f, ["one", "two", "three"], "one")
+push!(f, ebg, "exclusive")
+
+nebg = buttongroup(f, ["one", "two", "three"], exclusive=false)
+push!(f, nebg, "non-exclusive")
+
+b = button(f, "print values")
+connect(b, :clicked, () -> println("Exclusive:", ebg[:value], "\nNon-exclusive: ", nebg[:value]))
+push!(f, b, "")
+
+```
+""" ->
 function buttongroup(parent::Container, model::VectorModel; exclusive::Bool=true, kwargs...)
     widget, block = buttongroup(parent.toolkit, parent, model, exclusive=exclusive)
     obj = ButtonGroup(widget, block, model, parent, parent.toolkit, Dict())
@@ -510,9 +683,12 @@ function buttongroup(parent::Container, model::VectorModel; exclusive::Bool=true
     obj
 end
 
-function buttongroup(parent::Container, items::Vector, value=nothing; exclusive::Bool=true, kwargs...)
+function buttongroup{T <: String}(parent::Container, items::Vector{T}, value=nothing; 
+                                  exclusive::Bool=true, kwargs...)
     if !exclusive
-        if value == nothing value = String[] end
+        if value == nothing 
+            value = String[] 
+        end
         if !isa(value, Vector) value = [value] end
     end
     
@@ -521,46 +697,66 @@ function buttongroup(parent::Container, items::Vector, value=nothing; exclusive:
 end
 
 ## set by label
-setValue(obj::ButtonGroup, values::Vector) = (obj.model[:value] = map(string, values))
+setValue{T <: String}(obj::ButtonGroup, values::Vector{T}) = (obj.model[:value] = map(string, values))
 
 ## combobox
 type ComboBox <:  WidgetVectorModel
     o
     block
     model
-    react
     parent
     toolkit
     attrs
 end
 
-## Combobox
-##
-## Arguments:
-##
-## * `parent::Container` parent container `model::VectorModel` model
-## * (more conveniently items and value can be specifed). The `value`
-##   defaults to `items[1]`.  
-## * `editable::Bool` if true, create editable combobox.
-## 
-##
-## Signals:
-##
-## * `valueChanged (value)` called when combobox is update
-##
-## TODO:
-##
-## * `:editable=true` (will add `editingFinished` signal
-##
+@doc """
+Combobox
+
+
+Arguments:
+
+* `parent::Container` parent container `model::VectorModel` model
+* (more conveniently items and value can be specifed). The `value`
+  defaults to `items[1]`.  
+* `editable::Bool` if true, create editable combobox.
+
+
+Signals:
+
+* `valueChanged (value)` called when combobox is update
+
+TODO:
+
+* `:editable=true` (will add `editingFinished` signal
+
+## Examples
+```julia
+w = window(title="combobox")
+f = formlayout(w); push!(w, f)
+xs = ["one", "two", "three"]
+
+cb1 = combobox(f, xs)
+push!(f, cb1, "non-editable")
+
+cb2 = combobox(f, xs, editable=true)
+push!(f, cb2, "editable")
+
+b = button(f, "values")
+push!(f, b, "")
+
+connect(b, :clicked) do
+    println("non-editable: ", cb1[:value])
+    println("editable: ", cb2[:value])
+end
+```
+""" ->
 function combobox(parent::Container, model::VectorModel; editable::Bool=false, kwargs...)
     widget, block = combobox(parent.toolkit, parent, model, editable=editable)
    
-    react = Input(getValue(model))
-    obj = ComboBox(widget, block, model, react, parent, parent.toolkit, Dict())
+    obj = ComboBox(widget, block, model, parent, parent.toolkit, Dict())
     for (k, v) in kwargs
         obj[k] = v
     end
-#    connect_react(obj, react)
     obj
 end
 
@@ -575,55 +771,66 @@ end
 ## slider
 ## Slider slides over indices in a sortable vector (not low to high, use linspace or range to control)
 ## so model has items as items to select from, value an index
-type Slider <: WidgetReact
+type Slider <: WidgetModel
     o
     block
     model
-    react
     parent
     toolkit
     attrs
 end
 
-## Slider widget
-## 
-## Slider values are specified as a vector (not a from/to/by specification).
-##
+@doc """
+Slider widget
+
+Slider values are specified as a vector (not a from/to/by specification).
+
 ## Arguments:
-##
-## * `model::VectorModel` a model containing value and vector information. The value is the index of the vector.
-## * `orientation::Sybol=:horizontal` orientation of slider when rendered
-## * `items::Vector` vector of items, sortable.
-## * `items::Range` Range of items to scroll through
-## * `value::Int` index of initially selected item
-##
+
+* `model::VectorModel` a model containing value and vector information. The value is the index of the vector.
+* `orientation::Sybol=:horizontal` orientation of slider when rendered
+* `items::Vector` vector of items, sortable.
+* `items::Range` Range of items to scroll through
+* `value::Int` index of initially selected item
+
 ## Signals:
-##
-## * `valueChanged (value)` return value in vector that is selected
-##
+
+* `valueChanged (value)` return value in vector that is selected
+
 ## Notes:
-## use cb[:value] = nothing to deselect all 
-function slider(parent::Container, model::VectorModel; orientation::Symbol=:horizontal, size=[200,-1], kwargs...)
+use cb[:value] = nothing to deselect all 
+
+## Examples:
+```julia
+w = window(title="slider")
+g = grid(w); push!(w, g)
+slh = slider(g, 1:100, size=[200, -1])
+g[1,1] = slh
+
+slv = slider(g, 1:100, orientation=:vertical)
+slv[:size] = [-1, 200]
+g[1:2, 2] = slv
+
+connect(slh, :valueChanged, value -> println(value))
+""" ->
+function slider(parent::Container, model::VectorModel; orientation::Symbol=:horizontal, kwargs...)
     widget, block = slider(parent.toolkit, parent, model, orientation=orientation)
-    react = Input(getValue(model))
-    obj = Slider(widget, block, model, react, parent, parent.toolkit, Dict())
+    obj = Slider(widget, block, model, parent, parent.toolkit, {:orientation=>orientation})
 
     for (k, v) in kwargs
         obj[k] = v
     end
 
-    connect_react(obj, react)
-
     obj
 end
 function slider(parent::Container, items::Vector, value::Int=1; orientation::Symbol=:horizontal,kwargs...)
     model = VectorModel(sort(items), value)
-    slider(parent, model, orientation=orientation, kwargs...)
+    slider(parent, model; orientation=orientation, kwargs...)
 end
 function slider(parent::Container, items::Vector; orientation::Symbol=:horizontal, kwargs...)
     items = sort(items)
     model = VectorModel(items, 1)
-    slider(parent, model, orientation=orientation, kwargs...)
+    slider(parent, model; orientation=orientation, kwargs...)
 end
 
 slider(parent::Container, items::Range, value::Int=1; orientation::Symbol=:horizontal, kwargs...) =
@@ -642,20 +849,31 @@ type Slider2D <: WidgetModel
     attrs
 end
 
-## Two dimensional slider
-##
-## from Mathematica's mnaipulate feature. Provides a slider for moving x and y simultaneously
-##
+@doc """
+Two dimensional slider
+
+From Mathematica's mnaipulate feature. Provides a slider for moving x and y simultaneously. Not implemented in `Gtk.jl`.
+
 ## Arguments:
-##
-## * `items1` and `items2` are ranges to choose from
-##
+
+* `items1` and `items2` are ranges to choose from
+
 ## Signals:
-##
-## * `valueChanged (value)` is called when slider is moved. The value are [x,y] coordinates
-##
+
+* `valueChanged (value)` is called when slider is moved. The value are [x,y] coordinates
+
+## Examples:
+```julia
+if !JGUI.isgtk()
+  w = window(title="2dslider")
+  sl2 = slider2d(w, 1:100, 1:100)
+  push!(w, sl2)
+  connect(sl2, :valueChanged, value -> println(value))
+end
+```
+""" ->
 function slider2d(parent::Container, items1::Range, items2::Range; kwargs...) 
-    model = TwoDSliderModel(items1, items2)
+    model = TwoDSliderModel([items1], [items2])
     widget, block = slider2d(parent.toolkit, parent, model)
 
     obj = Slider2D(widget, block, model, parent, parent.toolkit, Dict())
@@ -664,43 +882,51 @@ function slider2d(parent::Container, items1::Range, items2::Range; kwargs...)
     end
     obj
 end
+
 ## get and set value override
 getValue(widget::Slider2D) = getValue(widget.toolkit, widget)
-setValue(widget::Slider2D, value; signal::Bool=true) = setValue(widget.toolkit, widget, value; signal=signal)
+setValue{T<:Number}(widget::Slider2D, value::Vector{T}; signal::Bool=true) = setValue(widget.toolkit, widget, value; signal=signal)
 
 
 ## spinbox: integer or real
-type SpinBox <: WidgetReact
+type SpinBox <: WidgetModel
     o
     block
     model
-    react
     parent
     toolkit
     attrs
 end    
-  
-## Spinbox
-##
-## widget used to collect numeric information from a specifed range
-##
+
+@doc """  
+Spinbox
+
+Widget used to collect numeric information from a specifed range
+
 ## Arguments:
-##
-## * `rng` a range of type `1:10` (Range1) or `0:pi/10:pi` (Range)
-##
+
+* `rng` a range of type `1:10` (Range1) or `0:pi/10:pi` (Range)
+
 ## Signals:
-##
-## * `valueChanged (value)` is called when spinbox is updated
-##  
+
+* `valueChanged (value)` is called when spinbox is updated
+ 
+## Examples:
+```julia
+w = window(title="spinbox")
+sp = spinbox(w, 1:100)
+push!(w, sp)
+
+connect(sp, :valueChanged, value -> println(value))
+```
+""" ->
 function spinbox(parent::Container, model::Model, rng::Range; kwargs...)
     widget, block = spinbox(parent.toolkit, parent, model, rng)
-    react = Input(getValue(model))
-    obj = SpinBox(widget, block, model, react, parent, parent.toolkit, Dict())
+    obj = SpinBox(widget, block, model, parent, parent.toolkit, Dict())
     for (k, v) in kwargs
         obj[k] = v
     end
     obj.attrs[:range] = rng
-    connect_react(obj, react)
     obj
 end
 spinbox(parent::Container, rng::Range; kwargs...) = spinbox(parent, ItemModel(start(rng)), rng; kwargs...)
@@ -724,24 +950,43 @@ type CairoGraphics <: WidgetModel
     attrs
 end
 
-## Cairo graphics device for use with Winston graphics, say
-##
-## Can be called with Winston.display(widget.o, p) -- need to make nicer 
-##
+@doc """
+Cairo graphics device for use with Winston graphics, say.
+
+Not available with `Qt`.
+
+Can be called with Winston.display(widget.o, p) 
+
 ## Arguments:
-##
+
 ## Signals:
-## * `mousePress (x,y)`
-## * `mouseRelease (x,y)`
-## * `mouseDoubleClick (x,y)`
-## * `keyPress (key)`
-## * `keyRelease (key)`
-## * `mouseMotion (x,y)`
-## * `mouseMove (x, y)`
-##
-## The context is [x,y] in relative pixel coordinates
+* `mousePress (x,y)`
+* `mouseRelease (x,y)`
+* `mouseDoubleClick (x,y)`
+* `keyPress (key)`
+* `keyRelease (key)`
+* `mouseMotion (x,y)`
+* `mouseMove (x, y)`
+
+The context is [x,y] in relative pixel coordinates
+
 ## TODO:
-##
+
+* improve interface. (Possible: `push!(cg, p)`)
+
+## Examples:
+```julia
+if !JGUI.isqt()
+  using Winston
+  p = plot(sin, 0, 2pi);        # suppress drawing with ";"
+
+  w = window(title="cairographic")
+  cg = cairographic(w, size=[480, 400])
+  push!(w, cg)
+  Winston.display(cg.o, p)
+end
+```
+""" ->
 function cairographic(parent::Widget; width::Int=480, height::Int=400, kwargs...)
     model = EventModel()  # for event handling
     widget, block = cairographic(parent.toolkit, parent, model, width=width, height=height)
@@ -766,17 +1011,27 @@ type ImageView <: Widget
     attrs
 end
 
-## Image viewer
-##
-## Widget to hold an image
-##
+@doc """
+Widget to display images
+
 ## Arguments:
-##
-## * `img`: if specified, an image file name
-##
-## Signals:
-##
-## 
+
+* `img`: if specified, an image file name
+
+Signals:
+
+## Examples
+```julia
+w = window(title="image")
+img = imageview(w)
+push!(w, img)
+if !JGUI.istk()
+    ## tk does not like png files, just .gif or .jpg
+    img[:image] = Pkg.dir("JGUI", "icons","default", "car.png")
+end
+```
+
+""" ->
 function imageview(parent::Container, img::Union(Nothing, String); kwargs...)
     widget, block = imageview(parent.toolkit, parent)
     obj = ImageView(widget, block, parent, parent.toolkit, Dict())
@@ -812,36 +1067,56 @@ type StoreView <: ModelView
     attrs
 end
 
-## A storeview shows a set of items, where each items is displayed as a row.
-##
-## The items are all instances of a composite type
-##
+@doc """
+
+A storeview shows a set of items, where each items is displayed as a row.
+
+
 ## Arguments:
-## 
-## * `parent::Container` parent container
-##
-## * `store::Store` a data store. 
-##
-## * `selectmode in [:single, :multiple]
-##
+
+* `parent::Container` parent container
+
+* `store::Store` a data store. 
+
+* `selectmode in [:single, :multiple]
+
 ## Signals:
-##
-## * `selectionChanged value` (indices)
-## * `rowInserted, i`
-## * `rowRemoved, i`
-## * `clicked, i,j`
-## * `doubleClicked, i, j`
-## * `headerClicked, j`
-## 
+
+* `selectionChanged value` (indices)
+* `rowInserted, i`
+* `rowRemoved, i`
+* `clicked, i,j`
+* `doubleClicked, i, j`
+* `headerClicked, j`
+
 ## TODO: add activated signal
-##
+
 ## Methods:
-##
-## getValue returns selected items as rows
-## getIndex: return index (:single) or [indices] (:multiple)
-## setIndex: use 0 (:single) to clear, Int[] (:multiple) to clear, 
-## getNames: return Vector{String} of names
-## setNames: pass `Vector{String}` of names
+
+getValue returns selected items as rows
+getIndex: return index (:single) or [indices] (:multiple)
+setIndex: use 0 (:single) to clear, Int[] (:multiple) to clear, 
+getNames: return Vector{String} of names
+setNames: pass `Vector{String}` of names
+
+## Examples
+```julia
+## Create a store
+store = Store(String, Float64)
+push!(store, ("one", 1.0))
+push!(store, ("two", 2.0))
+push!(store, ("three", 3.0))
+insert!(store, 3, ("two and a half", 2.5))
+
+## display the store
+w = window(title="storeview")
+sv = storeview(w, store)
+push!(w, sv)
+
+connect(sv, :selectionChanged, indices -> println(indices)) ## failing on Gtk.selected
+```
+
+""" ->
 function storeview(parent::Container, store::Store; selectmode::Symbol=:single, kwargs...)
     model = ItemModel([0])         # for selection
     widget, block = storeview(parent.toolkit, parent, store, model)
@@ -944,28 +1219,38 @@ replace!(s::StoreView, i::Int, item) = replace!(s.store, i, item)
 
 
 ## list view
-type ListItem <: AbstractStoreItem
-    value
-end
 
-## A listview displays a vector. User can adjust selection to indicate
-## selected values. There can be single or multiple selection.
-##
+@doc """
+Listview is a convenience wrapper to `storeview` for displaying a vector of values.
+
 ## Arguments:
-##
-## * `items::Vector` items to select from
-## * `selectmode::Symbol` which stule of selection
-##
+
+* `items::Vector` items to select from
+
+* `selectmode::Symbol` which stule of selection
+
 ## Signals:
-## 
-## Come from `storeview`
-##
+
+See `storeview`.
+
 ## Properties:
-## `:value` return value or [value] (if :multiple)
-## `:index` return index or [index] (if :multiple)
+`:value` return value or [value] (if :multiple)
+`:index` return index or [index] (if :multiple)
+
+## Examples
+```julia
+w = window(title="listview")
+items = ["one", "two", "three"]
+lv = listview(w, items)
+push!(w, lv)
+lv[:names] = ["Numbers"]
+```
+""" ->
 function listview(parent::Container, items::Vector; selectmode::Symbol=:single, kwargs...)
-    items =  map(x -> ListItem(x), items)
-    store = Store{ListItem}(items)
+    store = Store(eltype(items))
+    for item in items
+        push!(store, (item, ))
+    end
 
     obj = storeview(parent, store, selectmode=selectmode)
     for (k, v) in kwargs
@@ -987,34 +1272,42 @@ type TreeView <: ModelView
     attrs
 end
 
-## treeview widget
-##
+@doc """
+treeview widget
+
 ## Arguments:
-##
-## * `parent::Container` parent container
-##
-## * `store::TreeStore` tree store. Most of action happens with a tree store
-##
-## * `tpl` optional instance of data type for display. This allows columns to be set up in tree view. If not given, then
-## the store should have atleast one child node.
-##
+
+* `parent::Container` parent container
+
+* `store::TreeStore` tree store. Most of action happens with a tree store
+
+* `tpl` optional instance of data type for display. This allows columns to be set up in tree view. If not given, then
+the store should have atleast one child node.
+
 ## Signals:
-##
-## * `valueChanged (value)` Selection changes, this passes on selected path
-##
-## * `activated (value)` Selection is activated, typically double click but may be enter key
-##
-## * `nodeExpand (path)` gives path when node expands
-##
-## * `nodeCollapsed (path)` gives path when node expands
-##
-## * `clicked (path, column)` gives path and column user clicks on
-## 
-## * `doubleClicked(path, column)` gives path and column user clicks on
-##
+
+* `valueChanged (value)` Selection changes, this passes on selected path
+
+* `activated (value)` Selection is activated, typically double click but may be enter key
+
+* `nodeExpand (path)` gives path when node expands
+
+* `nodeCollapsed (path)` gives path when node expands
+
+* `clicked (path, column)` gives path and column user clicks on
+
+* `doubleClicked(path, column)` gives path and column user clicks on
+
 ## Notes:
-## There are two models: one for the store where we can insert! and friends and one for the widget
-## where the valueChanged, nodeExpand, ... are held. These are not shared between views of the same model
+
+There are two models: one for the store where we can insert! and friends and one for the widget
+where the valueChanged, nodeExpand, ... are held. These are not shared between views of the same model
+
+## Examples
+```julia
+```
+
+""" ->
 function treeview(parent::Container, store::TreeStore;  kwargs...)
     model = ItemModel()
     widget, block = treeview(parent.toolkit, parent, store, model)

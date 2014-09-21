@@ -124,10 +124,10 @@ ed1[:value] = 20
 
 push!(g, separator(g))
 
-### textedit
+### textedit ###
 
 
-## action
+### action ###
 
 ### button
 
@@ -142,6 +142,44 @@ push!(g, separator(g))
 ### checkbutton
 
 ### radio
+
+
+####### button group #####
+using Base.Test
+using JGUI
+
+w = window(title = "Button group")
+f = vbox(w); push!(w, f)
+
+## exclusive
+choices = ["one", "two", "three"]
+
+### no initial
+b1 = buttongroup(f, choices, exclusive=true); push!(b1)
+
+@assert b1[:value] == nothing
+b1[:value] = "one"
+@assert b1[:value] == "one"
+
+### initial
+b2 = buttongroup(f, choices, choices[1], exclusive=true); push!(b2)
+
+@assert b2[:value] == choices[1]
+
+## non-exclusive
+
+### no initial
+b3 = buttongroup(f, choices, exclusive=false); push!(b3)
+
+@assert b3[:value] == String[]
+b3[:value] = ["one"]
+@assert b3[:value] == ["one"]
+
+### initial
+b4 = buttongroup(f, choices, choices[1:2], exclusive=false); push!(b4)
+
+@assert b4[:value] == choices[1:2]
+
 
 ### combobox
 
