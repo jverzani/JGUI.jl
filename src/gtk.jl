@@ -1493,9 +1493,9 @@ end
 function setModaless(::MIME"application/x-qt", dlg::Dialog, value::Bool)
     convert(Function, dlg[:widget][:open])()
 end
-function destroy(::MIME"application/x-qt", dlg::Dialog)
-    convert(Function, dlg[:widget][:destroy])()
-end
+#function destroy(::MIME"application/x-qt", dlg::Dialog)
+#    convert(Function, dlg[:widget][:destroy])()
+#end
 
 
 ### special dialogs

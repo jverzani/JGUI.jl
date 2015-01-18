@@ -99,7 +99,7 @@ end
 
 
 ### window methods
-function raise(::MIME"application/x-qt", o::Window) 
+function PySide.raise(::MIME"application/x-qt", o::Window) 
     o[:widget][:show]()
     convert(Function, o[:widget][:raise])()
 end

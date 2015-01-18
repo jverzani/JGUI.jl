@@ -81,6 +81,7 @@ if istk()
 elseif isqt()
     using PyCall
     using PySide
+    import PySide: raise, setFocus, setIcon
 elseif isgtk()
     using Gtk, Cairo
 end
