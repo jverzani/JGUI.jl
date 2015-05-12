@@ -1,5 +1,7 @@
 # JGUI
 
+[This package may not work! Using Gtk.jl might just be best...]
+
 A package to simplify the creation of GUIs within Julia
 
 
@@ -10,7 +12,7 @@ interface for using the `tcl/tk`, `Gtk`, or `Qt` toolkits within `Julia`.
 
 # Installation
 
-The `JGUI` package installs with `Pkg.add("JGUI")`. For it to work one
+The `JGUI` package installs with `Pkg.clone("https://github.com/jverzani/JGUI.jl")`. For it to work one
 needs to have installed the `Tk` package, the `Gtk` package, or the
 `PySide` package. The latter requires an installation of the `Qt`
 libraries (http://qt-project.org/downloads), `Python`
